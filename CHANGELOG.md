@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0 "Smart Recovery"
+### Added
+- **Plasticity Tracker**: implicit feedback loop measuring recovery prompt effectiveness (success/failure tracking)
+- **Progressive amplification**: 3-level recovery (standard → emphatic → escalation via /metacog-escalate)
+- **Latency tracking**: every hook response includes `[latency: Nms]`
+- **`aletheia init`**: CLI command for project onboarding (generates .claude/settings.json)
+- Human-readable hook messages (Risk: HIGH | Strategy: verify-first | Budget: N tokens)
+
+### Fixed
+- Pre-tool-use risk classification now evaluates the actual command text, not hook metadata
+- `ls -la` correctly classified as LOW risk (was incorrectly HIGH)
+- Safe Bash commands (ls, cat, cargo test, git status, etc.) now have proper risk levels
+
+### Changed
+- Stop hook now uses plasticity-aware amplification for recovery prompts
+- PostToolUse hook records implicit feedback (success/failure) for pending recoveries
+
 ## 0.4.0 "Developer-First"
 ### Added
 - **Completion Verifier**: catches false "Done!" claims by checking that mentioned files actually exist on disk

@@ -73,6 +73,19 @@
 - [x] UserPromptSubmit hook estimates and tracks token consumption
 - [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
 
+## Phase 7: Smart Recovery (v0.5.0) -- COMPLETE
+
+- [x] Plasticity Tracker: implicit feedback loop measuring recovery prompt effectiveness
+- [x] Progressive amplification: 3-level recovery (standard → emphatic → escalation via /metacog-escalate)
+- [x] Latency tracking: every hook response includes `[latency: Nms]`
+- [x] `aletheia init` CLI command for project onboarding (generates .claude/settings.json)
+- [x] Human-readable hook messages (Risk: HIGH | Strategy: verify-first | Budget: N tokens)
+- [x] Pre-tool-use risk classification evaluates actual command text, not hook metadata
+- [x] Safe Bash commands (ls, cat, cargo test, git status, etc.) correctly classified as LOW risk
+- [x] Stop hook uses plasticity-aware amplification for recovery prompts
+- [x] PostToolUse hook records implicit feedback (success/failure) for pending recoveries
+- [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
+
 ## Next
 
 - [ ] MCP bridge crate (mcp-bridge) for native MCP server integration
@@ -81,4 +94,4 @@
 - [ ] Embedding generation pipeline for graph memory cosine search
 - [ ] CI integration tests (daemon startup + hook round-trips)
 - [ ] Publish to Claude Code marketplace
-- [ ] v0.5.0 planning: multi-agent orchestration, session replay
+- [ ] v0.6.0 planning: multi-agent orchestration, session replay
