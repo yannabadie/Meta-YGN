@@ -500,3 +500,169 @@ async fn forge_list_templates() {
     assert!(names.contains(&"json-validator"));
     assert!(names.contains(&"file-exists-checker"));
 }
+
+// ---------------------------------------------------------------------------
+// Completion verifier integration test
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn stop_hook_catches_false_completion() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/hooks/stop");
+    let client = reqwest::Client::new();
+
+    // Send a Stop event where Claude claims "Done!" but mentions a file that doesn't exist
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "Stop",
+            "last_assistant_message": "Done! I created `fake/nonexistent/module.rs` with all the changes.",
+            "cwd": "."
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    // Should detect the false completion and block it
+    assert!(
+        context.contains("COMPLETION CHECK FAILED"),
+        "Expected completion check failure for missing file, got: {context}"
+    );
+    assert!(
+        context.contains("NOT FOUND"),
+        "Expected NOT FOUND in failure message, got: {context}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Token Budget Tracker integration tests
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn budget_starts_at_zero() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 0);
+    assert_eq!(body["consumed_cost_usd"], 0.0);
+}
+
+#[tokio::test]
+async fn budget_consume_updates() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Consume some tokens
+    let url = format!("http://{addr}/budget/consume");
+    let resp = client
+        .post(&url)
+        .json(&json!({ "tokens": 500, "cost_usd": 0.005 }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 500);
+
+    // Verify via GET
+    let url = format!("http://{addr}/budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 500);
+    let cost = body["consumed_cost_usd"].as_f64().unwrap();
+    assert!((cost - 0.005).abs() < 1e-9);
+}
+
+#[tokio::test]
+async fn hook_responses_include_budget() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Submit a prompt — the response should contain "[budget:"
+    let url = format!("http://{addr}/hooks/user-prompt-submit");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "implement the login feature with full test coverage"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("[budget:"),
+        "Expected '[budget:' in hook response additionalContext, got: {context}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test Integrity Guard integration test
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn pre_tool_use_catches_test_weakening() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/hooks/pre-tool-use");
+    let client = reqwest::Client::new();
+
+    // Edit a test file, removing an assertion — should trigger Ask
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": "tests/my_test.rs",
+                "old_string": "#[test]\nfn it_works() {\n    assert!(result.is_ok());\n    assert_eq!(result.unwrap(), 42);\n}",
+                "new_string": "#[test]\nfn it_works() {\n    // looks good\n}"
+            }
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    let decision = body
+        .pointer("/hookSpecificOutput/permissionDecision")
+        .and_then(|v| v.as_str());
+    assert_eq!(
+        decision,
+        Some("ask"),
+        "Expected ask for test weakening edit, got: {body:?}"
+    );
+
+    let reason = body
+        .pointer("/hookSpecificOutput/permissionDecisionReason")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        reason.contains("TEST INTEGRITY WARNING"),
+        "Expected test integrity warning in reason, got: {reason}"
+    );
+
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("assertion(s) removed"),
+        "Expected assertion removal detail in context, got: {context}"
+    );
+}

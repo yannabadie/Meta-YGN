@@ -6,6 +6,7 @@ use metaygn_core::runner::ControlLoop;
 use metaygn_memory::graph::GraphMemory;
 use metaygn_memory::store::MemoryStore;
 use metaygn_sandbox::ProcessSandbox;
+use metaygn_shared::budget_tracker::SessionBudget;
 use metaygn_verifiers::guard_pipeline::GuardPipeline;
 
 use crate::forge::ForgeEngine;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub graph: Arc<GraphMemory>,
     pub evolver: Arc<Mutex<HeuristicEvolver>>,
     pub forge: Arc<Mutex<ForgeEngine>>,
+    pub budget: Arc<Mutex<SessionBudget>>,
 }
 
 impl AppState {
@@ -40,6 +42,7 @@ impl AppState {
             graph: Arc::new(graph),
             evolver: Arc::new(Mutex::new(HeuristicEvolver::new(20))),
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
+            budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
         })
     }
 
@@ -59,6 +62,7 @@ impl AppState {
             graph: Arc::new(graph),
             evolver: Arc::new(Mutex::new(HeuristicEvolver::new(20))),
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
+            budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
         })
     }
 }

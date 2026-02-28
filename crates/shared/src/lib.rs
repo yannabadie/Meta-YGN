@@ -1,3 +1,4 @@
+pub mod budget_tracker;
 pub mod state;
 pub mod events;
 pub mod protocol;

@@ -48,6 +48,19 @@ A local-first metacognitive plugin for Claude Code that adds verification, risk 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+## Developer-First Features (v0.4.0)
+
+These features solve the top 3 real-world Claude Code pain points:
+
+### Completion Verifier
+When Claude says "Done!", MetaYGN checks if the mentioned files actually exist. If they don't, it blocks the completion claim with a warning.
+
+### Test Integrity Guard
+When Claude tries to Edit a test file, MetaYGN analyzes the diff. If assertions are removed, test functions deleted, or expected values changed, it asks for confirmation with a detailed warning.
+
+### Token Budget Dashboard
+Every hook response includes a visible budget summary: `[budget: 3000tok/$0.03 used of 100000tok/$1.00 | 3%]`. Warns at 80% utilization.
+
 ## Components
 
 ### Skills (8 metacognitive workflows)
