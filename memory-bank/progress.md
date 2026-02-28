@@ -86,12 +86,26 @@
 - [x] PostToolUse hook records implicit feedback (success/failure) for pending recoveries
 - [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
 
+## Phase 8: Solid Ground (v0.6.0) -- COMPLETE
+
+- [x] Complete TypeScript hooks: all 8 hooks implemented in TypeScript with Bun runtime
+- [x] Daemon graceful lifecycle: `POST /admin/shutdown` endpoint with port file cleanup
+- [x] `aletheia start`: spawns daemon as detached process, polls for port file, health checks
+- [x] `aletheia stop`: sends shutdown request, waits for clean termination
+- [x] Persistent heuristics: HeuristicVersion and SessionOutcome stored in SQLite
+- [x] CI integration tests: GitHub Actions job that starts daemon, tests hooks, verifies budget, shuts down
+- [x] Plugin validation script: `scripts/validate-plugin.sh` checks all 26 plugin components
+- [x] Local fallback functions for user-prompt-submit, post-tool-use, and stop hooks
+- [x] `hooks/hooks.json` uses `bun run` for all hooks (was `bash hook-runner.sh`)
+- [x] Daemon supports dual shutdown triggers: Ctrl+C and `/admin/shutdown`
+- [x] CLI `start` finds `aletheiad` binary automatically next to CLI executable
+- [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
+
 ## Next
 
 - [ ] MCP bridge crate (mcp-bridge) for native MCP server integration
 - [ ] WASM sandbox backend (feature-gated behind wasmtime)
-- [ ] Persistent heuristic state (SQLite-backed evolver)
 - [ ] Embedding generation pipeline for graph memory cosine search
-- [ ] CI integration tests (daemon startup + hook round-trips)
 - [ ] Publish to Claude Code marketplace
-- [ ] v0.6.0 planning: multi-agent orchestration, session replay
+- [ ] Multi-agent orchestration improvements
+- [ ] Session replay and debugging tools

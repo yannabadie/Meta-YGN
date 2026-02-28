@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 "Solid Ground"
+### Added
+- **Complete TypeScript hooks**: all 8 hooks (session-start, user-prompt-submit, pre-tool-use, post-tool-use, post-tool-use-failure, stop, pre-compact, session-end) implemented in TypeScript with Bun runtime
+- **Daemon graceful lifecycle**: `POST /admin/shutdown` endpoint triggers clean shutdown with port file cleanup
+- **`aletheia start`**: spawns daemon as detached process, polls for port file, health checks
+- **`aletheia stop`**: sends shutdown request, waits for clean termination
+- **Persistent heuristics**: HeuristicVersion and SessionOutcome stored in SQLite, survive daemon restart
+- **CI integration tests**: GitHub Actions job that starts daemon, tests hooks, verifies budget, shuts down
+- **Plugin validation script**: `scripts/validate-plugin.sh` checks all 26 plugin components
+- Local fallback functions for user-prompt-submit, post-tool-use, and stop hooks
+
+### Changed
+- `hooks/hooks.json` now uses `bun run` for all hooks (was `bash hook-runner.sh`)
+- Daemon supports dual shutdown triggers: Ctrl+C and `/admin/shutdown`
+- CLI `start` finds `aletheiad` binary automatically next to the CLI executable
+
 ## 0.5.0 "Smart Recovery"
 ### Added
 - **Plasticity Tracker**: implicit feedback loop measuring recovery prompt effectiveness (success/failure tracking)
