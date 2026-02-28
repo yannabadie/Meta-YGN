@@ -13,6 +13,32 @@ use crate::app_state::AppState;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Append the session budget summary to a HookOutput's additionalContext.
+fn append_budget_to_output(output: &mut HookOutput, state: &AppState) {
+    let budget = state.budget.lock().expect("budget mutex poisoned");
+    let summary = budget.summary();
+    match output.hook_specific_output {
+        Some(ref mut hso) => {
+            // Append to existing additionalContext, or create it
+            match hso.additional_context {
+                Some(ref mut ctx) => {
+                    ctx.push(' ');
+                    ctx.push_str(&summary);
+                }
+                None => {
+                    hso.additional_context = Some(summary);
+                }
+            }
+        }
+        None => {
+            output.hook_specific_output = Some(metaygn_shared::protocol::HookSpecificOutput {
+                additional_context: Some(summary),
+                ..Default::default()
+            });
+        }
+    }
+}
+
 /// Extract the command string from tool_input. The command may be in
 /// tool_input.command (Bash tool) or tool_input itself might be a string.
 fn extract_command(input: &HookInput) -> String {
@@ -86,7 +112,9 @@ async fn pre_tool_use(
             })
             .unwrap_or_else(|| "Blocked by guard pipeline".to_string());
 
-        return Json(HookOutput::permission(decision, reason));
+        let mut output = HookOutput::permission(decision, reason);
+        append_budget_to_output(&mut output, &state);
+        return Json(output);
     }
 
     // Test Integrity Guard: detect test modification instead of code fixing
@@ -114,14 +142,16 @@ async fn pre_tool_use(
                         .collect::<Vec<_>>()
                         .join("; ");
 
-                    return Json(HookOutput {
+                    let mut output = HookOutput {
                         hook_specific_output: Some(metaygn_shared::protocol::HookSpecificOutput {
                             hook_event_name: Some("PreToolUse".into()),
                             permission_decision: Some(PermissionDecision::Ask),
                             permission_decision_reason: Some(report.recommendation),
                             additional_context: Some(format!("Issues: {}", issues_detail)),
                         }),
-                    });
+                    };
+                    append_budget_to_output(&mut output, &state);
+                    return Json(output);
                 }
             }
         }
@@ -138,13 +168,15 @@ async fn pre_tool_use(
     };
 
     // Return enriched context with risk + strategy
-    Json(HookOutput::context(
+    let mut output = HookOutput::context(
         "PreToolUse".to_string(),
         format!(
             "[risk:{}] [strategy:{:?}] [difficulty:{:.2}] Tool '{}' allowed by guard pipeline (score:{})",
             risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
         ),
-    ))
+    );
+    append_budget_to_output(&mut output, &state);
+    Json(output)
 }
 
 /// POST /hooks/post-tool-use
@@ -180,10 +212,9 @@ async fn post_tool_use(
         "Tool output recorded."
     };
 
-    Json(HookOutput::context(
-        "PostToolUse".to_string(),
-        context.to_string(),
-    ))
+    let mut output = HookOutput::context("PostToolUse".to_string(), context.to_string());
+    append_budget_to_output(&mut output, &state);
+    Json(output)
 }
 
 /// POST /hooks/user-prompt-submit
@@ -200,10 +231,18 @@ async fn user_prompt_submit(
     let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
 
     // Wire fatigue signal: record the prompt
+    let prompt_text = input.prompt.clone().unwrap_or_default();
     {
-        let prompt_text = input.prompt.as_deref().unwrap_or("");
         let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        profiler.on_prompt(prompt_text, chrono::Utc::now());
+        profiler.on_prompt(&prompt_text, chrono::Utc::now());
+    }
+
+    // Estimate and consume tokens for the prompt (~4 chars per token, $0.000003/token)
+    {
+        let estimated_tokens = (prompt_text.len() / 4) as u64;
+        let estimated_cost = estimated_tokens as f64 * 0.000003;
+        let mut budget = state.budget.lock().expect("budget mutex poisoned");
+        budget.consume(estimated_tokens, estimated_cost);
     }
 
     // Run ControlLoop stages 1-6 for analysis
@@ -220,13 +259,15 @@ async fn user_prompt_submit(
     let task_type = ctx.task_type.unwrap_or(TaskType::Bugfix);
     let plan = TopologyPlanner::plan(ctx.risk, ctx.difficulty, task_type);
 
-    Json(HookOutput::context(
+    let mut output = HookOutput::context(
         "UserPromptSubmit".to_string(),
         format!(
             "[risk:{}] [strategy:{:?}] [budget:{}tok] [task:{:?}] [topology={:?}] Prompt analysed via control loop",
             risk_label, ctx.strategy, ctx.budget.max_tokens, ctx.task_type, plan.topology,
         ),
-    ))
+    );
+    append_budget_to_output(&mut output, &state);
+    Json(output)
 }
 
 /// POST /hooks/stop
@@ -248,14 +289,16 @@ async fn stop(
     if !verification.verified {
         // BLOCK: Claude said "done" but files are missing
         let issues = verification.blocking_issues.join("; ");
-        return Json(HookOutput::context(
+        let mut output = HookOutput::context(
             "Stop".to_string(),
             format!(
                 "COMPLETION CHECK FAILED: {}. Claude claimed completion but verification found issues. \
                  Review before accepting.",
                 issues
             ),
-        ));
+        );
+        append_budget_to_output(&mut output, &state);
+        return Json(output);
     }
 
     let mut ctx = LoopContext::new(input);
@@ -280,7 +323,9 @@ async fn stop(
         context_msg.push_str(&format!(" [completion_warnings: {}]", warns));
     }
 
-    Json(HookOutput::context("Stop".to_string(), context_msg))
+    let mut output = HookOutput::context("Stop".to_string(), context_msg);
+    append_budget_to_output(&mut output, &state);
+    Json(output)
 }
 
 /// POST /hooks/analyze

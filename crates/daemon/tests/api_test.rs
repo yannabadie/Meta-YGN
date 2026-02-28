@@ -542,6 +542,76 @@ async fn stop_hook_catches_false_completion() {
 }
 
 // ---------------------------------------------------------------------------
+// Token Budget Tracker integration tests
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn budget_starts_at_zero() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 0);
+    assert_eq!(body["consumed_cost_usd"], 0.0);
+}
+
+#[tokio::test]
+async fn budget_consume_updates() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Consume some tokens
+    let url = format!("http://{addr}/budget/consume");
+    let resp = client
+        .post(&url)
+        .json(&json!({ "tokens": 500, "cost_usd": 0.005 }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 500);
+
+    // Verify via GET
+    let url = format!("http://{addr}/budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["consumed_tokens"], 500);
+    let cost = body["consumed_cost_usd"].as_f64().unwrap();
+    assert!((cost - 0.005).abs() < 1e-9);
+}
+
+#[tokio::test]
+async fn hook_responses_include_budget() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Submit a prompt — the response should contain "[budget:"
+    let url = format!("http://{addr}/hooks/user-prompt-submit");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "implement the login feature with full test coverage"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("[budget:"),
+        "Expected '[budget:' in hook response additionalContext, got: {context}"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Test Integrity Guard integration test
 // ---------------------------------------------------------------------------
 
