@@ -1,3 +1,4 @@
 {
-  "agent": "aletheia-main"
+  "agent": "aletheia-main",
+  "outputStyle": "aletheia-proof"
 }
