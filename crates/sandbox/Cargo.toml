@@ -1,0 +1,17 @@
+[package]
+name = "metaygn-sandbox"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+metaygn-shared = { path = "../shared" }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio = { version = "1", features = ["process", "time", "io-util", "macros"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

@@ -1070,6 +1070,7 @@ dependencies = [
  "dirs",
  "metaygn-core",
  "metaygn-memory",
+ "metaygn-sandbox",
  "metaygn-shared",
  "metaygn-verifiers",
  "regex",
@@ -1098,6 +1099,19 @@ dependencies = [
  "tokio-rusqlite",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "metaygn-sandbox"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "metaygn-shared",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

@@ -17,6 +17,7 @@ metaygn-shared = { path = "../shared" }
 metaygn-core = { path = "../core" }
 metaygn-memory = { path = "../memory" }
 metaygn-verifiers = { path = "../verifiers" }
+metaygn-sandbox = { path = "../sandbox" }
 axum = { version = "0.8", features = ["json"] }
 tokio.workspace = true
 tower = "0.5"
