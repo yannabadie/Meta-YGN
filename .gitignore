@@ -30,5 +30,8 @@ desktop.ini
 # Aletheia runtime logs (local only)
 events.jsonl
 
+# Rust
+target/
+
 # Node (if used in future)
 node_modules/

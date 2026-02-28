@@ -1,0 +1,33 @@
+[package]
+name = "metaygn-daemon"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "metaygn_daemon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aletheiad"
+path = "src/main.rs"
+
+[dependencies]
+metaygn-shared = { path = "../shared" }
+metaygn-memory = { path = "../memory" }
+metaygn-verifiers = { path = "../verifiers" }
+axum = { version = "0.8", features = ["json"] }
+tokio.workspace = true
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+regex = "1"
+dirs = "6"
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full", "test-util"] }
