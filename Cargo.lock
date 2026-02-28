@@ -1119,6 +1119,7 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "metaygn-shared",
+ "regex",
  "serde",
  "serde_json",
  "sha2",
