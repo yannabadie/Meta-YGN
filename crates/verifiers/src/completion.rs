@@ -29,16 +29,37 @@ pub struct Check {
 pub fn extract_claims(text: &str) -> CompletionClaim {
     let lower = text.to_lowercase();
 
-    // Extract file paths (patterns like `path/to/file.rs`, `src/main.py`, etc.)
+    // Extract file paths (patterns like `path/to/file.rs`, src/main.py, etc.)
+    // Must handle: backtick-quoted, space-delimited, end-of-line, after punctuation
     let file_pattern = regex::Regex::new(
-        r#"(?:^|[\s`'"])((?:[\w.\-]+/)*[\w.\-]+\.\w{1,10})(?:[\s`'"]|$|[,:;)])"#,
+        r"(?:^|[\s`(])((?:[\w.\-]+/)+[\w.\-]+\.\w{1,10})",
     )
     .unwrap();
-    let files_mentioned: Vec<String> = file_pattern
+    let mut files_mentioned: Vec<String> = file_pattern
         .captures_iter(text)
         .map(|c| c[1].to_string())
-        .filter(|f| !f.starts_with("http") && !f.contains("..."))
+        .filter(|f| {
+            !f.starts_with("http")
+                && !f.contains("...")
+                && !f.starts_with("e.g.")
+                && !f.starts_with("i.e.")
+        })
         .collect();
+    // Also catch standalone filenames with extension (no directory prefix)
+    // e.g., "updated Cargo.toml" or "modified main.rs"
+    let standalone_pattern = regex::Regex::new(
+        r"(?:^|[\s`(])([A-Z][\w.\-]*\.\w{1,10}|[\w.\-]+\.(?:rs|py|ts|js|toml|json|yaml|yml|md|sh|sql|html|css))\b",
+    )
+    .unwrap();
+    for cap in standalone_pattern.captures_iter(text) {
+        let f = cap[1].to_string();
+        if !files_mentioned.contains(&f) && !f.starts_with("http") && !f.contains("...") {
+            files_mentioned.push(f);
+        }
+    }
+    // Deduplicate
+    files_mentioned.sort();
+    files_mentioned.dedup();
 
     let completion_markers = [
         "done",
