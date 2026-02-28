@@ -2,6 +2,7 @@ use metaygn_shared::state::Decision;
 
 use crate::context::LoopContext;
 use crate::stages::*;
+use crate::topology::ExecutionPlan;
 
 /// Orchestrates the 12-stage metacognitive control loop.
 ///
@@ -99,6 +100,42 @@ impl ControlLoop {
                         "pipeline escalated (range)"
                     );
                     break;
+                }
+            }
+        }
+        ctx.decision
+    }
+
+    /// Run only the stages specified in an [`ExecutionPlan`].
+    ///
+    /// Stages are looked up by name and executed in the order listed in
+    /// `plan.stages`. A stage name that appears more than once (e.g. the
+    /// double verify+calibrate pass in Horizontal topology) will be executed
+    /// each time it appears.
+    pub fn run_plan(&self, ctx: &mut LoopContext, plan: &ExecutionPlan) -> Decision {
+        for stage_name in &plan.stages {
+            if let Some(stage) = self.stages.iter().find(|s| s.name() == *stage_name) {
+                tracing::trace!(stage = stage.name(), topology = ?plan.topology, "entering stage (plan)");
+                match stage.run(ctx) {
+                    StageResult::Continue => continue,
+                    StageResult::Skip => {
+                        tracing::debug!(stage = stage.name(), "stage requested skip (plan)");
+                        break;
+                    }
+                    StageResult::Escalate(reason) => {
+                        ctx.decision = Decision::Escalate;
+                        ctx.lessons.push(format!(
+                            "escalated at stage '{}': {}",
+                            stage.name(),
+                            reason
+                        ));
+                        tracing::warn!(
+                            stage = stage.name(),
+                            %reason,
+                            "pipeline escalated (plan)"
+                        );
+                        break;
+                    }
                 }
             }
         }

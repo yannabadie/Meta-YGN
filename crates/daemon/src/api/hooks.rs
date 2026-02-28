@@ -3,8 +3,9 @@ use axum::response::Json;
 use axum::{Router, routing::post};
 
 use metaygn_core::context::LoopContext;
+use metaygn_core::topology::TopologyPlanner;
 use metaygn_shared::protocol::{HookInput, HookOutput, PermissionDecision};
-use metaygn_shared::state::RiskLevel;
+use metaygn_shared::state::{RiskLevel, TaskType};
 
 use crate::app_state::AppState;
 
@@ -177,11 +178,15 @@ async fn user_prompt_submit(
         RiskLevel::High => "high",
     };
 
+    // Run TopologyPlanner to determine execution topology
+    let task_type = ctx.task_type.unwrap_or(TaskType::Bugfix);
+    let plan = TopologyPlanner::plan(ctx.risk, ctx.difficulty, task_type);
+
     Json(HookOutput::context(
         "UserPromptSubmit".to_string(),
         format!(
-            "[risk:{}] [strategy:{:?}] [budget:{}tok] [task:{:?}] Prompt analysed via control loop",
-            risk_label, ctx.strategy, ctx.budget.max_tokens, ctx.task_type,
+            "[risk:{}] [strategy:{:?}] [budget:{}tok] [task:{:?}] [topology={:?}] Prompt analysed via control loop",
+            risk_label, ctx.strategy, ctx.budget.max_tokens, ctx.task_type, plan.topology,
         ),
     ))
 }

@@ -5,37 +5,47 @@ A local-first metacognitive plugin for Claude Code that adds verification, risk 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Claude Code                        │
-│                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
-│  │  Skills   │  │  Agents  │  │  Output Styles   │  │
-│  │ (8 metacog│  │ (6 roles)│  │ (proof packets)  │  │
-│  │ workflows)│  │          │  │                  │  │
-│  └─────┬─────┘  └────┬─────┘  └────────┬─────────┘  │
-│        │              │                 │            │
-│  ┌─────┴──────────────┴─────────────────┴─────────┐  │
-│  │              Hooks (8 lifecycle events)          │  │
-│  │  SessionStart → UserPromptSubmit → PreToolUse   │  │
-│  │  → PostToolUse → PostToolUseFailure → Stop      │  │
-│  │  → PreCompact → SessionEnd                      │  │
-│  └─────────────────────┬───────────────────────────┘  │
-│                        │                             │
-│  ┌─────────────────────┴───────────────────────────┐  │
-│  │         Python Hook Handlers (scripts/)          │  │
-│  │  • Risk classification (prompt & tool level)     │  │
-│  │  • Security gates (destructive/high-risk/secret) │  │
-│  │  • Verification signals                          │  │
-│  │  • Proof packet enforcement                      │  │
-│  └─────────────────────┬───────────────────────────┘  │
-│                        │                             │
-│  ┌─────────────────────┴───────────────────────────┐  │
-│  │    Optional: Aletheia Daemon (ALETHEIA_DAEMON_URL)│  │
-│  │    • Durable state & learned heuristics          │  │
-│  │    • Advanced verification & proof archival      │  │
-│  │    • Graceful fallback to local heuristics       │  │
-│  └──────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         Claude Code                               │
+│                                                                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐               │
+│  │  Skills   │  │  Agents  │  │  Output Styles   │               │
+│  │ (8 metacog│  │ (6 roles)│  │ (proof packets)  │               │
+│  │ workflows)│  │          │  │                  │               │
+│  └─────┬─────┘  └────┬─────┘  └────────┬─────────┘               │
+│        │              │                 │                         │
+│  ┌─────┴──────────────┴─────────────────┴─────────┐               │
+│  │              Hooks (8 lifecycle events)          │               │
+│  └─────────────────────┬───────────────────────────┘               │
+│                        │ HTTP                                     │
+│  ┌─────────────────────┴───────────────────────────────────────┐  │
+│  │              Aletheia Daemon (aletheiad)                      │  │
+│  │                                                              │  │
+│  │  ┌──────────────────────────────────────────────────────┐    │  │
+│  │  │  12-Stage Control Loop (classify..learn)             │    │  │
+│  │  │  + TopologyPlanner (Single/Vertical/Horizontal)      │    │  │
+│  │  └──────────────────────────────────────────────────────┘    │  │
+│  │                                                              │  │
+│  │  ┌───────────────┐ ┌─────────────┐ ┌────────────────────┐   │  │
+│  │  │ Guard Pipeline │ │ MASC Anomaly│ │ Fatigue Profiler   │   │  │
+│  │  │ (security gate)│ │ Detector    │ │ (inverse metacog)  │   │  │
+│  │  └───────────────┘ └─────────────┘ └────────────────────┘   │  │
+│  │                                                              │  │
+│  │  ┌───────────────┐ ┌─────────────┐ ┌────────────────────┐   │  │
+│  │  │ Graph Memory   │ │ Heuristic   │ │ Tool Forge         │   │  │
+│  │  │ (nodes, edges, │ │ Evolver     │ │ (templates, cache, │   │  │
+│  │  │  FTS5, cosine) │ │ (Layer 0)   │ │  sandbox execute)  │   │  │
+│  │  └───────┬────────┘ └──────┬──────┘ └─────────┬──────────┘   │  │
+│  │          │                 │                   │              │  │
+│  │  ┌───────┴─────────────────┴───────────────────┴──────────┐  │  │
+│  │  │  SQLite (MemoryStore + GraphMemory) │ ProcessSandbox   │  │  │
+│  │  └────────────────────────────────────┴───────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  eval/ MetaCog-Bench (15 scenarios, 5 families)              │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Components

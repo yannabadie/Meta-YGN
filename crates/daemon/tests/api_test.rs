@@ -375,3 +375,128 @@ async fn stop_returns_enforcement_hint() {
         "Expected proof packet mention in stop response, got: {context}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4: graph memory, heuristics, forge endpoints
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn graph_insert_and_search() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Insert a node
+    let url = format!("http://{addr}/memory/nodes");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "id": "node-1",
+            "node_type": "Task",
+            "scope": "Session",
+            "label": "Fix authentication bug",
+            "content": "The login form rejects valid credentials due to a hashing mismatch",
+            "embedding": null,
+            "created_at": "2025-01-01T00:00:00Z",
+            "access_count": 0
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["ok"], true);
+    assert_eq!(body["id"], "node-1");
+
+    // Search for the node via FTS
+    let url = format!("http://{addr}/memory/graph/search");
+    let resp = client
+        .post(&url)
+        .json(&json!({ "query": "authentication", "limit": 5 }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let nodes = body["nodes"].as_array().expect("expected nodes array");
+    assert!(
+        !nodes.is_empty(),
+        "Expected at least one node matching 'authentication', got empty"
+    );
+    assert_eq!(nodes[0]["id"], "node-1");
+
+    // Verify stats
+    let url = format!("http://{addr}/memory/graph/stats");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["node_count"], 1);
+    assert_eq!(body["edge_count"], 0);
+}
+
+#[tokio::test]
+async fn heuristics_evolve() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Record an outcome first so evolution has data
+    let url = format!("http://{addr}/heuristics/outcome");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "session_id": "sess-1",
+            "task_type": "bugfix",
+            "risk_level": "medium",
+            "strategy_used": "step_by_step",
+            "success": true,
+            "tokens_consumed": 5000,
+            "duration_ms": 30000,
+            "errors_encountered": 0
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // Trigger evolution
+    let url = format!("http://{addr}/heuristics/evolve");
+    let resp = client.post(&url).send().await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["ok"], true);
+    assert!(body.get("best").is_some(), "Expected 'best' in evolve response: {body:?}");
+
+    // Verify population grew
+    let url = format!("http://{addr}/heuristics/population");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let size = body["size"].as_u64().unwrap();
+    assert!(size >= 2, "Expected population size >= 2 after evolve, got {size}");
+    assert!(body["generation"].as_u64().unwrap() >= 1);
+}
+
+#[tokio::test]
+async fn forge_list_templates() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/forge/templates");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let templates = body["templates"].as_array().expect("expected templates array");
+    assert_eq!(
+        templates.len(),
+        4,
+        "Expected 4 templates, got {}: {body:?}",
+        templates.len()
+    );
+
+    // Verify the 4 expected template names are present
+    let names: Vec<&str> = templates
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
+    assert!(names.contains(&"grep-pattern-checker"));
+    assert!(names.contains(&"import-validator"));
+    assert!(names.contains(&"json-validator"));
+    assert!(names.contains(&"file-exists-checker"));
+}

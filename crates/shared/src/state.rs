@@ -123,3 +123,16 @@ pub enum EvidenceTier {
     Experimental,
     Unverified,
 }
+
+/// Execution topology for the control loop pipeline.
+///
+/// Controls how many stages are executed and in what arrangement.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum Topology {
+    /// Trivial task: only 4 stages (classify, assess, act, decide).
+    Single,
+    /// Standard: full 12 stages executed sequentially.
+    Vertical,
+    /// Complex/security: 12 stages + double verify+calibrate pass (14 total).
+    Horizontal,
+}
