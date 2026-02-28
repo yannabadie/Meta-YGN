@@ -418,6 +418,7 @@ checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
+ "rand_core",
  "serde",
  "sha2",
  "subtle",
@@ -1119,6 +1120,7 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "metaygn-shared",
+ "rand_core",
  "regex",
  "serde",
  "serde_json",
