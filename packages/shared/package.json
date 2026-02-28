@@ -1,0 +1,10 @@
+{
+  "name": "@metaygn/shared",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/types.ts",
+  "devDependencies": {
+    "typescript": "^5.7",
+    "zod": "^3.24"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@metaygn/hooks",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@metaygn/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7",
+    "zod": "^3.24",
+    "@types/node": "^22"
+  }
+}
