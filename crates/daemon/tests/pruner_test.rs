@@ -138,3 +138,19 @@ fn non_consecutive_errors_dont_trigger() {
     assert_eq!(analysis.consecutive_errors, 2);
     assert!(!analysis.should_prune);
 }
+
+#[test]
+fn amplified_recovery_level_2_is_emphatic() {
+    let pruner = ContextPruner::with_defaults();
+    let msg = pruner.amplified_recovery("reasoning loop", 2);
+    assert!(msg.contains("CRITICAL"));
+    assert!(msg.contains("different approach"));
+}
+
+#[test]
+fn amplified_recovery_level_3_escalates() {
+    let pruner = ContextPruner::with_defaults();
+    let msg = pruner.amplified_recovery("reasoning loop", 3);
+    assert!(msg.contains("ESCALATE"));
+    assert!(msg.contains("/metacog-escalate"));
+}

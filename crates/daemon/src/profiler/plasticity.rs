@@ -73,6 +73,12 @@ impl PlasticityTracker {
         self.plasticity_score() < 0.3
     }
 
+    /// Whether there is a recovery injection that hasn't yet been resolved
+    /// (i.e., `total_injections > total_recoveries`).
+    pub fn has_pending_recovery(&self) -> bool {
+        self.total_injections > self.total_recoveries()
+    }
+
     /// Amplification level for recovery prompts based on consecutive failures.
     ///
     /// - `1` -- standard prompt (0 consecutive failures)

@@ -8,6 +8,7 @@ use metaygn_shared::protocol::{HookInput, HookOutput, PermissionDecision};
 use metaygn_shared::state::{RiskLevel, TaskType};
 
 use crate::app_state::AppState;
+use crate::proxy::pruner::ContextPruner;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,12 +194,27 @@ async fn post_tool_use(
     let response = input.tool_response.clone().unwrap_or_default();
 
     // Wire fatigue signals: record error or success
+    let is_error = response_looks_like_error(&tool_name, &response);
     {
         let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        if response_looks_like_error(&tool_name, &response) {
+        if is_error {
             profiler.on_error();
         } else {
             profiler.on_success();
+        }
+    }
+
+    // Wire plasticity signals: if a recovery was injected and is pending,
+    // record whether the outcome suggests success or failure.
+    {
+        use crate::profiler::plasticity::RecoveryOutcome;
+        let mut tracker = state.plasticity.lock().expect("plasticity mutex poisoned");
+        if tracker.has_pending_recovery() {
+            if is_error {
+                tracker.record_outcome(RecoveryOutcome::Failure);
+            } else {
+                tracker.record_outcome(RecoveryOutcome::Success);
+            }
         }
     }
 
@@ -301,6 +317,26 @@ async fn stop(
         return Json(output);
     }
 
+    // Pruner analysis: check if the last assistant message shows repeated errors
+    let pruner = ContextPruner::with_defaults();
+    let last_msg_text = input.last_assistant_message.as_deref().unwrap_or("");
+    let pruner_analysis = pruner.analyze(&[
+        crate::proxy::pruner::Message { role: "assistant".to_string(), content: last_msg_text.to_string() },
+    ]);
+
+    // If the pruner detects errors, generate an amplified recovery message
+    let recovery_note = if pruner_analysis.consecutive_errors > 0 {
+        let reason = pruner_analysis.suggested_injection
+            .as_deref()
+            .unwrap_or("repeated errors detected");
+        let level = state.plasticity.lock().unwrap().amplification_level();
+        let recovery_msg = pruner.amplified_recovery(reason, level);
+        state.plasticity.lock().unwrap().record_recovery_injected();
+        Some(recovery_msg)
+    } else {
+        None
+    };
+
     let mut ctx = LoopContext::new(input);
     let decision = state.control_loop.run_range(&mut ctx, 8, 12);
 
@@ -316,6 +352,11 @@ async fn stop(
         "[decision:{:?}] [metacog:{}] [lessons:{}] Proof packet enforcement recommended",
         decision, metacog, lessons_summary,
     );
+
+    // Append recovery note if pruner detected errors
+    if let Some(ref note) = recovery_note {
+        context_msg.push_str(&format!(" {}", note));
+    }
 
     // Append completion warnings if any
     if !verification.warnings.is_empty() {
