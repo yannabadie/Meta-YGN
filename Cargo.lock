@@ -418,6 +418,7 @@ checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
+ "rand_core",
  "serde",
  "sha2",
  "subtle",
@@ -1046,12 +1047,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "metaygn-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "metaygn-shared",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "metaygn-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
  "dirs",
+ "metaygn-core",
  "metaygn-memory",
  "metaygn-shared",
  "metaygn-verifiers",
@@ -1103,6 +1120,8 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "metaygn-shared",
+ "rand_core",
+ "regex",
  "serde",
  "serde_json",
  "sha2",

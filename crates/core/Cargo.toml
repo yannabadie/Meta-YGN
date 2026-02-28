@@ -1,5 +1,5 @@
 [package]
-name = "metaygn-verifiers"
+name = "metaygn-core"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -12,10 +12,7 @@ chrono.workspace = true
 uuid.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
-sha2 = "0.10"
-ed25519-dalek = { version = "2", features = ["rand_core"] }
-rand_core = { version = "0.6", features = ["getrandom"] }
-regex = "1"
+tracing.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

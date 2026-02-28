@@ -1,5 +1,6 @@
 pub mod api;
 pub mod app_state;
+pub mod proxy;
 
 use anyhow::Result;
 use axum::Router;
