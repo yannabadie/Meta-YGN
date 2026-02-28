@@ -1,22 +1,17 @@
 [package]
-name = "metaygn-cli"
+name = "metaygn-sandbox"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
 
-[[bin]]
-name = "aletheia"
-path = "src/main.rs"
-
 [dependencies]
 metaygn-shared = { path = "../shared" }
-clap = { version = "4.5", features = ["derive"] }
-reqwest = { version = "0.12", features = ["json"] }
-tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
-dirs = "6"
-ratatui = "0.30"
-crossterm = "0.29"
+tokio = { version = "1", features = ["process", "time", "io-util", "macros"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

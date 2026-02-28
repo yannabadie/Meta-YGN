@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use metaygn_core::runner::ControlLoop;
 use metaygn_memory::store::MemoryStore;
+use metaygn_sandbox::ProcessSandbox;
 use metaygn_verifiers::guard_pipeline::GuardPipeline;
+
+use crate::profiler::fatigue::FatigueProfiler;
 
 /// Shared application state for the daemon.
 #[derive(Clone)]
@@ -11,6 +14,8 @@ pub struct AppState {
     pub memory: Arc<MemoryStore>,
     pub control_loop: Arc<ControlLoop>,
     pub guard_pipeline: Arc<GuardPipeline>,
+    pub sandbox: Arc<ProcessSandbox>,
+    pub fatigue: Arc<Mutex<FatigueProfiler>>,
 }
 
 impl AppState {
@@ -22,6 +27,8 @@ impl AppState {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
             guard_pipeline: Arc::new(GuardPipeline::new()),
+            sandbox: Arc::new(ProcessSandbox::with_defaults()),
+            fatigue: Arc::new(Mutex::new(FatigueProfiler::with_defaults())),
         })
     }
 
@@ -32,6 +39,8 @@ impl AppState {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
             guard_pipeline: Arc::new(GuardPipeline::new()),
+            sandbox: Arc::new(ProcessSandbox::with_defaults()),
+            fatigue: Arc::new(Mutex::new(FatigueProfiler::with_defaults())),
         })
     }
 }

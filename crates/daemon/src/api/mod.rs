@@ -1,6 +1,8 @@
 pub mod health;
 pub mod hooks;
 pub mod memory;
+pub mod profiler;
+pub mod sandbox;
 
 use axum::Router;
 
@@ -12,5 +14,7 @@ pub fn router(state: AppState) -> Router {
         .merge(health::routes())
         .merge(hooks::routes())
         .merge(memory::routes())
+        .merge(sandbox::routes())
+        .merge(profiler::routes())
         .with_state(state)
 }

@@ -30,6 +30,17 @@ fn extract_command(input: &HookInput) -> String {
     String::new()
 }
 
+/// Determine whether a tool response indicates an error.
+fn response_looks_like_error(tool_name: &str, response: &str) -> bool {
+    if tool_name == "Bash" && (response.contains("FAIL") || response.contains("error")) {
+        return true;
+    }
+    if response.starts_with("Error") || response.starts_with("error:") {
+        return true;
+    }
+    false
+}
+
 // ---------------------------------------------------------------------------
 // Route handlers
 // ---------------------------------------------------------------------------
@@ -110,6 +121,16 @@ async fn post_tool_use(
     let tool_name = input.tool_name.clone().unwrap_or_default();
     let response = input.tool_response.clone().unwrap_or_default();
 
+    // Wire fatigue signals: record error or success
+    {
+        let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
+        if response_looks_like_error(&tool_name, &response) {
+            profiler.on_error();
+        } else {
+            profiler.on_success();
+        }
+    }
+
     let context = if tool_name == "Bash" && response.contains("FAIL") {
         "Test failure detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
@@ -129,7 +150,8 @@ async fn post_tool_use(
 /// POST /hooks/user-prompt-submit
 ///
 /// 1. Run ControlLoop stages 1-6 on the user's prompt
-/// 2. Return risk, strategy, and budget recommendation
+/// 2. Record a fatigue signal for the prompt
+/// 3. Return risk, strategy, and budget recommendation
 async fn user_prompt_submit(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
@@ -137,6 +159,13 @@ async fn user_prompt_submit(
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
+
+    // Wire fatigue signal: record the prompt
+    {
+        let prompt_text = input.prompt.as_deref().unwrap_or("");
+        let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
+        profiler.on_prompt(prompt_text, chrono::Utc::now());
+    }
 
     // Run ControlLoop stages 1-6 for analysis
     let mut ctx = LoopContext::new(input);

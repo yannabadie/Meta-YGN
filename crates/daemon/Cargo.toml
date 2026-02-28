@@ -17,6 +17,7 @@ metaygn-shared = { path = "../shared" }
 metaygn-core = { path = "../core" }
 metaygn-memory = { path = "../memory" }
 metaygn-verifiers = { path = "../verifiers" }
+metaygn-sandbox = { path = "../sandbox" }
 axum = { version = "0.8", features = ["json"] }
 tokio.workspace = true
 tower = "0.5"
@@ -28,6 +29,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 regex = "1"
 dirs = "6"
+chrono.workspace = true
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
