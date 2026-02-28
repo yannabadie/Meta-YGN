@@ -5,9 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session_start.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" session-start",
             "timeout": 10,
-            "statusMessage": "Initializing Aletheia profile..."
+            "statusMessage": "Initializing Aletheia..."
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/user_prompt_submit.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" user-prompt-submit",
             "timeout": 5,
             "statusMessage": "Classifying risk..."
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
             "timeout": 5
           }
         ]
@@ -92,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -102,7 +102,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -112,7 +112,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -122,7 +122,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -142,7 +142,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
             "timeout": 5
           }
         ]
@@ -154,7 +154,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use_failure.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
             "timeout": 5
           }
         ]
@@ -164,7 +164,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use_failure.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
             "timeout": 5
           }
         ]
@@ -174,7 +174,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/post_tool_use_failure.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
             "timeout": 5
           }
         ]
@@ -185,7 +185,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/stop.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" stop",
             "timeout": 5
           }
         ]
@@ -196,7 +196,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/pre_compact.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-compact",
             "timeout": 5
           }
         ]
@@ -207,7 +207,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session_end.py\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" session-end",
             "timeout": 10,
             "async": true
           }
