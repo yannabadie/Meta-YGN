@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  rust-check:
+    name: Rust Check & Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: cargo check --workspace
+      - name: Test
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+        if: matrix.os == 'ubuntu-latest'
+
+  rust-fmt:
+    name: Rust Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  typescript-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cd packages/shared && npx tsc --noEmit
+      - run: cd packages/hooks && npx tsc --noEmit
+
+  python-eval:
+    name: Python Eval Collection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cd eval && pip install -e ".[dev]" 2>/dev/null || pip install pytest httpx
+      - run: cd eval && python -m pytest benchmarks/ --collect-only

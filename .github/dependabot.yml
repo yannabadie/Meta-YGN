@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      frequency: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      frequency: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      frequency: weekly

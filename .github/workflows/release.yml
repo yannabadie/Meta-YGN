@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: aletheiad
+            cli: aletheia
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary: aletheiad.exe
+            cli: aletheia.exe
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary: aletheiad
+            cli: aletheia
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary: aletheiad
+            cli: aletheia
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --workspace --release --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} dist/
+          cp target/${{ matrix.target }}/release/${{ matrix.cli }} dist/
+          cd dist && tar czf ../metaygn-${{ matrix.target }}.tar.gz *
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metaygn-${{ matrix.target }}
+          path: metaygn-${{ matrix.target }}.tar.gz
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.tar.gz
+          generate_release_notes: true
