@@ -65,6 +65,29 @@ impl MemoryStore {
                     CREATE TRIGGER IF NOT EXISTS events_ai AFTER INSERT ON events BEGIN
                         INSERT INTO events_fts(rowid, payload) VALUES (new.rowid, new.payload);
                     END;
+
+                    CREATE TABLE IF NOT EXISTS heuristic_versions (
+                        id TEXT PRIMARY KEY,
+                        generation INTEGER NOT NULL,
+                        parent_id TEXT,
+                        fitness_json TEXT NOT NULL,
+                        risk_weights_json TEXT NOT NULL,
+                        strategy_scores_json TEXT NOT NULL,
+                        created_at TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS session_outcomes (
+                        id TEXT PRIMARY KEY,
+                        session_id TEXT NOT NULL,
+                        task_type TEXT,
+                        risk_level TEXT,
+                        strategy_used TEXT,
+                        success INTEGER NOT NULL,
+                        tokens_consumed INTEGER,
+                        duration_ms INTEGER,
+                        errors_encountered INTEGER,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
                     ",
                 )?;
                 Ok::<_, rusqlite::Error>(())
@@ -175,6 +198,142 @@ impl MemoryStore {
                         })
                     })?
                     .collect::<std::result::Result<Vec<EventRow>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
+    /// Persist a heuristic version snapshot.
+    pub async fn save_heuristic(
+        &self,
+        id: &str,
+        generation: u32,
+        parent_id: Option<&str>,
+        fitness_json: &str,
+        risk_weights_json: &str,
+        strategy_scores_json: &str,
+        created_at: &str,
+    ) -> Result<()> {
+        let id = id.to_owned();
+        let generation = generation as i64;
+        let parent_id = parent_id.map(|s| s.to_owned());
+        let fitness_json = fitness_json.to_owned();
+        let risk_weights_json = risk_weights_json.to_owned();
+        let strategy_scores_json = strategy_scores_json.to_owned();
+        let created_at = created_at.to_owned();
+
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "INSERT OR REPLACE INTO heuristic_versions
+                     (id, generation, parent_id, fitness_json, risk_weights_json, strategy_scores_json, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    params![id, generation, parent_id, fitness_json, risk_weights_json, strategy_scores_json, created_at],
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Load all heuristic versions, ordered by generation ascending.
+    pub async fn load_heuristics(
+        &self,
+    ) -> Result<Vec<(String, u32, Option<String>, String, String, String, String)>> {
+        let rows = self
+            .conn
+            .call(|conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, generation, parent_id, fitness_json, risk_weights_json, strategy_scores_json, created_at
+                     FROM heuristic_versions
+                     ORDER BY generation ASC",
+                )?;
+                let rows = stmt
+                    .query_map([], |row| {
+                        let generation: i64 = row.get(1)?;
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            generation as u32,
+                            row.get::<_, Option<String>>(2)?,
+                            row.get::<_, String>(3)?,
+                            row.get::<_, String>(4)?,
+                            row.get::<_, String>(5)?,
+                            row.get::<_, String>(6)?,
+                        ))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
+    /// Record a session outcome for heuristic fitness tracking.
+    pub async fn save_outcome(
+        &self,
+        id: &str,
+        session_id: &str,
+        task_type: &str,
+        risk_level: &str,
+        strategy_used: &str,
+        success: bool,
+        tokens_consumed: u64,
+        duration_ms: u64,
+        errors_encountered: u32,
+    ) -> Result<()> {
+        let id = id.to_owned();
+        let session_id = session_id.to_owned();
+        let task_type = task_type.to_owned();
+        let risk_level = risk_level.to_owned();
+        let strategy_used = strategy_used.to_owned();
+        let success_int: i64 = if success { 1 } else { 0 };
+        let tokens_consumed = tokens_consumed as i64;
+        let duration_ms = duration_ms as i64;
+        let errors_encountered = errors_encountered as i64;
+
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "INSERT INTO session_outcomes
+                     (id, session_id, task_type, risk_level, strategy_used, success, tokens_consumed, duration_ms, errors_encountered)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    params![id, session_id, task_type, risk_level, strategy_used, success_int, tokens_consumed, duration_ms, errors_encountered],
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Load the most recent session outcomes as JSON values.
+    pub async fn load_recent_outcomes(&self, limit: u32) -> Result<Vec<serde_json::Value>> {
+        let rows = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, session_id, task_type, risk_level, strategy_used, success,
+                            tokens_consumed, duration_ms, errors_encountered, created_at
+                     FROM session_outcomes
+                     ORDER BY created_at DESC
+                     LIMIT ?1",
+                )?;
+                let rows = stmt
+                    .query_map(params![limit], |row| {
+                        Ok(serde_json::json!({
+                            "id": row.get::<_, String>(0)?,
+                            "session_id": row.get::<_, String>(1)?,
+                            "task_type": row.get::<_, Option<String>>(2)?,
+                            "risk_level": row.get::<_, Option<String>>(3)?,
+                            "strategy_used": row.get::<_, Option<String>>(4)?,
+                            "success": row.get::<_, i64>(5)? != 0,
+                            "tokens_consumed": row.get::<_, Option<i64>>(6)?,
+                            "duration_ms": row.get::<_, Option<i64>>(7)?,
+                            "errors_encountered": row.get::<_, Option<i64>>(8)?,
+                            "created_at": row.get::<_, String>(9)?,
+                        }))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
                 Ok::<_, rusqlite::Error>(rows)
             })
             .await?;

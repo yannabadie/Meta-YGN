@@ -700,6 +700,28 @@ async fn hook_responses_include_latency() {
 // Task 3: Pre-tool-use risk classification fix
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Task 3 (v0.6.0): /admin/shutdown endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn admin_shutdown_responds_ok() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/admin/shutdown"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["ok"], true);
+    assert!(
+        body["message"].as_str().unwrap().contains("Shutdown"),
+        "Expected shutdown message, got: {body:?}"
+    );
+}
+
 #[tokio::test]
 async fn pre_tool_use_safe_command_not_high_risk() {
     let addr = start_test_server().await;

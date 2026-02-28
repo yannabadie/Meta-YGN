@@ -94,3 +94,54 @@ export function evaluateFallback(input: HookInput): HookOutput | null {
   // No match — allow (return null)
   return null;
 }
+
+/**
+ * Local fallback for user-prompt-submit: classify risk using keyword matching.
+ * Returns a HookOutput with risk level and strategy hint.
+ */
+export function fallbackUserPromptSubmit(input: HookInput): HookOutput | null {
+  const prompt = (input.prompt || "").toLowerCase();
+  const highRisk = ["auth", "oauth", "token", "secret", "deploy", "payment", "database", "prod", "security", "delete", "terraform", "kubernetes"];
+  const lowRisk = ["typo", "rename", "comment", "docs", "readme", "format", "lint", "cleanup"];
+
+  const risk = highRisk.some(k => prompt.includes(k)) ? "HIGH"
+    : lowRisk.some(k => prompt.includes(k)) ? "LOW" : "MEDIUM";
+
+  return {
+    hookSpecificOutput: {
+      hookEventName: "UserPromptSubmit",
+      additionalContext: `Risk: ${risk} | Aletheia daemon offline — using local classification`,
+    },
+  };
+}
+
+/**
+ * Local fallback for post-tool-use: detect test/verification commands.
+ * Returns a HookOutput if a test keyword is found, or null to exit silently.
+ */
+export function fallbackPostToolUse(input: HookInput): HookOutput | null {
+  const cmd = ((input.tool_input as Record<string, unknown>)?.command as string || "").toLowerCase();
+  const testKw = ["test", "pytest", "cargo test", "cargo check", "lint", "tsc", "mypy"];
+  if (testKw.some(k => cmd.includes(k))) {
+    return {
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext: "Verification signal captured. Treat results as evidence.",
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Local fallback for stop: remind to produce a proof packet.
+ * Always returns a HookOutput (never null).
+ */
+export function fallbackStop(): HookOutput {
+  return {
+    hookSpecificOutput: {
+      hookEventName: "Stop",
+      additionalContext: "Finish with proof packet: Goal, Changes, Evidence, Uncertainty, Next step.",
+    },
+  };
+}

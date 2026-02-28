@@ -86,7 +86,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start { host, port, db_path } => cmd_start(&host, port, db_path.as_deref()),
+        Commands::Start { host, port, db_path } => cmd_start(&host, port, db_path.as_deref()).await,
         Commands::Stop => cmd_stop().await,
         Commands::Status => cmd_status().await,
         Commands::Recall { query, limit } => cmd_recall(&query, limit).await,
@@ -95,50 +95,131 @@ async fn main() -> Result<()> {
     }
 }
 
-/// Start command: prints a message (actual daemon spawn deferred to Phase 2).
-fn cmd_start(host: &str, port: u16, db_path: Option<&std::path::Path>) -> Result<()> {
-    let port_display = if port == 0 {
-        "auto".to_string()
-    } else {
-        port.to_string()
-    };
-    let db_display = db_path
-        .map(|p| p.display().to_string())
-        .unwrap_or_else(|| "~/.claude/aletheia/metaygn.db".to_string());
+/// Start command: spawn the aletheiad daemon as a detached process.
+async fn cmd_start(_host: &str, _port: u16, db_path: Option<&std::path::Path>) -> Result<()> {
+    // 1. Check if already running
+    if let Some(existing_port) = read_daemon_port() {
+        let client = http_client()?;
+        if let Ok(resp) = client
+            .get(format!("http://127.0.0.1:{existing_port}/health"))
+            .send()
+            .await
+        {
+            if resp.status().is_success() {
+                println!("Daemon already running on port {existing_port}");
+                return Ok(());
+            }
+        }
+        // Port file exists but daemon not responding -- stale
+        if let Ok(pf) = port_file_path() {
+            let _ = std::fs::remove_file(&pf);
+        }
+    }
 
-    println!("Starting aletheia daemon...");
-    println!("  Host:    {host}");
-    println!("  Port:    {port_display}");
-    println!("  DB:      {db_display}");
-    println!();
-    println!("NOTE: Daemon spawn not yet implemented (Phase 2).");
-    println!("      Run `aletheiad` directly for now.");
+    // 2. Find aletheiad binary next to this executable
+    let exe = std::env::current_exe().context("could not determine own executable path")?;
+    let exe_dir = exe.parent().context("executable has no parent directory")?;
+    let daemon_name = if cfg!(windows) {
+        "aletheiad.exe"
+    } else {
+        "aletheiad"
+    };
+    let daemon_path = exe_dir.join(daemon_name);
+
+    if !daemon_path.exists() {
+        anyhow::bail!(
+            "Cannot find aletheiad at {:?}. Build with: cargo build --workspace",
+            daemon_path
+        );
+    }
+
+    // 3. Spawn detached
+    println!("Starting aletheiad...");
+    let mut cmd = std::process::Command::new(&daemon_path);
+    if let Some(db) = db_path {
+        cmd.env("METAYGN_DB_PATH", db);
+    }
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .stdin(std::process::Stdio::null());
+    cmd.spawn().context("Failed to spawn aletheiad")?;
+
+    // 4. Poll for port file (up to 10 seconds)
+    let pf = port_file_path()?;
+    let mut found = false;
+    for _ in 0..20 {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        if pf.exists() {
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        anyhow::bail!("Daemon did not start within 10 seconds");
+    }
+
+    let port = read_daemon_port().context("Port file exists but unreadable")?;
+
+    // 5. Health check
+    let client = http_client()?;
+    match client
+        .get(format!("http://127.0.0.1:{port}/health"))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            println!("Daemon started on port {port}");
+        }
+        _ => {
+            println!(
+                "Daemon started on port {port} (health check failed -- may still be initializing)"
+            );
+        }
+    }
+
     Ok(())
 }
 
-/// Stop command: check if daemon is running and report status.
+/// Stop command: POST /admin/shutdown and wait for port file removal.
 async fn cmd_stop() -> Result<()> {
     let Some(port) = read_daemon_port() else {
         println!("Daemon: STOPPED (no port file found)");
         return Ok(());
     };
 
-    // Check if the daemon is actually reachable
     let client = http_client()?;
-    let url = format!("http://127.0.0.1:{port}/health");
+    println!("Stopping daemon on port {port}...");
 
-    match client.get(&url).send().await {
+    // Send shutdown request
+    match client
+        .post(format!("http://127.0.0.1:{port}/admin/shutdown"))
+        .send()
+        .await
+    {
         Ok(resp) if resp.status().is_success() => {
-            println!("Daemon is running on port {port}.");
-            println!("NOTE: Graceful stop not yet implemented (Phase 2).");
-            println!("      Send Ctrl+C to the daemon process for now.");
+            // Poll until port file disappears (up to 5 seconds)
+            let pf = port_file_path()?;
+            let mut stopped = false;
+            for _ in 0..10 {
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                if !pf.exists() {
+                    stopped = true;
+                    break;
+                }
+            }
+            if stopped {
+                println!("Daemon stopped.");
+            } else {
+                // Force cleanup
+                let _ = std::fs::remove_file(&pf);
+                println!("Daemon stopped (port file cleaned up).");
+            }
         }
         _ => {
-            println!("Daemon: STOPPED (port file exists but daemon is not responding)");
-            // Clean up stale port file
-            if let Ok(path) = port_file_path() {
-                let _ = std::fs::remove_file(path);
-                println!("  Removed stale port file.");
+            println!("Daemon not responding. Cleaning up port file.");
+            if let Ok(pf) = port_file_path() {
+                let _ = std::fs::remove_file(&pf);
             }
         }
     }

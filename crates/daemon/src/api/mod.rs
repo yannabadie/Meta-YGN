@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod budget;
 pub mod forge;
 pub mod graph;
@@ -24,5 +25,6 @@ pub fn router(state: AppState) -> Router {
         .merge(heuristics::routes())
         .merge(forge::routes())
         .merge(budget::routes())
+        .merge(admin::routes())
         .with_state(state)
 }

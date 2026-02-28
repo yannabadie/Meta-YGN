@@ -75,6 +75,20 @@ MetaYGN tracks whether recovery prompts work without asking the developer. If th
 ### Latency Transparency
 Every hook response includes `[latency: Nms]` so developers know exactly how much overhead MetaYGN adds.
 
+## Solid Ground (v0.6.0)
+
+### Full Plugin Pipeline
+All 8 TypeScript hooks fire through the daemon with 350ms timeout and local fallback. Install and run:
+```bash
+aletheia start     # spawn daemon
+claude --plugin-dir /path/to/MetaYGN
+aletheia status    # verify
+aletheia stop      # clean shutdown
+```
+
+### Persistent Learning
+Heuristic versions and session outcomes survive daemon restarts via SQLite persistence.
+
 ## Components
 
 ### Skills (8 metacognitive workflows)
