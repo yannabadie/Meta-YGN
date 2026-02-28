@@ -1046,12 +1046,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "metaygn-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "metaygn-shared",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "metaygn-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
  "dirs",
+ "metaygn-core",
  "metaygn-memory",
  "metaygn-shared",
  "metaygn-verifiers",
