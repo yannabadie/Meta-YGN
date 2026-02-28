@@ -71,6 +71,39 @@ impl ControlLoop {
     pub fn stage_names(&self) -> Vec<&'static str> {
         self.stages.iter().map(|s| s.name()).collect()
     }
+
+    /// Run a subset of stages (0-indexed range) on the given context.
+    ///
+    /// `start` is inclusive, `end` is exclusive. For example,
+    /// `run_range(ctx, 0, 6)` runs stages 1-6 (classify through strategy).
+    pub fn run_range(&self, ctx: &mut LoopContext, start: usize, end: usize) -> Decision {
+        let end = end.min(self.stages.len());
+        for stage in &self.stages[start..end] {
+            tracing::trace!(stage = stage.name(), "entering stage (range)");
+            match stage.run(ctx) {
+                StageResult::Continue => continue,
+                StageResult::Skip => {
+                    tracing::debug!(stage = stage.name(), "stage requested skip (range)");
+                    break;
+                }
+                StageResult::Escalate(reason) => {
+                    ctx.decision = Decision::Escalate;
+                    ctx.lessons.push(format!(
+                        "escalated at stage '{}': {}",
+                        stage.name(),
+                        reason
+                    ));
+                    tracing::warn!(
+                        stage = stage.name(),
+                        %reason,
+                        "pipeline escalated (range)"
+                    );
+                    break;
+                }
+            }
+        }
+        ctx.decision
+    }
 }
 
 impl Default for ControlLoop {

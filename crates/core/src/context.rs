@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use metaygn_shared::protocol::HookInput;
 use metaygn_shared::state::*;
 
@@ -6,6 +8,7 @@ use metaygn_shared::state::*;
 /// Each stage reads and/or writes fields on this struct. The runner passes
 /// it through the pipeline sequentially so every stage can observe what
 /// previous stages decided.
+#[derive(Serialize)]
 pub struct LoopContext {
     /// The raw hook event that triggered this loop iteration.
     pub input: HookInput,

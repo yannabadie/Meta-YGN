@@ -1,66 +1,12 @@
 use axum::extract::State;
 use axum::response::Json;
 use axum::{Router, routing::post};
-use regex::Regex;
-use std::sync::LazyLock;
 
+use metaygn_core::context::LoopContext;
 use metaygn_shared::protocol::{HookInput, HookOutput, PermissionDecision};
+use metaygn_shared::state::RiskLevel;
 
 use crate::app_state::AppState;
-
-// ---------------------------------------------------------------------------
-// Security patterns for pre-tool-use
-// ---------------------------------------------------------------------------
-
-/// Commands that are always denied (destructive).
-static DESTRUCTIVE_PATTERNS: &[&str] = &[
-    r"rm\s+-rf\s+/",
-    r"sudo\s+rm\s+-rf",
-    r"\bmkfs\b",
-    r"\bdd\s+if=",
-    r"\bshutdown\b",
-    r"\breboot\b",
-    r":\(\)\s*\{\s*:\|:\s*&\s*\}\s*;?\s*:", // fork bomb
-];
-
-/// Commands that require user confirmation (high risk).
-static HIGH_RISK_PATTERNS: &[&str] = &[
-    r"\bgit\s+push\b",
-    r"\bgit\s+reset\s+--hard\b",
-    r"\bterraform\s+apply\b",
-    r"\bterraform\s+destroy\b",
-    r"\bkubectl\s+apply\b",
-    r"\bkubectl\s+delete\b",
-    r"\bcurl\b.*\|\s*bash",
-    r"\bsudo\b",
-];
-
-/// Keywords for risk classification of user prompts.
-static HIGH_RISK_KEYWORDS: &[&str] = &[
-    "auth", "oauth", "token", "secret", "deploy", "payment", "billing",
-    "migration", "database", "prod", "production", "security", "delete",
-    "terraform", "kubernetes", "docker", "ci/cd", "release",
-];
-
-static LOW_RISK_KEYWORDS: &[&str] = &[
-    "typo", "rename", "comment", "docs", "readme", "format", "lint", "cleanup",
-];
-
-/// Pre-compiled destructive regexes.
-static DESTRUCTIVE_REGEXES: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    DESTRUCTIVE_PATTERNS
-        .iter()
-        .map(|p| Regex::new(p).expect("invalid destructive regex pattern"))
-        .collect()
-});
-
-/// Pre-compiled high-risk regexes.
-static HIGH_RISK_REGEXES: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    HIGH_RISK_PATTERNS
-        .iter()
-        .map(|p| Regex::new(p).expect("invalid high-risk regex pattern"))
-        .collect()
-});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -84,64 +30,16 @@ fn extract_command(input: &HookInput) -> String {
     String::new()
 }
 
-/// Classify a command for pre-tool-use gating.
-fn classify_command(tool_name: &str, command: &str) -> HookOutput {
-    // MCP tools always need confirmation
-    if tool_name.starts_with("mcp__") {
-        return HookOutput::permission(
-            PermissionDecision::Ask,
-            format!("MCP tool '{tool_name}' requires user confirmation"),
-        );
-    }
-
-    // Check destructive patterns
-    for re in DESTRUCTIVE_REGEXES.iter() {
-        if re.is_match(command) {
-            return HookOutput::permission(
-                PermissionDecision::Deny,
-                format!("Destructive command detected: matched pattern '{}'", re.as_str()),
-            );
-        }
-    }
-
-    // Check high-risk patterns
-    for re in HIGH_RISK_REGEXES.iter() {
-        if re.is_match(command) {
-            return HookOutput::permission(
-                PermissionDecision::Ask,
-                format!("High-risk command detected: matched pattern '{}'", re.as_str()),
-            );
-        }
-    }
-
-    // Default: allow
-    HookOutput::allow()
-}
-
-/// Classify a user prompt by risk level.
-fn classify_prompt(prompt: &str) -> (&'static str, &'static str) {
-    let lower = prompt.to_lowercase();
-
-    for kw in HIGH_RISK_KEYWORDS {
-        if lower.contains(kw) {
-            return ("high", "Prompt involves sensitive operations; proceed with extra caution.");
-        }
-    }
-
-    for kw in LOW_RISK_KEYWORDS {
-        if lower.contains(kw) {
-            return ("low", "Routine change; standard workflow applies.");
-        }
-    }
-
-    ("medium", "Standard risk; normal review process recommended.")
-}
-
 // ---------------------------------------------------------------------------
 // Route handlers
 // ---------------------------------------------------------------------------
 
 /// POST /hooks/pre-tool-use
+///
+/// 1. Run the GuardPipeline on tool_name + command
+/// 2. If the pipeline blocks -> return deny (score 0) or ask (score > 0)
+/// 3. Run ControlLoop stages 1-6 (classify through strategy) for risk assessment
+/// 4. Return enriched context with risk level and strategy recommendation
 async fn pre_tool_use(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
@@ -153,8 +51,50 @@ async fn pre_tool_use(
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "pre_tool_use", &payload).await;
 
-    let output = classify_command(&tool_name, &command);
-    Json(output)
+    // Step 1: Run the guard pipeline
+    let pipeline_decision = state.guard_pipeline.check(&tool_name, &command);
+
+    if !pipeline_decision.allowed {
+        // Score 0 = destructive -> deny; score > 0 = high-risk -> ask
+        let decision = if pipeline_decision.aggregate_score == 0 {
+            PermissionDecision::Deny
+        } else {
+            PermissionDecision::Ask
+        };
+
+        let reason = pipeline_decision
+            .blocking_guard
+            .as_deref()
+            .map(|g| {
+                let detail = pipeline_decision.results.iter()
+                    .find(|r| r.guard_name == g)
+                    .and_then(|r| r.reason.as_deref())
+                    .unwrap_or("blocked by guard");
+                format!("[guard:{g}] {detail}")
+            })
+            .unwrap_or_else(|| "Blocked by guard pipeline".to_string());
+
+        return Json(HookOutput::permission(decision, reason));
+    }
+
+    // Step 2: Run ControlLoop stages 1-6 for risk assessment
+    let mut ctx = LoopContext::new(input);
+    state.control_loop.run_range(&mut ctx, 0, 6);
+
+    let risk_label = match ctx.risk {
+        RiskLevel::Low => "low",
+        RiskLevel::Medium => "medium",
+        RiskLevel::High => "high",
+    };
+
+    // Return enriched context with risk + strategy
+    Json(HookOutput::context(
+        "PreToolUse".to_string(),
+        format!(
+            "[risk:{}] [strategy:{:?}] [difficulty:{:.2}] Tool '{}' allowed by guard pipeline (score:{})",
+            risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
+        ),
+    ))
 }
 
 /// POST /hooks/post-tool-use
@@ -187,22 +127,83 @@ async fn post_tool_use(
 }
 
 /// POST /hooks/user-prompt-submit
+///
+/// 1. Run ControlLoop stages 1-6 on the user's prompt
+/// 2. Return risk, strategy, and budget recommendation
 async fn user_prompt_submit(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
-    let prompt = input.prompt.clone().unwrap_or_default();
-
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
 
-    let (risk, hint) = classify_prompt(&prompt);
+    // Run ControlLoop stages 1-6 for analysis
+    let mut ctx = LoopContext::new(input);
+    state.control_loop.run_range(&mut ctx, 0, 6);
+
+    let risk_label = match ctx.risk {
+        RiskLevel::Low => "low",
+        RiskLevel::Medium => "medium",
+        RiskLevel::High => "high",
+    };
 
     Json(HookOutput::context(
         "UserPromptSubmit".to_string(),
-        format!("[risk:{risk}] {hint}"),
+        format!(
+            "[risk:{}] [strategy:{:?}] [budget:{}tok] [task:{:?}] Prompt analysed via control loop",
+            risk_label, ctx.strategy, ctx.budget.max_tokens, ctx.task_type,
+        ),
     ))
+}
+
+/// POST /hooks/stop
+///
+/// Run ControlLoop stages 9-12 (calibrate, compact, decide, learn)
+/// and return a proof-packet enforcement hint.
+async fn stop(
+    State(state): State<AppState>,
+    Json(input): Json<HookInput>,
+) -> Json<HookOutput> {
+    let payload = serde_json::to_string(&input).unwrap_or_default();
+    let _ = state.memory.log_event("daemon", "stop", &payload).await;
+
+    let mut ctx = LoopContext::new(input);
+    let decision = state.control_loop.run_range(&mut ctx, 8, 12);
+
+    let metacog = ctx.metacog_vector.compact_encode();
+    let lessons_summary = if ctx.lessons.is_empty() {
+        "none".to_string()
+    } else {
+        ctx.lessons.join("; ")
+    };
+
+    Json(HookOutput::context(
+        "Stop".to_string(),
+        format!(
+            "[decision:{:?}] [metacog:{}] [lessons:{}] Proof packet enforcement recommended",
+            decision, metacog, lessons_summary,
+        ),
+    ))
+}
+
+/// POST /hooks/analyze
+///
+/// Debug endpoint: runs the full 12-stage loop on an input and returns the
+/// complete LoopContext as JSON for inspection.
+async fn analyze(
+    State(state): State<AppState>,
+    Json(input): Json<HookInput>,
+) -> Json<serde_json::Value> {
+    let payload = serde_json::to_string(&input).unwrap_or_default();
+    let _ = state.memory.log_event("daemon", "analyze", &payload).await;
+
+    let mut ctx = LoopContext::new(input);
+    state.control_loop.run(&mut ctx);
+
+    // Return the full context as JSON
+    let value = serde_json::to_value(&ctx).unwrap_or_default();
+    Json(value)
 }
 
 pub fn routes() -> Router<AppState> {
@@ -210,4 +211,6 @@ pub fn routes() -> Router<AppState> {
         .route("/hooks/pre-tool-use", post(pre_tool_use))
         .route("/hooks/post-tool-use", post(post_tool_use))
         .route("/hooks/user-prompt-submit", post(user_prompt_submit))
+        .route("/hooks/stop", post(stop))
+        .route("/hooks/analyze", post(analyze))
 }

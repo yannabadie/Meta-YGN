@@ -25,7 +25,7 @@ pub enum StageResult {
 }
 
 /// Trait that every pipeline stage implements.
-pub trait Stage {
+pub trait Stage: Send + Sync {
     /// A unique, human-readable name for this stage (e.g. `"classify"`).
     fn name(&self) -> &'static str;
 
