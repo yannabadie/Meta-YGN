@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" session-start",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/session-start.ts\"",
             "timeout": 10,
             "statusMessage": "Initializing Aletheia..."
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" user-prompt-submit",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/user-prompt-submit.ts\"",
             "timeout": 5,
             "statusMessage": "Classifying risk..."
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -92,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -102,7 +102,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -112,7 +112,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -122,7 +122,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -142,7 +142,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
             "timeout": 5
           }
         ]
@@ -154,7 +154,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
             "timeout": 5
           }
         ]
@@ -164,7 +164,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
             "timeout": 5
           }
         ]
@@ -174,7 +174,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" post-tool-use-failure",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
             "timeout": 5
           }
         ]
@@ -185,7 +185,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" stop",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/stop.ts\"",
             "timeout": 5
           }
         ]
@@ -196,7 +196,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" pre-compact",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-compact.ts\"",
             "timeout": 5
           }
         ]
@@ -207,7 +207,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-runner.sh\" session-end",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/session-end.ts\"",
             "timeout": 10,
             "async": true
           }
