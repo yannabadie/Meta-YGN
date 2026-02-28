@@ -1,4 +1,7 @@
+pub mod forge;
+pub mod graph;
 pub mod health;
+pub mod heuristics;
 pub mod hooks;
 pub mod memory;
 pub mod profiler;
@@ -16,5 +19,8 @@ pub fn router(state: AppState) -> Router {
         .merge(memory::routes())
         .merge(sandbox::routes())
         .merge(profiler::routes())
+        .merge(graph::routes())
+        .merge(heuristics::routes())
+        .merge(forge::routes())
         .with_state(state)
 }

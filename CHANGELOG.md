@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 "Adaptive Topology"
+### Added
+- Graph memory with nodes, edges, FTS5 search, cosine similarity (crates/memory/)
+- Dynamic topology planner with skip-routing: Single/Vertical/Horizontal (crates/core/)
+- Heuristic evolver — Layer 0 meta-metacognition with statistical fitness (crates/core/)
+- Tool forge with 4 verification templates, sandbox execution, caching (crates/daemon/)
+- MetaCog-Bench evaluation framework with 15 scenarios across 5 families (eval/)
+- MASC anomaly detector with TF-IDF cosine similarity (crates/core/)
+- Human fatigue profiler — inverse metacognition (crates/daemon/)
+- Glass-Box TUI dashboard — aletheia top (crates/cli/)
+- Process-based sandbox with timeout and hypothesis testing (crates/sandbox/)
+- New daemon endpoints: /memory/graph/*, /heuristics/*, /forge/*
+- Topology enum (Single/Vertical/Horizontal) in shared types
+
+### Changed
+- Control loop now supports run_plan() for executing stage subsets
+- Daemon AppState includes graph memory, evolver, forge engine
+- Hook responses include topology recommendation
+
 ## 0.2.0
 ### Added
 - **PostToolUseFailure hook**: error diagnosis guidance for failed tool calls
