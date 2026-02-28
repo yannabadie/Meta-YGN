@@ -666,3 +666,34 @@ async fn pre_tool_use_catches_test_weakening() {
         "Expected assertion removal detail in context, got: {context}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 3: Pre-tool-use risk classification fix
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn pre_tool_use_safe_command_not_high_risk() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/hooks/pre-tool-use"))
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls -la"}
+        }))
+        .send()
+        .await
+        .unwrap();
+    let body: Value = resp.json().await.unwrap();
+    let ctx = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    // "ls -la" should be low risk, not high
+    assert!(
+        !ctx.contains("risk:high"),
+        "ls -la should not be HIGH risk: {}",
+        ctx
+    );
+}

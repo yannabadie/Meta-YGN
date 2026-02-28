@@ -159,7 +159,15 @@ async fn pre_tool_use(
     }
 
     // Step 2: Run ControlLoop stages 1-6 for risk assessment
-    let mut ctx = LoopContext::new(input);
+    // Fix: inject the actual command text as the prompt so the classify/assess
+    // stages can evaluate the real content rather than defaulting to high risk
+    // based solely on the tool name "Bash".
+    let mut input_for_loop = input.clone();
+    let cmd = extract_command(&input_for_loop);
+    if !cmd.is_empty() {
+        input_for_loop.prompt = Some(cmd);
+    }
+    let mut ctx = LoopContext::new(input_for_loop);
     state.control_loop.run_range(&mut ctx, 0, 6);
 
     let risk_label = match ctx.risk {
