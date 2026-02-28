@@ -4,6 +4,10 @@ edition.workspace = true
 version.workspace = true
 license.workspace = true
 
+[lib]
+name = "metaygn_daemon"
+path = "src/lib.rs"
+
 [[bin]]
 name = "aletheiad"
 path = "src/main.rs"
