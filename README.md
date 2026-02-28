@@ -61,6 +61,20 @@ When Claude tries to Edit a test file, MetaYGN analyzes the diff. If assertions 
 ### Token Budget Dashboard
 Every hook response includes a visible budget summary: `[budget: 3000tok/$0.03 used of 100000tok/$1.00 | 3%]`. Warns at 80% utilization.
 
+## Smart Recovery (v0.5.0)
+
+### Plasticity-Aware Recovery
+When error recovery fails, MetaYGN escalates progressively:
+- **Level 1**: Standard recovery hint
+- **Level 2**: Emphatic critique with concrete alternative strategies
+- **Level 3**: Auto-escalation recommending `/metacog-escalate`
+
+### Implicit Feedback
+MetaYGN tracks whether recovery prompts work without asking the developer. If the same error returns after recovery, plasticity score drops and amplification increases.
+
+### Latency Transparency
+Every hook response includes `[latency: Nms]` so developers know exactly how much overhead MetaYGN adds.
+
 ## Components
 
 ### Skills (8 metacognitive workflows)

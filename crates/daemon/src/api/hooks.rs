@@ -8,6 +8,7 @@ use metaygn_shared::protocol::{HookInput, HookOutput, PermissionDecision};
 use metaygn_shared::state::{RiskLevel, TaskType};
 
 use crate::app_state::AppState;
+use crate::proxy::pruner::ContextPruner;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,6 +58,31 @@ fn extract_command(input: &HookInput) -> String {
     String::new()
 }
 
+/// Format a human-readable context line from risk, strategy, budget, task, and topology.
+fn format_readable(risk: &str, strategy: &str, budget_tokens: u64, task: &str, topology: &str) -> String {
+    format!(
+        "Risk: {} | Strategy: {} | Budget: {} tokens | Task: {} | Topology: {}",
+        risk.to_uppercase(),
+        strategy,
+        budget_tokens,
+        task,
+        topology,
+    )
+}
+
+/// Append a latency tag to the additionalContext field of a HookOutput.
+fn append_latency(output: &mut HookOutput, start: std::time::Instant) {
+    let latency_ms = start.elapsed().as_millis();
+    let tag = format!(" [latency: {}ms]", latency_ms);
+    if let Some(ref mut hso) = output.hook_specific_output {
+        if let Some(ref mut ctx) = hso.additional_context {
+            ctx.push_str(&tag);
+        } else {
+            hso.additional_context = Some(tag);
+        }
+    }
+}
+
 /// Determine whether a tool response indicates an error.
 fn response_looks_like_error(tool_name: &str, response: &str) -> bool {
     if tool_name == "Bash" && (response.contains("FAIL") || response.contains("error")) {
@@ -82,6 +108,7 @@ async fn pre_tool_use(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
+    let start = std::time::Instant::now();
     let tool_name = input.tool_name.clone().unwrap_or_default();
     let command = extract_command(&input);
 
@@ -114,6 +141,7 @@ async fn pre_tool_use(
 
         let mut output = HookOutput::permission(decision, reason);
         append_budget_to_output(&mut output, &state);
+        append_latency(&mut output, start);
         return Json(output);
     }
 
@@ -151,6 +179,7 @@ async fn pre_tool_use(
                         }),
                     };
                     append_budget_to_output(&mut output, &state);
+                    append_latency(&mut output, start);
                     return Json(output);
                 }
             }
@@ -158,7 +187,15 @@ async fn pre_tool_use(
     }
 
     // Step 2: Run ControlLoop stages 1-6 for risk assessment
-    let mut ctx = LoopContext::new(input);
+    // Fix: inject the actual command text as the prompt so the classify/assess
+    // stages can evaluate the real content rather than defaulting to high risk
+    // based solely on the tool name "Bash".
+    let mut input_for_loop = input.clone();
+    let cmd = extract_command(&input_for_loop);
+    if !cmd.is_empty() {
+        input_for_loop.prompt = Some(cmd);
+    }
+    let mut ctx = LoopContext::new(input_for_loop);
     state.control_loop.run_range(&mut ctx, 0, 6);
 
     let risk_label = match ctx.risk {
@@ -176,6 +213,7 @@ async fn pre_tool_use(
         ),
     );
     append_budget_to_output(&mut output, &state);
+    append_latency(&mut output, start);
     Json(output)
 }
 
@@ -184,6 +222,7 @@ async fn post_tool_use(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
+    let start = std::time::Instant::now();
     // Log the tool output for verification signals
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "post_tool_use", &payload).await;
@@ -193,12 +232,27 @@ async fn post_tool_use(
     let response = input.tool_response.clone().unwrap_or_default();
 
     // Wire fatigue signals: record error or success
+    let is_error = response_looks_like_error(&tool_name, &response);
     {
         let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        if response_looks_like_error(&tool_name, &response) {
+        if is_error {
             profiler.on_error();
         } else {
             profiler.on_success();
+        }
+    }
+
+    // Wire plasticity signals: if a recovery was injected and is pending,
+    // record whether the outcome suggests success or failure.
+    {
+        use crate::profiler::plasticity::RecoveryOutcome;
+        let mut tracker = state.plasticity.lock().expect("plasticity mutex poisoned");
+        if tracker.has_pending_recovery() {
+            if is_error {
+                tracker.record_outcome(RecoveryOutcome::Failure);
+            } else {
+                tracker.record_outcome(RecoveryOutcome::Success);
+            }
         }
     }
 
@@ -214,6 +268,7 @@ async fn post_tool_use(
 
     let mut output = HookOutput::context("PostToolUse".to_string(), context.to_string());
     append_budget_to_output(&mut output, &state);
+    append_latency(&mut output, start);
     Json(output)
 }
 
@@ -226,6 +281,7 @@ async fn user_prompt_submit(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
+    let start = std::time::Instant::now();
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
@@ -259,14 +315,27 @@ async fn user_prompt_submit(
     let task_type = ctx.task_type.unwrap_or(TaskType::Bugfix);
     let plan = TopologyPlanner::plan(ctx.risk, ctx.difficulty, task_type);
 
+    let strategy_label = format!("{:?}", ctx.strategy).to_lowercase();
+    let strategy_kebab = strategy_label.replace('_', "-");
+    let task_label = ctx.task_type
+        .map(|t| format!("{:?}", t).to_lowercase())
+        .unwrap_or_else(|| "unknown".to_string());
+    let topology_label = format!("{:?}", plan.topology).to_lowercase();
+
+    let readable = format_readable(
+        risk_label,
+        &strategy_kebab,
+        ctx.budget.max_tokens,
+        &task_label,
+        &topology_label,
+    );
+
     let mut output = HookOutput::context(
         "UserPromptSubmit".to_string(),
-        format!(
-            "[risk:{}] [strategy:{:?}] [budget:{}tok] [task:{:?}] [topology={:?}] Prompt analysed via control loop",
-            risk_label, ctx.strategy, ctx.budget.max_tokens, ctx.task_type, plan.topology,
-        ),
+        format!("{} | Prompt analysed via control loop", readable),
     );
     append_budget_to_output(&mut output, &state);
+    append_latency(&mut output, start);
     Json(output)
 }
 
@@ -278,6 +347,7 @@ async fn stop(
     State(state): State<AppState>,
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
+    let start = std::time::Instant::now();
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "stop", &payload).await;
 
@@ -298,8 +368,29 @@ async fn stop(
             ),
         );
         append_budget_to_output(&mut output, &state);
+        append_latency(&mut output, start);
         return Json(output);
     }
+
+    // Pruner analysis: check if the last assistant message shows repeated errors
+    let pruner = ContextPruner::with_defaults();
+    let last_msg_text = input.last_assistant_message.as_deref().unwrap_or("");
+    let pruner_analysis = pruner.analyze(&[
+        crate::proxy::pruner::Message { role: "assistant".to_string(), content: last_msg_text.to_string() },
+    ]);
+
+    // If the pruner detects errors, generate an amplified recovery message
+    let recovery_note = if pruner_analysis.consecutive_errors > 0 {
+        let reason = pruner_analysis.suggested_injection
+            .as_deref()
+            .unwrap_or("repeated errors detected");
+        let level = state.plasticity.lock().unwrap().amplification_level();
+        let recovery_msg = pruner.amplified_recovery(reason, level);
+        state.plasticity.lock().unwrap().record_recovery_injected();
+        Some(recovery_msg)
+    } else {
+        None
+    };
 
     let mut ctx = LoopContext::new(input);
     let decision = state.control_loop.run_range(&mut ctx, 8, 12);
@@ -317,6 +408,11 @@ async fn stop(
         decision, metacog, lessons_summary,
     );
 
+    // Append recovery note if pruner detected errors
+    if let Some(ref note) = recovery_note {
+        context_msg.push_str(&format!(" {}", note));
+    }
+
     // Append completion warnings if any
     if !verification.warnings.is_empty() {
         let warns = verification.warnings.join("; ");
@@ -325,6 +421,7 @@ async fn stop(
 
     let mut output = HookOutput::context("Stop".to_string(), context_msg);
     append_budget_to_output(&mut output, &state);
+    append_latency(&mut output, start);
     Json(output)
 }
 

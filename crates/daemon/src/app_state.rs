@@ -11,6 +11,7 @@ use metaygn_verifiers::guard_pipeline::GuardPipeline;
 
 use crate::forge::ForgeEngine;
 use crate::profiler::fatigue::FatigueProfiler;
+use crate::profiler::plasticity::PlasticityTracker;
 
 /// Shared application state for the daemon.
 #[derive(Clone)]
@@ -24,6 +25,7 @@ pub struct AppState {
     pub evolver: Arc<Mutex<HeuristicEvolver>>,
     pub forge: Arc<Mutex<ForgeEngine>>,
     pub budget: Arc<Mutex<SessionBudget>>,
+    pub plasticity: Arc<Mutex<PlasticityTracker>>,
 }
 
 impl AppState {
@@ -43,6 +45,7 @@ impl AppState {
             evolver: Arc::new(Mutex::new(HeuristicEvolver::new(20))),
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
+            plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
         })
     }
 
@@ -63,6 +66,7 @@ impl AppState {
             evolver: Arc::new(Mutex::new(HeuristicEvolver::new(20))),
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
+            plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
         })
     }
 }

@@ -195,22 +195,22 @@ async fn user_prompt_returns_strategy() {
 
     // Should contain strategy recommendation from the control loop
     assert!(
-        context.contains("strategy:"),
+        context.contains("Strategy:"),
         "Expected strategy recommendation in context, got: {context}"
     );
     // Should contain risk level
     assert!(
-        context.contains("risk:"),
+        context.contains("Risk:"),
         "Expected risk level in context, got: {context}"
     );
     // Should contain budget info
     assert!(
-        context.contains("budget:"),
+        context.contains("Budget:"),
         "Expected budget info in context, got: {context}"
     );
     // Should contain task type
     assert!(
-        context.contains("task:"),
+        context.contains("Task:"),
         "Expected task type in context, got: {context}"
     );
 }
@@ -664,5 +664,65 @@ async fn pre_tool_use_catches_test_weakening() {
     assert!(
         context.contains("assertion(s) removed"),
         "Expected assertion removal detail in context, got: {context}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 4: Latency tracking in hook responses
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn hook_responses_include_latency() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/hooks/user-prompt-submit"))
+        .json(&json!({
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "fix typo"
+        }))
+        .send()
+        .await
+        .unwrap();
+    let body: Value = resp.json().await.unwrap();
+    let ctx = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        ctx.contains("latency:"),
+        "Should include latency: {}",
+        ctx
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 3: Pre-tool-use risk classification fix
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn pre_tool_use_safe_command_not_high_risk() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/hooks/pre-tool-use"))
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls -la"}
+        }))
+        .send()
+        .await
+        .unwrap();
+    let body: Value = resp.json().await.unwrap();
+    let ctx = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    // "ls -la" should be low risk, not high
+    assert!(
+        !ctx.contains("risk:high"),
+        "ls -la should not be HIGH risk: {}",
+        ctx
     );
 }

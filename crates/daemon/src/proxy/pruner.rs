@@ -154,6 +154,30 @@ impl ContextPruner {
         }
     }
 
+    /// Generate a recovery message at the given amplification level.
+    /// Level 1: standard hint. Level 2: emphatic with alternatives. Level 3: escalation.
+    pub fn amplified_recovery(&self, base_reason: &str, level: u8) -> String {
+        match level {
+            1 => format!(
+                "[ALETHEIA] Context recovery: {}. Try a different approach.",
+                base_reason
+            ),
+            2 => format!(
+                "[ALETHEIA] CRITICAL: Recovery attempt failed. {}. \
+                 You MUST use a fundamentally different approach. Do NOT retry the same strategy. \
+                 Consider: 1) Simplify the problem, 2) Break into smaller steps, \
+                 3) Ask the user for clarification.",
+                base_reason
+            ),
+            _ => format!(
+                "[ALETHEIA] ESCALATE: Multiple recovery attempts failed. {}. \
+                 Use /metacog-escalate to present options to the developer. \
+                 Do not continue on the current path.",
+                base_reason
+            ),
+        }
+    }
+
     /// Prune error messages from the history and inject a recovery prompt.
     ///
     /// Rules:
