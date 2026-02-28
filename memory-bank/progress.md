@@ -59,6 +59,20 @@
 - [x] install.sh for daemon binary installation
 - [x] Final documentation: API reference, architecture notes, memory-bank update
 
+## Phase 6: Developer-First (v0.4.0) -- COMPLETE
+
+- [x] Completion Verifier: catches false "Done!" claims by checking mentioned files exist on disk
+- [x] Test Integrity Guard: detects when Claude weakens test assertions instead of fixing code
+- [x] Token Budget Tracker: visible budget summary in every hook response
+- [x] `GET /budget` endpoint for current session budget status
+- [x] `POST /budget/consume` endpoint for recording token consumption
+- [x] Budget warning at 80% utilization, over-budget detection
+- [x] Stop hook runs completion verification before accepting "Done!" responses
+- [x] PreToolUse hook checks test file integrity on Edit/MultiEdit operations
+- [x] All hook responses include budget summary in additionalContext
+- [x] UserPromptSubmit hook estimates and tracks token consumption
+- [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
+
 ## Next
 
 - [ ] MCP bridge crate (mcp-bridge) for native MCP server integration
@@ -67,4 +81,4 @@
 - [ ] Embedding generation pipeline for graph memory cosine search
 - [ ] CI integration tests (daemon startup + hook round-trips)
 - [ ] Publish to Claude Code marketplace
-- [ ] v0.4.0 planning: multi-agent orchestration, session replay
+- [ ] v0.5.0 planning: multi-agent orchestration, session replay

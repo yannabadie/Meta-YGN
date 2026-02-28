@@ -1,7 +1,7 @@
 {
   "name": "aletheia-nexus",
-  "description": "Local-first metacognitive runtime for coding agents. Adds risk classification, factored verification, evidence packs, dynamic topology, tool forge, human fatigue protection, and context pruning.",
-  "version": "0.3.0",
+  "description": "Local-first metacognitive runtime for coding agents. Catches false completion claims, detects test manipulation, provides visible token budgets, plus risk classification, factored verification, evidence packs, dynamic topology, and context pruning.",
+  "version": "0.4.0",
   "author": {
     "name": "Yann Abadie"
   },

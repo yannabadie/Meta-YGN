@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 "Developer-First"
+### Added
+- **Completion Verifier**: catches false "Done!" claims by checking that mentioned files actually exist on disk
+- **Test Integrity Guard**: detects when Claude weakens test assertions instead of fixing implementation code (asks for confirmation)
+- **Token Budget Tracker**: visible `[budget: Ntok/$X.XX used | Y%]` in every hook response
+- `GET /budget` endpoint for current session budget status
+- `POST /budget/consume` endpoint for recording token consumption
+- Budget warning at 80% utilization, over-budget detection
+
+### Changed
+- Stop hook now runs completion verification before accepting "Done!" responses
+- PreToolUse hook now checks test file integrity on Edit/MultiEdit operations
+- All hook responses now include budget summary in additionalContext
+- UserPromptSubmit hook estimates and tracks token consumption
+
 ## 0.3.0 "Adaptive Topology"
 ### Added
 - Graph memory with nodes, edges, FTS5 search, cosine similarity (crates/memory/)
