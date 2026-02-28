@@ -255,6 +255,87 @@ async fn analyze_returns_full_context() {
     assert!(competence >= 0.0 && competence <= 1.0, "competence out of range: {competence}");
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3: sandbox and profiler endpoints
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn sandbox_exec_python() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/sandbox/exec");
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "language": "python",
+            "code": "print('hello')",
+            "timeout_ms": 5000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    // If python is not available, stderr will contain a spawn error.
+    // Either way, we should get a well-formed SandboxResult.
+    assert!(
+        body.get("success").is_some(),
+        "Expected 'success' field in sandbox result: {body:?}"
+    );
+    assert!(
+        body.get("duration_ms").is_some(),
+        "Expected 'duration_ms' field in sandbox result: {body:?}"
+    );
+    // If python is available, stdout should contain "hello"
+    if body["success"].as_bool() == Some(true) {
+        let stdout = body["stdout"].as_str().unwrap_or("");
+        assert!(
+            stdout.contains("hello"),
+            "Expected 'hello' in stdout, got: {stdout}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn profiler_fatigue_starts_zero() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/profiler/fatigue");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let score = body["score"].as_f64().unwrap();
+    assert!(
+        score.abs() < f64::EPSILON,
+        "Expected score ~0 for fresh profiler, got {score}"
+    );
+    assert_eq!(body["high_friction"], false);
+}
+
+#[tokio::test]
+async fn profiler_signal_increases_score() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // Send a short prompt signal -- "fix" is 3 chars, well below threshold
+    let url = format!("http://{addr}/profiler/signal");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "signal_type": "prompt",
+            "prompt": "fix"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let score = body["score"].as_f64().unwrap();
+    assert!(
+        score > 0.0,
+        "Expected score > 0 after short prompt signal, got {score}"
+    );
+}
+
 #[tokio::test]
 async fn stop_returns_enforcement_hint() {
     let addr = start_test_server().await;
