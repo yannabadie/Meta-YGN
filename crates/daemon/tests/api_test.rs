@@ -540,3 +540,59 @@ async fn stop_hook_catches_false_completion() {
         "Expected NOT FOUND in failure message, got: {context}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Test Integrity Guard integration test
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn pre_tool_use_catches_test_weakening() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/hooks/pre-tool-use");
+    let client = reqwest::Client::new();
+
+    // Edit a test file, removing an assertion — should trigger Ask
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": "tests/my_test.rs",
+                "old_string": "#[test]\nfn it_works() {\n    assert!(result.is_ok());\n    assert_eq!(result.unwrap(), 42);\n}",
+                "new_string": "#[test]\nfn it_works() {\n    // looks good\n}"
+            }
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    let decision = body
+        .pointer("/hookSpecificOutput/permissionDecision")
+        .and_then(|v| v.as_str());
+    assert_eq!(
+        decision,
+        Some("ask"),
+        "Expected ask for test weakening edit, got: {body:?}"
+    );
+
+    let reason = body
+        .pointer("/hookSpecificOutput/permissionDecisionReason")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        reason.contains("TEST INTEGRITY WARNING"),
+        "Expected test integrity warning in reason, got: {reason}"
+    );
+
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("assertion(s) removed"),
+        "Expected assertion removal detail in context, got: {context}"
+    );
+}
