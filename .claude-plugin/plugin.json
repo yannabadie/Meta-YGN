@@ -1,0 +1,19 @@
+{
+  "name": "aletheia-nexus",
+  "description": "Local-first metacognitive plugin for coding agents. Adds preflight risk classification, proof-carrying verification, assumption challenging, threat modeling, context discipline, tool-necessity auditing, and escalation workflows.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Aletheia-Nexus"
+  },
+  "license": "MIT",
+  "keywords": [
+    "metacognition",
+    "verification",
+    "safety",
+    "proof",
+    "calibration",
+    "context-discipline",
+    "risk-classification",
+    "threat-model"
+  ]
+}

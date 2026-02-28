@@ -1,0 +1,7 @@
+{
+  "lspServers": {
+    "rust-analyzer": {
+      "command": "rust-analyzer"
+    }
+  }
+}
