@@ -500,3 +500,43 @@ async fn forge_list_templates() {
     assert!(names.contains(&"json-validator"));
     assert!(names.contains(&"file-exists-checker"));
 }
+
+// ---------------------------------------------------------------------------
+// Completion verifier integration test
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn stop_hook_catches_false_completion() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/hooks/stop");
+    let client = reqwest::Client::new();
+
+    // Send a Stop event where Claude claims "Done!" but mentions a file that doesn't exist
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "Stop",
+            "last_assistant_message": "Done! I created `fake/nonexistent/module.rs` with all the changes.",
+            "cwd": "."
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    // Should detect the false completion and block it
+    assert!(
+        context.contains("COMPLETION CHECK FAILED"),
+        "Expected completion check failure for missing file, got: {context}"
+    );
+    assert!(
+        context.contains("NOT FOUND"),
+        "Expected NOT FOUND in failure message, got: {context}"
+    );
+}

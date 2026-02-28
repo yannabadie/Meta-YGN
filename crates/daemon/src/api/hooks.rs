@@ -202,6 +202,24 @@ async fn stop(
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "stop", &payload).await;
 
+    // Completion verification: check Claude's claims match filesystem reality
+    let last_msg = input.last_assistant_message.as_deref().unwrap_or("");
+    let cwd = input.cwd.as_deref().unwrap_or(".");
+    let verification = metaygn_verifiers::completion::verify_completion(last_msg, cwd);
+
+    if !verification.verified {
+        // BLOCK: Claude said "done" but files are missing
+        let issues = verification.blocking_issues.join("; ");
+        return Json(HookOutput::context(
+            "Stop".to_string(),
+            format!(
+                "COMPLETION CHECK FAILED: {}. Claude claimed completion but verification found issues. \
+                 Review before accepting.",
+                issues
+            ),
+        ));
+    }
+
     let mut ctx = LoopContext::new(input);
     let decision = state.control_loop.run_range(&mut ctx, 8, 12);
 
@@ -212,13 +230,19 @@ async fn stop(
         ctx.lessons.join("; ")
     };
 
-    Json(HookOutput::context(
-        "Stop".to_string(),
-        format!(
-            "[decision:{:?}] [metacog:{}] [lessons:{}] Proof packet enforcement recommended",
-            decision, metacog, lessons_summary,
-        ),
-    ))
+    // Build base context from control loop
+    let mut context_msg = format!(
+        "[decision:{:?}] [metacog:{}] [lessons:{}] Proof packet enforcement recommended",
+        decision, metacog, lessons_summary,
+    );
+
+    // Append completion warnings if any
+    if !verification.warnings.is_empty() {
+        let warns = verification.warnings.join("; ");
+        context_msg.push_str(&format!(" [completion_warnings: {}]", warns));
+    }
+
+    Json(HookOutput::context("Stop".to_string(), context_msg))
 }
 
 /// POST /hooks/analyze
