@@ -1,3 +1,5 @@
+mod tui;
+
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -67,6 +69,9 @@ enum Commands {
         #[arg(long, default_value_t = 10)]
         limit: u32,
     },
+
+    /// Launch real-time cognitive telemetry dashboard
+    Top,
 }
 
 #[tokio::main]
@@ -78,6 +83,7 @@ async fn main() -> Result<()> {
         Commands::Stop => cmd_stop().await,
         Commands::Status => cmd_status().await,
         Commands::Recall { query, limit } => cmd_recall(&query, limit).await,
+        Commands::Top => cmd_top().await,
     }
 }
 
@@ -262,4 +268,37 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Top command: launch the real-time cognitive telemetry TUI dashboard.
+async fn cmd_top() -> Result<()> {
+    let Some(port) = read_daemon_port() else {
+        println!("Daemon not running (no port file found).");
+        println!("Start the daemon first, then run: aletheia top");
+        return Ok(());
+    };
+
+    // Quick health check before launching the TUI
+    let client = http_client()?;
+    let url = format!("http://127.0.0.1:{port}/health");
+
+    match client.get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            // Daemon is up — launch TUI
+            tui::run_tui(port).await
+        }
+        Ok(resp) => {
+            println!(
+                "Daemon returned unexpected status {} on port {port}.",
+                resp.status()
+            );
+            println!("Fix the daemon and try again.");
+            Ok(())
+        }
+        Err(_) => {
+            println!("Cannot connect to daemon on port {port}.");
+            println!("Start the daemon first, then run: aletheia top");
+            Ok(())
+        }
+    }
 }

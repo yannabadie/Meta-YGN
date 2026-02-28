@@ -18,3 +18,5 @@ serde_json.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 dirs = "6"
+ratatui = "0.30"
+crossterm = "0.29"
