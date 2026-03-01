@@ -34,6 +34,7 @@ pub fn router(state: AppState) -> Router {
         .merge(semantic::routes())
         .merge(trajectories::routes())
         .merge(admin::routes())
+        .merge(crate::metrics::routes())
         .route("/proxy/anthropic", post(service::prune_messages))
         .with_state(state)
 }

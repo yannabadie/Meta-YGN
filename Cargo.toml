@@ -8,7 +8,7 @@ members = [
     "crates/cli",
     "crates/verifiers",
     "crates/sandbox",
-    "crates/mcp-bridge",
+
 ]
 
 [workspace.package]

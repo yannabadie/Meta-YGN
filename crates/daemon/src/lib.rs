@@ -3,6 +3,7 @@ pub mod app_state;
 pub mod forge;
 #[cfg(feature = "mcp")]
 pub mod mcp;
+pub mod metrics;
 pub mod postprocess;
 pub mod profiler;
 pub mod proxy;
