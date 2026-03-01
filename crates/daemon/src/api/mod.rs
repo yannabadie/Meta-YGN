@@ -9,6 +9,7 @@ pub mod memory;
 pub mod profiler;
 pub mod replay;
 pub mod sandbox;
+pub mod semantic;
 
 use axum::routing::post;
 use axum::Router;
@@ -29,6 +30,7 @@ pub fn router(state: AppState) -> Router {
         .merge(forge::routes())
         .merge(budget::routes())
         .merge(replay::routes())
+        .merge(semantic::routes())
         .merge(admin::routes())
         .route("/proxy/anthropic", post(service::prune_messages))
         .with_state(state)
