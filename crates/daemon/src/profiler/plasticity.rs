@@ -9,6 +9,17 @@ pub enum RecoveryOutcome {
     Failure,
 }
 
+/// Three-level plasticity classification (RL2F-inspired).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlasticityLevel {
+    /// Error pattern changed after recovery — feedback is working.
+    Responsive,
+    /// Same error class recurred once after recovery — warning.
+    Degraded,
+    /// Same error recurred 2+ times after recovery — model ignoring feedback.
+    Lost,
+}
+
 /// Tracks whether recovery prompts injected by the context pruner are
 /// actually effective.  This is "implicit feedback" -- we infer
 /// success/failure from subsequent hook events without asking the developer.
@@ -79,6 +90,21 @@ impl PlasticityTracker {
         self.total_injections > self.total_recoveries()
     }
 
+    /// Classify current plasticity into one of three levels based on
+    /// consecutive failure count.
+    pub fn plasticity_level(&self) -> PlasticityLevel {
+        match self.consecutive_failures {
+            0 => PlasticityLevel::Responsive,
+            1 => PlasticityLevel::Degraded,
+            _ => PlasticityLevel::Lost,
+        }
+    }
+
+    /// Convenience check: has plasticity been lost (2+ consecutive failures)?
+    pub fn is_plasticity_lost(&self) -> bool {
+        self.plasticity_level() == PlasticityLevel::Lost
+    }
+
     /// Amplification level for recovery prompts based on consecutive failures.
     ///
     /// - `1` -- standard prompt (0 consecutive failures)
@@ -109,5 +135,49 @@ mod tests {
         let b = PlasticityTracker::default();
         assert_eq!(a.total_recoveries(), b.total_recoveries());
         assert!((a.plasticity_score() - b.plasticity_score()).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn plasticity_level_responsive_by_default() {
+        let tracker = PlasticityTracker::new();
+        assert_eq!(tracker.plasticity_level(), PlasticityLevel::Responsive);
+        assert!(!tracker.is_plasticity_lost());
+    }
+
+    #[test]
+    fn plasticity_level_degrades_after_one_failure() {
+        let mut tracker = PlasticityTracker::new();
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Failure);
+        assert_eq!(tracker.plasticity_level(), PlasticityLevel::Degraded);
+        assert!(!tracker.is_plasticity_lost());
+    }
+
+    #[test]
+    fn plasticity_level_lost_after_two_failures() {
+        let mut tracker = PlasticityTracker::new();
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Failure);
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Failure);
+        assert_eq!(tracker.plasticity_level(), PlasticityLevel::Lost);
+        assert!(tracker.is_plasticity_lost());
+    }
+
+    #[test]
+    fn plasticity_recovers_after_success() {
+        let mut tracker = PlasticityTracker::new();
+        // Drive to Lost
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Failure);
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Failure);
+        assert_eq!(tracker.plasticity_level(), PlasticityLevel::Lost);
+
+        // One success should reset to Responsive
+        tracker.record_recovery_injected();
+        tracker.record_outcome(RecoveryOutcome::Success);
+        assert_eq!(tracker.plasticity_level(), PlasticityLevel::Responsive);
+        assert!(!tracker.is_plasticity_lost());
     }
 }
