@@ -30,6 +30,29 @@ impl Stage for DecideStage {
             return StageResult::Escalate(reason);
         }
 
+        // Overconfidence detected (EGPO) → revise with warning
+        if ctx.overconfidence_score > 0.3 {
+            ctx.decision = Decision::Revise;
+            tracing::warn!(
+                stage = self.name(),
+                overconfidence_score = ctx.overconfidence_score,
+                "overconfidence detected (EGPO), forcing revise"
+            );
+            return StageResult::Continue;
+        }
+
+        // Plasticity lost (RL2F) → escalate
+        if ctx.plasticity_lost {
+            ctx.decision = Decision::Escalate;
+            tracing::warn!(
+                stage = self.name(),
+                "plasticity lost — model ignoring recovery feedback, escalating"
+            );
+            return StageResult::Escalate(
+                "plasticity lost: model ignoring recovery feedback after multiple attempts".into(),
+            );
+        }
+
         // Very low metacognitive quality => revise.
         if quality < REVISE_QUALITY_THRESHOLD {
             ctx.decision = Decision::Revise;
@@ -72,10 +95,57 @@ impl Stage for DecideStage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::context::LoopContext;
+    use metaygn_shared::protocol::{HookEvent, HookInput};
+
+    fn make_input() -> HookInput {
+        HookInput {
+            hook_event_name: HookEvent::PreToolUse,
+            session_id: None,
+            cwd: None,
+            tool_name: None,
+            tool_input: None,
+            tool_response: None,
+            prompt: None,
+            error: None,
+            last_assistant_message: None,
+            source: None,
+            reason: None,
+            trigger: None,
+        }
+    }
 
     #[test]
     fn escalation_threshold() {
         assert!(ESCALATION_COMPETENCE_THRESHOLD > 0.0);
         assert!(ESCALATION_COMPETENCE_THRESHOLD < 1.0);
+    }
+
+    #[test]
+    fn overconfidence_forces_revise() {
+        let mut ctx = LoopContext::new(make_input());
+        ctx.overconfidence_score = 0.5; // above 0.3 threshold
+        let stage = DecideStage;
+        stage.run(&mut ctx);
+        assert_eq!(ctx.decision, Decision::Revise);
+    }
+
+    #[test]
+    fn plasticity_lost_forces_escalate() {
+        let mut ctx = LoopContext::new(make_input());
+        ctx.plasticity_lost = true;
+        let stage = DecideStage;
+        let result = stage.run(&mut ctx);
+        assert_eq!(ctx.decision, Decision::Escalate);
+        assert!(matches!(result, StageResult::Escalate(_)));
+    }
+
+    #[test]
+    fn normal_operation_continues() {
+        let mut ctx = LoopContext::new(make_input());
+        // defaults: overconfidence_score=0.0, plasticity_lost=false
+        let stage = DecideStage;
+        stage.run(&mut ctx);
+        assert_eq!(ctx.decision, Decision::Continue);
     }
 }

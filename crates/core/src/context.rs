@@ -57,6 +57,12 @@ pub struct LoopContext {
     /// Intended action recorded by the `act` stage for post-verification.
     pub intended_action: Option<IntendedAction>,
 
+    /// Overconfidence score from EntropyTracker (0.0-1.0). Set by hook handler.
+    pub overconfidence_score: f64,
+
+    /// Whether plasticity is lost (model ignoring recovery feedback). Set by hook handler.
+    pub plasticity_lost: bool,
+
     /// Entropy tracker for overconfidence detection (EGPO).
     #[serde(skip)]
     pub entropy_tracker: EntropyTracker,
@@ -91,6 +97,8 @@ impl LoopContext {
             verification_results: Vec::new(),
             lessons: Vec::new(),
             intended_action: None,
+            overconfidence_score: 0.0,
+            plasticity_lost: false,
             entropy_tracker: EntropyTracker::new(20),
         }
     }
