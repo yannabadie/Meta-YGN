@@ -1,6 +1,6 @@
 # Aletheia Daemon API Reference
 
-**Version**: 0.3.0 "Adaptive Topology"
+**Version**: 0.12.0 "Observable Runtime"
 **Base URL**: `http://127.0.0.1:{port}` (port read from `~/.claude/aletheia/daemon.port`)
 **Binary**: `aletheiad` (crate: `metaygn-daemon`)
 

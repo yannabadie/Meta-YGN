@@ -459,6 +459,12 @@ async fn post_tool_use(
         let session_clone = session_ctx.clone();
         let tool_name_clone = tool_name.clone();
         let response_clone = response.clone();
+        let file_path_clone = input
+            .tool_input
+            .as_ref()
+            .and_then(|ti| ti.get("file_path"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
         tokio::spawn(async move {
             crate::postprocess::after_post_tool_use(
                 state_clone,
@@ -466,6 +472,7 @@ async fn post_tool_use(
                 tool_name_clone,
                 is_error,
                 response_clone,
+                file_path_clone,
             )
             .await;
         });

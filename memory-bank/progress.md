@@ -157,10 +157,36 @@
 - [x] E2E integration test harness: 7 scenarios covering full lifecycle
 - [x] Updated CHANGELOG.md, plugin.json, memory-bank
 
+## Phase 13: Hardened Core (v0.11.0) -- COMPLETE
+
+- [x] Token accounting: SessionOutcome.tokens_consumed wired (was always 0)
+- [x] Session-scoped profilers: fatigue/plasticity/budget per session
+- [x] Verification → decide pipeline: all 5 error patterns feed calibrate+decide
+- [x] CLI truth: removed misleading --host/--port flags
+- [x] ForgeEngine Tier 1: in-process JSON/YAML/TOML validation
+- [x] ForgeEngine Tier 2: async Python syntax checking via sandbox
+- [x] MCP fusion: 5 tools moved into daemon behind --mcp feature flag
+- [x] Verify stage upgrade: intended_action + test result parsing
+
+## Phase 14: Observable Runtime (v0.12.0) -- COMPLETE
+
+- [x] Removed crates/mcp-bridge/ (redundant, 8→7 crates)
+- [x] Removed scripts/*.py (legacy Python hooks)
+- [x] Budget display reads session-local budget (Expert P0 fix)
+- [x] MCP metacog_prune wired to ContextPruner
+- [x] Prometheus /metrics endpoint (5 metrics)
+- [x] Stage-level tracing spans (info_span for OTel)
+- [x] Tree-sitter multi-language syntax verification (feature: syntax)
+- [x] Adaptive competence from session history (SSR-inspired)
+- [x] aletheia eval calibration report
+- [x] aletheia doctor installation health check
+- [x] Fixed Tier 2 forge trigger (file_path instead of text match)
+
 ## Next
 
-- [ ] ForgeEngine integration (verification templates called from post_tool_use)
 - [ ] WASM sandbox backend (feature-gated behind wasmtime)
 - [ ] Publish to Claude Code marketplace
 - [ ] Dialectic topology (RL2F teacher-student 3-call loop)
 - [ ] LLM-driven heuristic mutation (AlphaEvolve-inspired)
+- [ ] daemon-contract.md full regeneration
+- [ ] E2E tests for experimental features (EGPO, RL2F, topology)
