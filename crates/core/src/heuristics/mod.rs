@@ -8,5 +8,6 @@
 //! outcomes, then adjusts scores using a lightweight evolutionary algorithm
 //! with multi-objective fitness (AlphaEvolve-inspired).
 
+pub mod entropy;
 pub mod evolver;
 pub mod fitness;
