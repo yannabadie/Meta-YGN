@@ -130,9 +130,24 @@
 - [x] All hook handlers record replay events automatically
 - [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
 
+## Phase 11: Calibrated Mind (v0.9.0) -- COMPLETE
+
+- [x] EntropyTracker for overconfidence detection (EGPO-inspired, 20-entry sliding window)
+- [x] Wired into calibrate stage: penalizes confidence when overconfidence > 0.3
+- [x] PlasticityLevel enum (Responsive/Degraded/Lost) extending PlasticityTracker
+- [x] UCB-scored adaptive_recall on GraphMemory (70% cosine + 30% exploration bonus)
+- [x] record_recall_reward for bandit feedback on memory nodes
+- [x] Rl2fTrajectory struct for structured RL trajectory capture
+- [x] rl2f_trajectories SQLite table with signature hash
+- [x] GET /trajectories/export daemon endpoint
+- [x] aletheia export CLI command (JSONL to ~/.claude/aletheia/trajectories/)
+- [x] Updated CHANGELOG.md, plugin.json, memory-bank
+
 ## Next
 
 - [ ] WASM sandbox backend (feature-gated behind wasmtime)
 - [ ] Publish to Claude Code marketplace
 - [ ] Multi-agent orchestration improvements
 - [ ] A2A protocol adapter
+- [ ] Dialectic topology (RL2F teacher-student 3-call loop)
+- [ ] LLM-driven heuristic mutation (AlphaEvolve-inspired)
