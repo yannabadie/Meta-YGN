@@ -198,27 +198,25 @@ fn act_stage_records_intended_action() {
 }
 
 #[test]
-fn compact_stage_deduplicates_lessons() {
+fn compact_stage_clusters_lessons() {
     let cl = ControlLoop::new();
     let input = make_input(Some("hello world"));
     let mut ctx = LoopContext::new(input);
 
-    // Pre-populate lessons with duplicates
+    // Pre-populate lessons with similar entries that share >50% word overlap.
+    // "lesson A" / "lesson B" etc. only have one non-trivial word ("lesson"),
+    // so they all cluster together under the new semantic clustering logic.
     ctx.lessons = vec![
-        "lesson A".into(),
-        "lesson B".into(),
-        "lesson A".into(), // duplicate
-        "lesson C".into(),
-        "lesson B".into(), // duplicate
-        "lesson D".into(),
+        "always check error handling before deploying".into(),
+        "always check error handling before releasing".into(), // similar
+        "database migrations require careful backup planning".into(),
+        "always check error handling before shipping".into(), // similar
+        "unit tests should cover edge cases thoroughly".into(),
     ];
 
     cl.run(&mut ctx);
 
-    // Compact stage deduplicates and caps at 5, then adds a summary.
-    // The learn stage (stage 12) runs after compact and appends more lessons.
-    // So we verify:
-    // 1. The compact summary exists
+    // 1. The compact summary should exist
     let has_compact_summary = ctx.lessons.iter().any(|l| l.starts_with("[compact]"));
     assert!(
         has_compact_summary,
@@ -226,18 +224,16 @@ fn compact_stage_deduplicates_lessons() {
         ctx.lessons
     );
 
-    // 2. The duplicates were removed: "lesson A" and "lesson B" should each
-    //    appear exactly once (the learn stage does not re-add them).
-    let lesson_a_count = ctx.lessons.iter().filter(|l| *l == "lesson A").count();
-    let lesson_b_count = ctx.lessons.iter().filter(|l| *l == "lesson B").count();
+    // 2. The three similar "always check error handling" lessons should be
+    //    merged into one cluster with a "(x3)" suffix.
+    let merged_count = ctx
+        .lessons
+        .iter()
+        .filter(|l| l.contains("error handling") && l.contains("(x3)"))
+        .count();
     assert_eq!(
-        lesson_a_count, 1,
-        "lesson A should appear once after dedup, got {}",
-        lesson_a_count
-    );
-    assert_eq!(
-        lesson_b_count, 1,
-        "lesson B should appear once after dedup, got {}",
-        lesson_b_count
+        merged_count, 1,
+        "similar lessons should merge into one cluster with (x3), got: {:?}",
+        ctx.lessons
     );
 }
