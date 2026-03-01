@@ -748,3 +748,63 @@ async fn pre_tool_use_safe_command_not_high_risk() {
         ctx
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 5: Context pruning service endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn proxy_passes_clean_messages() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/proxy/anthropic"))
+        .json(&json!({
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hi there"}
+            ],
+            "model": "claude-sonnet",
+            "max_tokens": 1000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["pruned"], false);
+    assert_eq!(body["recovery_injected"], false);
+    assert_eq!(body["tokens_removed"], 0);
+    assert!(body["reason"].is_null());
+    assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn proxy_prunes_error_loop() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/proxy/anthropic"))
+        .json(&json!({
+            "messages": [
+                {"role": "user", "content": "fix this"},
+                {"role": "assistant", "content": "Error: compilation failed"},
+                {"role": "user", "content": "try again"},
+                {"role": "assistant", "content": "Error: same compilation failed"},
+                {"role": "user", "content": "please fix"},
+                {"role": "assistant", "content": "Error: still failing"}
+            ],
+            "model": "claude-sonnet",
+            "max_tokens": 1000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["pruned"], true);
+    assert!(body["recovery_injected"].as_bool().unwrap());
+    assert!(body["reason"].as_str().unwrap().contains("ALETHEIA"));
+    // Pruned messages should be shorter than the original 6
+    assert!(body["messages"].as_array().unwrap().len() < 6);
+}
