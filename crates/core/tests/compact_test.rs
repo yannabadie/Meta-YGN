@@ -68,14 +68,33 @@ fn cluster_keeps_different_lessons_separate() {
 
 #[test]
 fn cluster_respects_max_limit() {
-    // 15 completely unique lessons, max = 10
-    let lessons: Vec<String> = (0..15)
-        .map(|i| format!("unique lesson number {} about topic {}", i, i * 100))
-        .collect();
+    // 15 genuinely unrelated lessons (no shared non-trivial words)
+    let lessons: Vec<String> = vec![
+        "always check error handling carefully".into(),
+        "database migrations require careful backup".into(),
+        "unit tests should cover edge cases".into(),
+        "security reviews prevent vulnerabilities early".into(),
+        "performance profiling identifies bottleneck issues".into(),
+        "documentation helps onboarding new developers".into(),
+        "code reviews catch bugs before production".into(),
+        "monitoring alerts detect incidents quickly overnight".into(),
+        "dependency updates prevent supply chain attacks".into(),
+        "configuration management reduces deployment failures".into(),
+        "incident response plans minimize customer impact".into(),
+        "accessibility standards improve user experience universally".into(),
+        "caching strategies reduce latency significantly overall".into(),
+        "load balancing distributes traffic across servers".into(),
+        "encryption protects sensitive data during transit".into(),
+    ];
     let result = cluster_lessons(&lessons, 10);
     assert!(
         result.len() <= 10,
         "should respect max_clusters=10, got {} clusters",
+        result.len()
+    );
+    assert!(
+        result.len() >= 10,
+        "15 unrelated lessons with max=10 should produce exactly 10, got {}",
         result.len()
     );
 }
