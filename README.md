@@ -90,7 +90,7 @@ aletheia export [--limit N]                              Export RL trajectories 
 
 ### Prerequisites
 - **Rust** 1.85+ (`rustup update`)
-- **Bun** 1.0+ (`curl -fsSL https://bun.sh/install | bash`) — required for hook execution
+- **Node.js** 22+ with npm (`node --version`) — hooks run via `npx tsx`
 - **pnpm** 9+ (`npm install -g pnpm`) — for TypeScript workspace dependencies
 
 ### Setup
