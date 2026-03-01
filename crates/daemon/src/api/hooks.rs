@@ -373,6 +373,23 @@ async fn post_tool_use(
         start,
     )
     .await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        let tool_name_clone = tool_name.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_post_tool_use(
+                state_clone,
+                session_clone,
+                tool_name_clone,
+                is_error,
+            )
+            .await;
+        });
+    }
+
     Json(output)
 }
 
@@ -477,6 +494,16 @@ async fn user_prompt_submit(
         start,
     )
     .await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_user_prompt_submit(state_clone, session_clone).await;
+        });
+    }
+
     Json(output)
 }
 
@@ -598,6 +625,23 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(&state, &session_id, "Stop", &payload, &resp_json, start).await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        let decision_str = format!("{:?}", decision);
+        let lessons_clone = ctx.lessons.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_stop(
+                state_clone,
+                session_clone,
+                decision_str,
+                lessons_clone,
+            )
+            .await;
+        });
+    }
 
     // Clean up session context now that the session is ending
     state.sessions.remove(&session_id);
