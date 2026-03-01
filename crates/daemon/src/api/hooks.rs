@@ -397,6 +397,35 @@ async fn post_tool_use(
             .push(format!("syntax_error: {} — {}", file_path, error));
     }
 
+    // Tier 1.5 verification: tree-sitter syntax check for code files
+    #[cfg(feature = "syntax")]
+    if tool_name == "Write" || tool_name == "Edit" {
+        if let Some(ref tool_input) = input.tool_input {
+            if let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str()) {
+                let ext = file_path.rsplit('.').next().unwrap_or("");
+                if let Some(content) = tool_input.get("content").and_then(|v| v.as_str()) {
+                    let errors = metaygn_verifiers::syntax::check_syntax(content, ext);
+                    if !errors.is_empty() {
+                        let detail = errors
+                            .iter()
+                            .map(|e| format!("L{}: {}", e.line, e.message))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        verification_context.push_str(&format!(
+                            " SYNTAX: {} error(s) in {}: {}",
+                            errors.len(),
+                            file_path,
+                            detail
+                        ));
+                        let mut sess = session_ctx.lock().unwrap();
+                        sess.verification_results
+                            .push(format!("syntax_error: {} — {}", file_path, detail));
+                    }
+                }
+            }
+        }
+    }
+
     let context = if tool_name == "Bash" && response.contains("FAIL") {
         "Test failure detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
