@@ -1,0 +1,24 @@
+[
+  {
+    "name": "OpenSage",
+    "arxiv_id": "2602.16891",
+    "file": "docs\\papers\\html\\arxiv-2602.16891.html"
+  },
+  {
+    "name": "Discovering Multiagent Learning Algorithms",
+    "arxiv_id": "2602.16928",
+    "file": "docs\\papers\\html\\arxiv-2602.16928.html"
+  },
+  {
+    "name": "PSRO (Unified Game-Theoretic Approach)",
+    "source": "ar5iv",
+    "arxiv_id": "1711.00832",
+    "file": "docs\\papers\\html\\ar5iv-1711.00832.html"
+  },
+  {
+    "name": "AlphaEvolve: A coding agent for scientific and algorithmic discovery",
+    "source": "ar5iv",
+    "arxiv_id": "2506.13131",
+    "file": "docs\\papers\\html\\ar5iv-2506.13131.html"
+  }
+]
