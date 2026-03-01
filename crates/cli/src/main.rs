@@ -499,6 +499,34 @@ async fn cmd_replay(session_id: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Mcp command: launch the MCP stdio bridge (aletheia-mcp) with inherited I/O.
+async fn cmd_mcp() -> Result<()> {
+    let exe = std::env::current_exe().context("could not determine own executable path")?;
+    let exe_dir = exe.parent().context("executable has no parent directory")?;
+    let mcp_name = if cfg!(windows) {
+        "aletheia-mcp.exe"
+    } else {
+        "aletheia-mcp"
+    };
+    let mcp_path = exe_dir.join(mcp_name);
+
+    if !mcp_path.exists() {
+        anyhow::bail!(
+            "Cannot find aletheia-mcp at {:?}. Build with: cargo build --workspace",
+            mcp_path
+        );
+    }
+
+    let status = std::process::Command::new(&mcp_path)
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .status()
+        .context("Failed to launch aletheia-mcp")?;
+
+    std::process::exit(status.code().unwrap_or(1));
+}
+
 /// Top command: launch the real-time cognitive telemetry TUI dashboard.
 async fn cmd_top() -> Result<()> {
     let Some(port) = read_daemon_port() else {
