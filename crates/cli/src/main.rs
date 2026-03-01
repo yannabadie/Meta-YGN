@@ -554,30 +554,31 @@ async fn cmd_export(limit: u32) -> Result<()> {
     Ok(())
 }
 
-/// Mcp command: launch the MCP stdio bridge (aletheia-mcp) with inherited I/O.
+/// Mcp command: launch the daemon in MCP stdio mode (aletheiad --mcp).
 async fn cmd_mcp() -> Result<()> {
     let exe = std::env::current_exe().context("could not determine own executable path")?;
     let exe_dir = exe.parent().context("executable has no parent directory")?;
-    let mcp_name = if cfg!(windows) {
-        "aletheia-mcp.exe"
+    let daemon_name = if cfg!(windows) {
+        "aletheiad.exe"
     } else {
-        "aletheia-mcp"
+        "aletheiad"
     };
-    let mcp_path = exe_dir.join(mcp_name);
+    let daemon_path = exe_dir.join(daemon_name);
 
-    if !mcp_path.exists() {
+    if !daemon_path.exists() {
         anyhow::bail!(
-            "Cannot find aletheia-mcp at {:?}. Build with: cargo build --workspace",
-            mcp_path
+            "Cannot find aletheiad at {:?}. Build with: cargo build --workspace --features mcp",
+            daemon_path
         );
     }
 
-    let status = std::process::Command::new(&mcp_path)
+    let status = std::process::Command::new(&daemon_path)
+        .arg("--mcp")
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
         .status()
-        .context("Failed to launch aletheia-mcp")?;
+        .context("Failed to launch aletheiad --mcp")?;
 
     std::process::exit(status.code().unwrap_or(1));
 }
