@@ -470,6 +470,43 @@ impl MemoryStore {
         Ok(())
     }
 
+    /// Get the success rate for a given task type from recent session outcomes.
+    /// Returns None if fewer than `min_samples` outcomes exist.
+    pub async fn success_rate_for_task_type(
+        &self,
+        task_type: &str,
+        limit: u32,
+        min_samples: u32,
+    ) -> Result<Option<f32>> {
+        let task_type = task_type.to_owned();
+        let result = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT COUNT(*) as total,
+                            COALESCE(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END), 0) as successes
+                     FROM (
+                         SELECT success FROM session_outcomes
+                         WHERE task_type = ?1
+                         ORDER BY created_at DESC
+                         LIMIT ?2
+                     )",
+                )?;
+                let (total, successes): (u32, u32) =
+                    stmt.query_row(rusqlite::params![task_type, limit], |row| {
+                        Ok((row.get(0)?, row.get(1)?))
+                    })?;
+                Ok::<_, rusqlite::Error>((total, successes))
+            })
+            .await?;
+        let (total, successes) = result;
+        if total < min_samples {
+            Ok(None)
+        } else {
+            Ok(Some(successes as f32 / total as f32))
+        }
+    }
+
     /// Export recent RL2F trajectories, ordered by timestamp descending.
     /// Returns Vec of (id, session_id, trajectory_json, signature_hash, timestamp).
     pub async fn export_trajectories(
