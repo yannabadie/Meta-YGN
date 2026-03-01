@@ -88,6 +88,19 @@ impl MemoryStore {
                         errors_encountered INTEGER,
                         created_at TEXT NOT NULL DEFAULT (datetime('now'))
                     );
+
+                    CREATE TABLE IF NOT EXISTS replay_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        hook_event TEXT NOT NULL,
+                        request_json TEXT NOT NULL,
+                        response_json TEXT NOT NULL,
+                        latency_ms INTEGER NOT NULL,
+                        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_replay_session
+                        ON replay_events(session_id, timestamp);
                     ",
                 )?;
                 Ok::<_, rusqlite::Error>(())
@@ -332,6 +345,96 @@ impl MemoryStore {
                             "errors_encountered": row.get::<_, Option<i64>>(8)?,
                             "created_at": row.get::<_, String>(9)?,
                         }))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
+    /// Record a replay event for session replay.
+    pub async fn record_replay_event(
+        &self,
+        session_id: &str,
+        hook_event: &str,
+        request_json: &str,
+        response_json: &str,
+        latency_ms: i64,
+    ) -> Result<()> {
+        let session_id = session_id.to_owned();
+        let hook_event = hook_event.to_owned();
+        let request_json = request_json.to_owned();
+        let response_json = response_json.to_owned();
+
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "INSERT INTO replay_events (session_id, hook_event, request_json, response_json, latency_ms)
+                     VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![session_id, hook_event, request_json, response_json, latency_ms],
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// List all replay sessions with event counts, ordered by most recent last event.
+    /// Returns Vec of (session_id, event_count, first_event_timestamp, last_event_timestamp).
+    pub async fn replay_sessions(&self) -> Result<Vec<(String, u64, String, String)>> {
+        let rows = self
+            .conn
+            .call(|conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT session_id, COUNT(*) as event_count,
+                            MIN(timestamp) as first_event, MAX(timestamp) as last_event
+                     FROM replay_events
+                     GROUP BY session_id
+                     ORDER BY last_event DESC",
+                )?;
+                let rows = stmt
+                    .query_map([], |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, u64>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, String>(3)?,
+                        ))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
+    /// Retrieve all replay events for a given session, ordered by id ascending.
+    /// Returns Vec of (id, hook_event, request_json, response_json, latency_ms, timestamp).
+    pub async fn replay_events(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<(i64, String, String, String, i64, String)>> {
+        let session_id = session_id.to_owned();
+        let rows = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, hook_event, request_json, response_json, latency_ms, timestamp
+                     FROM replay_events
+                     WHERE session_id = ?1
+                     ORDER BY id ASC",
+                )?;
+                let rows = stmt
+                    .query_map(params![session_id], |row| {
+                        Ok((
+                            row.get::<_, i64>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, String>(3)?,
+                            row.get::<_, i64>(4)?,
+                            row.get::<_, String>(5)?,
+                        ))
                     })?
                     .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
                 Ok::<_, rusqlite::Error>(rows)

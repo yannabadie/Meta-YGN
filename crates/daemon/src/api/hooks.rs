@@ -83,6 +83,22 @@ fn append_latency(output: &mut HookOutput, start: std::time::Instant) {
     }
 }
 
+/// Record a replay event for session replay, ignoring errors.
+async fn record_replay(
+    state: &AppState,
+    session_id: &str,
+    hook_event: &str,
+    request_json: &str,
+    response_json: &str,
+    start: std::time::Instant,
+) {
+    let latency_ms = start.elapsed().as_millis() as i64;
+    let _ = state
+        .memory
+        .record_replay_event(session_id, hook_event, request_json, response_json, latency_ms)
+        .await;
+}
+
 /// Determine whether a tool response indicates an error.
 fn response_looks_like_error(tool_name: &str, response: &str) -> bool {
     if tool_name == "Bash" && (response.contains("FAIL") || response.contains("error")) {
@@ -109,6 +125,7 @@ async fn pre_tool_use(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
+    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
     let tool_name = input.tool_name.clone().unwrap_or_default();
     let command = extract_command(&input);
 
@@ -142,6 +159,8 @@ async fn pre_tool_use(
         let mut output = HookOutput::permission(decision, reason);
         append_budget_to_output(&mut output, &state);
         append_latency(&mut output, start);
+        let resp_json = serde_json::to_string(&output).unwrap_or_default();
+        record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
         return Json(output);
     }
 
@@ -180,6 +199,8 @@ async fn pre_tool_use(
                     };
                     append_budget_to_output(&mut output, &state);
                     append_latency(&mut output, start);
+                    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+                    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
                     return Json(output);
                 }
             }
@@ -214,6 +235,8 @@ async fn pre_tool_use(
     );
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
+    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
     Json(output)
 }
 
@@ -223,6 +246,7 @@ async fn post_tool_use(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
+    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
     // Log the tool output for verification signals
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "post_tool_use", &payload).await;
@@ -269,6 +293,8 @@ async fn post_tool_use(
     let mut output = HookOutput::context("PostToolUse".to_string(), context.to_string());
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
+    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+    record_replay(&state, &session_id, "PostToolUse", &payload, &resp_json, start).await;
     Json(output)
 }
 
@@ -282,6 +308,7 @@ async fn user_prompt_submit(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
+    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
@@ -336,6 +363,8 @@ async fn user_prompt_submit(
     );
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
+    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+    record_replay(&state, &session_id, "UserPromptSubmit", &payload, &resp_json, start).await;
     Json(output)
 }
 
@@ -348,6 +377,7 @@ async fn stop(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
+    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "stop", &payload).await;
 
@@ -369,6 +399,8 @@ async fn stop(
         );
         append_budget_to_output(&mut output, &state);
         append_latency(&mut output, start);
+        let resp_json = serde_json::to_string(&output).unwrap_or_default();
+        record_replay(&state, &session_id, "Stop", &payload, &resp_json, start).await;
         return Json(output);
     }
 
@@ -422,6 +454,8 @@ async fn stop(
     let mut output = HookOutput::context("Stop".to_string(), context_msg);
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
+    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+    record_replay(&state, &session_id, "Stop", &payload, &resp_json, start).await;
     Json(output)
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "aletheia-nexus",
-  "description": "Local-first metacognitive runtime for coding agents. Catches false completion claims, detects test manipulation, provides visible token budgets, plus risk classification, factored verification, evidence packs, dynamic topology, context pruning service, embeddings, and skill crystallizer.",
-  "version": "0.7.0",
+  "description": "Local-first metacognitive runtime for coding agents. MCP bridge with 5 metacognitive tools, neural embeddings, session replay, plus risk classification, factored verification, evidence packs, dynamic topology, context pruning, and skill crystallizer.",
+  "version": "0.8.0",
   "author": {
     "name": "Yann Abadie"
   },
