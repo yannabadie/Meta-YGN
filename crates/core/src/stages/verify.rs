@@ -12,6 +12,43 @@ impl Stage for VerifyStage {
     fn run(&self, ctx: &mut LoopContext) -> StageResult {
         ctx.verification_results.clear();
 
+        // Check intended action against actual tool usage.
+        if let Some(ref action) = ctx.intended_action {
+            if let Some(ref tool_name) = ctx.input.tool_name {
+                if *tool_name != action.tool && !action.tool.is_empty() {
+                    ctx.verification_results.push(format!(
+                        "tool_mismatch: intended '{}' but executed '{}'",
+                        action.tool, tool_name
+                    ));
+                }
+            }
+        }
+
+        // Parse test results from Bash tool responses.
+        if let Some(ref tool_name) = ctx.input.tool_name {
+            if tool_name == "Bash" {
+                if let Some(ref response) = ctx.input.tool_response {
+                    // Look for common test result patterns.
+                    // Pattern: "N failed"
+                    let lower = response.to_lowercase();
+                    if let Some(pos) = lower.find("failed") {
+                        // Extract the number before "failed".
+                        let prefix = &lower[..pos];
+                        if let Some(num_str) = prefix.split_whitespace().last() {
+                            if let Ok(failed) = num_str.parse::<u32>() {
+                                if failed > 0 {
+                                    ctx.verification_results.push(format!(
+                                        "test_failures: {} tests failed",
+                                        failed
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // If we have an error from a previous tool invocation, record it.
         if let Some(err) = &ctx.input.error {
             ctx.verification_results.push(format!("tool_error: {err}"));
