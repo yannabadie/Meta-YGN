@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use metaygn_daemon::app_state::AppState;
 use serde_json::{json, Value};
 
 async fn start_test_server() -> SocketAddr {
@@ -807,4 +808,69 @@ async fn proxy_prunes_error_loop() {
     assert!(body["reason"].as_str().unwrap().contains("ALETHEIA"));
     // Pruned messages should be shorter than the original 6
     assert!(body["messages"].as_array().unwrap().len() < 6);
+}
+
+// ---------------------------------------------------------------------------
+// Task 8 (v0.7.0): Cross-session learning persistence roundtrip
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn heuristic_persistence_roundtrip() {
+    // 1. Create AppState (in-memory)
+    let state = AppState::new_in_memory().await.unwrap();
+
+    // 2. Record an outcome and persist it via the memory store
+    let outcome_id = uuid::Uuid::new_v4().to_string();
+    state.memory.save_outcome(
+        &outcome_id, "sess-rt", "bugfix", "medium", "step_by_step",
+        true, 3000, 15000, 0,
+    ).await.unwrap();
+
+    {
+        let mut evolver = state.evolver.lock().unwrap();
+        evolver.record_outcome(metaygn_core::heuristics::fitness::SessionOutcome {
+            session_id: "sess-rt".into(),
+            task_type: "bugfix".into(),
+            risk_level: "medium".into(),
+            strategy_used: "step_by_step".into(),
+            success: true,
+            tokens_consumed: 3000,
+            duration_ms: 15000,
+            errors_encountered: 0,
+        });
+
+        // 3. Evolve via evolver directly
+        evolver.evolve_generation();
+
+        // 4. Check population > 1 (seed + mutated child)
+        assert!(
+            evolver.population_size() > 1,
+            "Expected population > 1 after evolve, got {}",
+            evolver.population_size()
+        );
+
+        // Persist the best version
+        if let Some(best) = evolver.best() {
+            state.memory.save_heuristic(
+                &best.id, best.generation, best.parent_id.as_deref(),
+                &serde_json::to_string(&best.fitness).unwrap(),
+                &serde_json::to_string(&best.risk_weights).unwrap(),
+                &serde_json::to_string(&best.strategy_scores).unwrap(),
+                &best.created_at,
+            ).await.unwrap();
+        }
+    }
+
+    // 5. Verify persistence: load back from SQLite
+    let versions = state.memory.load_heuristics().await.unwrap();
+    assert!(
+        !versions.is_empty(),
+        "Expected at least one heuristic version persisted"
+    );
+
+    let outcomes = state.memory.load_recent_outcomes(10).await.unwrap();
+    assert!(
+        !outcomes.is_empty(),
+        "Expected at least one outcome persisted"
+    );
 }
