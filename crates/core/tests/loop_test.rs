@@ -165,3 +165,74 @@ fn control_loop_stage_count_is_twelve() {
     let cl = ControlLoop::new();
     assert_eq!(cl.stage_count(), 12);
 }
+
+#[test]
+fn act_stage_records_intended_action() {
+    let cl = ControlLoop::new();
+
+    let mut input = make_input(Some("read the config file"));
+    input.tool_name = Some("Read".to_string());
+    input.tool_input = Some(serde_json::json!({
+        "file_path": "/etc/config.toml"
+    }));
+    let mut ctx = LoopContext::new(input);
+
+    cl.run(&mut ctx);
+
+    let action = ctx
+        .intended_action
+        .as_ref()
+        .expect("act stage should record an intended action");
+    assert_eq!(action.tool, "Read");
+    assert_eq!(action.target, "/etc/config.toml");
+    assert!(
+        action.purpose.contains("strategy"),
+        "purpose should mention strategy, got: {}",
+        action.purpose
+    );
+}
+
+#[test]
+fn compact_stage_deduplicates_lessons() {
+    let cl = ControlLoop::new();
+    let input = make_input(Some("hello world"));
+    let mut ctx = LoopContext::new(input);
+
+    // Pre-populate lessons with duplicates
+    ctx.lessons = vec![
+        "lesson A".into(),
+        "lesson B".into(),
+        "lesson A".into(), // duplicate
+        "lesson C".into(),
+        "lesson B".into(), // duplicate
+        "lesson D".into(),
+    ];
+
+    cl.run(&mut ctx);
+
+    // Compact stage deduplicates and caps at 5, then adds a summary.
+    // The learn stage (stage 12) runs after compact and appends more lessons.
+    // So we verify:
+    // 1. The compact summary exists
+    let has_compact_summary = ctx.lessons.iter().any(|l| l.starts_with("[compact]"));
+    assert!(
+        has_compact_summary,
+        "compact stage should add a summary, got: {:?}",
+        ctx.lessons
+    );
+
+    // 2. The duplicates were removed: "lesson A" and "lesson B" should each
+    //    appear exactly once (the learn stage does not re-add them).
+    let lesson_a_count = ctx.lessons.iter().filter(|l| *l == "lesson A").count();
+    let lesson_b_count = ctx.lessons.iter().filter(|l| *l == "lesson B").count();
+    assert_eq!(
+        lesson_a_count, 1,
+        "lesson A should appear once after dedup, got {}",
+        lesson_a_count
+    );
+    assert_eq!(
+        lesson_b_count, 1,
+        "lesson B should appear once after dedup, got {}",
+        lesson_b_count
+    );
+}
