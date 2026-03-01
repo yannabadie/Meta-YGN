@@ -28,6 +28,10 @@ pub struct SessionContext {
     pub errors: u32,
     pub success_count: u32,
     pub tokens_consumed: u64,
+    /// Graph node ID of the Task node for this session (for edge creation).
+    pub task_node_id: Option<String>,
+    /// Graph node ID of the last Evidence node (for edge chaining).
+    pub last_evidence_node_id: Option<String>,
     /// Session-local fatigue profiler (avoids cross-session bleed).
     pub fatigue: FatigueProfiler,
     /// Session-local plasticity tracker (avoids cross-session bleed).
@@ -61,6 +65,8 @@ impl SessionContext {
             errors: 0,
             success_count: 0,
             tokens_consumed: 0,
+            task_node_id: None,
+            last_evidence_node_id: None,
             fatigue: FatigueProfiler::with_defaults(),
             plasticity: PlasticityTracker::new(),
             budget: SessionBudget::new(100_000, 1.00),

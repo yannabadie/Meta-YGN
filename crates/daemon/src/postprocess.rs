@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex};
 
 use metaygn_core::heuristics::fitness::SessionOutcome;
-use metaygn_memory::graph::{MemoryNode, NodeType, Scope};
+use metaygn_memory::graph::{EdgeType, MemoryEdge, MemoryNode, NodeType, Scope};
 
 use crate::app_state::AppState;
 use crate::session::SessionContext;
@@ -28,8 +28,9 @@ pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<Sessio
         )
     };
 
+    let task_id = format!("task-{}", uuid::Uuid::new_v4());
     let node = MemoryNode {
-        id: format!("task-{}", uuid::Uuid::new_v4()),
+        id: task_id.clone(),
         node_type: NodeType::Task,
         scope: Scope::Session,
         label: format!("Task: {} (risk: {})", task_type, risk),
@@ -45,6 +46,9 @@ pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<Sessio
     if let Err(e) = state.graph.insert_node(&node).await {
         tracing::warn!("failed to insert Task node into graph: {e}");
     }
+
+    // Store task node ID in session for edge creation in subsequent hooks
+    session.lock().unwrap().task_node_id = Some(task_id);
 }
 
 /// After `post_tool_use`: update the entropy tracker with the latest
@@ -65,9 +69,10 @@ pub async fn after_post_tool_use(
         sess.entropy_tracker.record(confidence, !was_error);
     }
 
-    // 2. Insert Evidence node into graph
+    // 2. Insert Evidence node into graph + edge from Task
+    let evidence_id = format!("evidence-{}", uuid::Uuid::new_v4());
     let node = MemoryNode {
-        id: format!("evidence-{}", uuid::Uuid::new_v4()),
+        id: evidence_id.clone(),
         node_type: NodeType::Evidence,
         scope: Scope::Session,
         label: format!(
@@ -84,6 +89,21 @@ pub async fn after_post_tool_use(
     if let Err(e) = state.graph.insert_node(&node).await {
         tracing::warn!("failed to insert Evidence node into graph: {e}");
     }
+
+    // Create edge: Task → Evidence (DependsOn)
+    let task_node_id = session.lock().unwrap().task_node_id.clone();
+    if let Some(task_id) = task_node_id {
+        let edge = MemoryEdge {
+            source_id: task_id,
+            target_id: evidence_id.clone(),
+            edge_type: EdgeType::Produces,
+            weight: 1.0,
+            metadata: None,
+        };
+        let _ = state.graph.insert_edge(&edge).await;
+    }
+    // Store for chaining
+    session.lock().unwrap().last_evidence_node_id = Some(evidence_id);
 
     // 3. Tier 2: async forge verification for Python files
     let is_python_file = file_path
@@ -127,9 +147,10 @@ pub async fn after_stop(
 ) {
     let session_id = session.lock().unwrap().session_id.clone();
 
-    // 1. Insert Decision node
+    // 1. Insert Decision node + edge from last Evidence
+    let decision_id = format!("decision-{}", uuid::Uuid::new_v4());
     let decision_node = MemoryNode {
-        id: format!("decision-{}", uuid::Uuid::new_v4()),
+        id: decision_id.clone(),
         node_type: NodeType::Decision,
         scope: Scope::Session,
         label: format!("Decision: {}", decision),
@@ -140,6 +161,19 @@ pub async fn after_stop(
     };
     if let Err(e) = state.graph.insert_node(&decision_node).await {
         tracing::warn!("failed to insert Decision node: {e}");
+    }
+
+    // Create edge: last Evidence → Decision (Verifies)
+    let last_evidence_id = session.lock().unwrap().last_evidence_node_id.clone();
+    if let Some(evidence_id) = last_evidence_id {
+        let edge = MemoryEdge {
+            source_id: evidence_id,
+            target_id: decision_id.clone(),
+            edge_type: EdgeType::Verifies,
+            weight: 1.0,
+            metadata: None,
+        };
+        let _ = state.graph.insert_edge(&edge).await;
     }
 
     // 2. Insert Lesson nodes (max 5 to avoid flooding)

@@ -166,7 +166,7 @@ async fn pre_tool_use(
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state
         .memory
-        .log_event("daemon", "pre_tool_use", &payload)
+        .log_event(&session_id, "pre_tool_use", &payload)
         .await;
 
     // Step 1: Run the guard pipeline
@@ -323,7 +323,7 @@ async fn post_tool_use(
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state
         .memory
-        .log_event("daemon", "post_tool_use", &payload)
+        .log_event(&session_id, "post_tool_use", &payload)
         .await;
 
     // Post-tool-use: emit verification context based on what happened
@@ -499,7 +499,7 @@ async fn user_prompt_submit(
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state
         .memory
-        .log_event("daemon", "user_prompt_submit", &payload)
+        .log_event(&session_id, "user_prompt_submit", &payload)
         .await;
 
     // Get or create session context for cross-hook state persistence
@@ -619,7 +619,7 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         .clone()
         .unwrap_or_else(|| "unknown".to_string());
     let payload = serde_json::to_string(&input).unwrap_or_default();
-    let _ = state.memory.log_event("daemon", "stop", &payload).await;
+    let _ = state.memory.log_event(&session_id, "stop", &payload).await;
 
     // Completion verification: check Claude's claims match filesystem reality
     let last_msg = input.last_assistant_message.as_deref().unwrap_or("");
@@ -772,7 +772,7 @@ async fn analyze(
     Json(input): Json<HookInput>,
 ) -> Json<serde_json::Value> {
     let payload = serde_json::to_string(&input).unwrap_or_default();
-    let _ = state.memory.log_event("daemon", "analyze", &payload).await;
+    let _ = state.memory.log_event("analyze", "analyze", &payload).await;
 
     let mut ctx = LoopContext::new(input);
     state.control_loop.run(&mut ctx);

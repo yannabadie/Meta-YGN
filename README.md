@@ -75,7 +75,7 @@ These are implemented but not yet validated at scale. Treat claims about their e
 ## CLI Commands
 
 ```
-aletheia start [--host H] [--port P] [--db-path PATH]   Start the daemon
+aletheia start [--db-path PATH]                         Start the daemon
 aletheia stop                                            Stop the daemon
 aletheia status                                          Show daemon health
 aletheia recall --query Q [--limit N]                    Search memory
