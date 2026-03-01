@@ -221,6 +221,7 @@ impl MemoryStore {
     }
 
     /// Persist a heuristic version snapshot.
+    #[allow(clippy::too_many_arguments)]
     pub async fn save_heuristic(
         &self,
         id: &str,
@@ -286,6 +287,7 @@ impl MemoryStore {
     }
 
     /// Record a session outcome for heuristic fitness tracking.
+    #[allow(clippy::too_many_arguments)]
     pub async fn save_outcome(
         &self,
         id: &str,

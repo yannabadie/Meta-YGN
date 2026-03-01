@@ -52,10 +52,10 @@ async fn run_event_loop(
         terminal.draw(|frame| render(frame, app))?;
 
         // Wait up to `tick_rate` for a keyboard event
-        if event::poll(tick_rate)? {
-            if let Event::Key(key) = event::read()? {
-                app.handle_key(key);
-            }
+        if event::poll(tick_rate)?
+            && let Event::Key(key) = event::read()?
+        {
+            app.handle_key(key);
         }
 
         if app.should_quit {

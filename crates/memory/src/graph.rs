@@ -26,6 +26,7 @@ impl Scope {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Session" => Some(Scope::Session),
@@ -62,6 +63,7 @@ impl NodeType {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Task" => Some(NodeType::Task),
@@ -99,6 +101,7 @@ impl EdgeType {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "DependsOn" => Some(EdgeType::DependsOn),

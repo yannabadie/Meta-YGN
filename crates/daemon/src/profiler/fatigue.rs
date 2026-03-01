@@ -127,7 +127,7 @@ impl FatigueProfiler {
 
         // 3. Late night?
         let hour = timestamp.hour();
-        if hour >= 23 || hour < 5 {
+        if !(5..23).contains(&hour) {
             self.push_signal(now, FatigueSignal::LateNight { hour });
         }
 

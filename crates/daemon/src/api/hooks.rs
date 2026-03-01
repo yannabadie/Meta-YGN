@@ -193,53 +193,52 @@ async fn pre_tool_use(
     }
 
     // Test Integrity Guard: detect test modification instead of code fixing
-    if tool_name == "Edit" || tool_name == "MultiEdit" {
-        if let Some(ref tool_input) = input.tool_input {
-            if let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str()) {
-                let old_string = tool_input
-                    .get("old_string")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let new_string = tool_input
-                    .get("new_string")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+    if (tool_name == "Edit" || tool_name == "MultiEdit")
+        && let Some(ref tool_input) = input.tool_input
+        && let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str())
+    {
+        let old_string = tool_input
+            .get("old_string")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let new_string = tool_input
+            .get("new_string")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
-                let report = metaygn_verifiers::test_integrity::analyze_test_edit(
-                    file_path, old_string, new_string,
-                );
+        let report = metaygn_verifiers::test_integrity::analyze_test_edit(
+            file_path, old_string, new_string,
+        );
 
-                if report.suspicious {
-                    let issues_detail = report
-                        .issues
-                        .iter()
-                        .map(|i| i.detail.as_str())
-                        .collect::<Vec<_>>()
-                        .join("; ");
+        if report.suspicious {
+            let issues_detail = report
+                .issues
+                .iter()
+                .map(|i| i.detail.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
 
-                    let mut output = HookOutput {
-                        hook_specific_output: Some(metaygn_shared::protocol::HookSpecificOutput {
-                            hook_event_name: Some("PreToolUse".into()),
-                            permission_decision: Some(PermissionDecision::Ask),
-                            permission_decision_reason: Some(report.recommendation),
-                            additional_context: Some(format!("Issues: {}", issues_detail)),
-                        }),
-                    };
-                    append_budget_to_output(&mut output, &state);
-                    append_latency(&mut output, start);
-                    let resp_json = serde_json::to_string(&output).unwrap_or_default();
-                    record_replay(
-                        &state,
-                        &session_id,
-                        "PreToolUse",
-                        &payload,
-                        &resp_json,
-                        start,
-                    )
-                    .await;
-                    return Json(output);
-                }
-            }
+            let mut output = HookOutput {
+                hook_specific_output: Some(metaygn_shared::protocol::HookSpecificOutput {
+                    hook_event_name: Some("PreToolUse".into()),
+                    permission_decision: Some(PermissionDecision::Ask),
+                    permission_decision_reason: Some(report.recommendation),
+                    additional_context: Some(format!("Issues: {}", issues_detail)),
+                }),
+            };
+            append_budget_to_output(&mut output, &state);
+            append_latency(&mut output, start);
+            let resp_json = serde_json::to_string(&output).unwrap_or_default();
+            record_replay(
+                &state,
+                &session_id,
+                "PreToolUse",
+                &payload,
+                &resp_json,
+                start,
+            )
+            .await;
+            return Json(output);
         }
     }
 

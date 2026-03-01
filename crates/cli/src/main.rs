@@ -127,11 +127,10 @@ async fn cmd_start(_host: &str, _port: u16, db_path: Option<&std::path::Path>) -
             .get(format!("http://127.0.0.1:{existing_port}/health"))
             .send()
             .await
+            && resp.status().is_success()
         {
-            if resp.status().is_success() {
-                println!("Daemon already running on port {existing_port}");
-                return Ok(());
-            }
+            println!("Daemon already running on port {existing_port}");
+            return Ok(());
         }
         // Port file exists but daemon not responding -- stale
         if let Ok(pf) = port_file_path() {

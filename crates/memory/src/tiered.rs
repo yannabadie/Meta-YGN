@@ -96,11 +96,11 @@ impl TieredMemory {
     /// `accessed_at` timestamp.
     pub fn get(&mut self, key: &str) -> Option<&MemoryEntry> {
         // Check hot tier first — but skip expired entries.
-        if let Some(entry) = self.hot.get(key) {
-            if entry.created_at.elapsed() >= self.hot_ttl {
-                // Expired — remove silently and fall through.
-                self.hot.remove(key);
-            }
+        if let Some(entry) = self.hot.get(key)
+            && entry.created_at.elapsed() >= self.hot_ttl
+        {
+            // Expired — remove silently and fall through.
+            self.hot.remove(key);
         }
 
         // If still present in hot (not expired), bump and return.

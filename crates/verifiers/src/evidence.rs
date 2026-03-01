@@ -147,7 +147,7 @@ impl EvidencePack {
 
         while layer.len() > 1 {
             // Duplicate last if odd
-            if layer.len() % 2 != 0 {
+            if !layer.len().is_multiple_of(2) {
                 let last = *layer.last().unwrap();
                 layer.push(last);
             }
