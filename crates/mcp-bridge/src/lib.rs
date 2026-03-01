@@ -1,3 +1,5 @@
+pub mod handler;
+
 use std::time::Duration;
 
 use anyhow::{Context, Result};
