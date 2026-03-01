@@ -114,8 +114,7 @@ fn prune_injects_recovery_prompt() {
     ];
     let pruned = pruner.prune(&messages);
     let has_injection = pruned.iter().any(|m| {
-        m.content.contains("ALETHEIA")
-            && m.content.contains("fundamentally different approach")
+        m.content.contains("ALETHEIA") && m.content.contains("fundamentally different approach")
     });
     assert!(
         has_injection,

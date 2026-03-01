@@ -7,8 +7,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use crossterm::event::{self, Event};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
+use ratatui::backend::CrosstermBackend;
 
 use self::app::TuiApp;
 use self::ui::render;

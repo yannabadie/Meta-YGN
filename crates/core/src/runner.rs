@@ -18,18 +18,18 @@ impl ControlLoop {
     pub fn new() -> Self {
         Self {
             stages: vec![
-                Box::new(classify::ClassifyStage),   // 1. classify task type
-                Box::new(assess::AssessStage),        // 2. assess difficulty + risk
-                Box::new(competence::CompetenceStage),// 3. self-assess competence
-                Box::new(tool_need::ToolNeedStage),   // 4. determine if tool needed
-                Box::new(budget::BudgetStage),        // 5. allocate budget
-                Box::new(strategy::StrategyStage),    // 6. select reasoning strategy
-                Box::new(act::ActStage),              // 7. execute (no-op)
-                Box::new(verify::VerifyStage),        // 8. verify tool output
-                Box::new(calibrate::CalibrateStage),  // 9. calibrate metacog vector
+                Box::new(classify::ClassifyStage),     // 1. classify task type
+                Box::new(assess::AssessStage),         // 2. assess difficulty + risk
+                Box::new(competence::CompetenceStage), // 3. self-assess competence
+                Box::new(tool_need::ToolNeedStage),    // 4. determine if tool needed
+                Box::new(budget::BudgetStage),         // 5. allocate budget
+                Box::new(strategy::StrategyStage),     // 6. select reasoning strategy
+                Box::new(act::ActStage),               // 7. execute (no-op)
+                Box::new(verify::VerifyStage),         // 8. verify tool output
+                Box::new(calibrate::CalibrateStage),   // 9. calibrate metacog vector
                 Box::new(compact::CompactStage),       // 10. memory compaction (no-op)
-                Box::new(decide::DecideStage),        // 11. make decision
-                Box::new(learn::LearnStage),          // 12. collect lessons
+                Box::new(decide::DecideStage),         // 11. make decision
+                Box::new(learn::LearnStage),           // 12. collect lessons
             ],
         }
     }
@@ -46,11 +46,8 @@ impl ControlLoop {
                 }
                 StageResult::Escalate(reason) => {
                     ctx.decision = Decision::Escalate;
-                    ctx.lessons.push(format!(
-                        "escalated at stage '{}': {}",
-                        stage.name(),
-                        reason
-                    ));
+                    ctx.lessons
+                        .push(format!("escalated at stage '{}': {}", stage.name(), reason));
                     tracing::warn!(
                         stage = stage.name(),
                         %reason,
@@ -89,11 +86,8 @@ impl ControlLoop {
                 }
                 StageResult::Escalate(reason) => {
                     ctx.decision = Decision::Escalate;
-                    ctx.lessons.push(format!(
-                        "escalated at stage '{}': {}",
-                        stage.name(),
-                        reason
-                    ));
+                    ctx.lessons
+                        .push(format!("escalated at stage '{}': {}", stage.name(), reason));
                     tracing::warn!(
                         stage = stage.name(),
                         %reason,

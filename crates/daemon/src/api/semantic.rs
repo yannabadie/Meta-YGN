@@ -4,13 +4,13 @@
 //! via [`HashEmbedProvider`] and performs cosine-similarity search over all
 //! graph nodes that have stored embeddings.
 
+use axum::Router;
 use axum::extract::State;
 use axum::response::Json;
 use axum::routing::post;
-use axum::Router;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use metaygn_memory::embeddings::{EmbeddingProvider, HashEmbedProvider};
 

@@ -5,9 +5,12 @@
 
 use axum::extract::State;
 use axum::response::Json;
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use metaygn_memory::graph::{MemoryEdge, MemoryNode};
 
@@ -29,10 +32,7 @@ pub struct GraphSearchRequest {
 // ---------------------------------------------------------------------------
 
 /// POST /memory/nodes -- Insert a MemoryNode.
-async fn insert_node(
-    State(state): State<AppState>,
-    Json(node): Json<MemoryNode>,
-) -> Json<Value> {
+async fn insert_node(State(state): State<AppState>, Json(node): Json<MemoryNode>) -> Json<Value> {
     match state.graph.insert_node(&node).await {
         Ok(()) => Json(json!({ "ok": true, "id": node.id })),
         Err(e) => Json(json!({ "error": e.to_string() })),
@@ -40,10 +40,7 @@ async fn insert_node(
 }
 
 /// POST /memory/edges -- Insert a MemoryEdge.
-async fn insert_edge(
-    State(state): State<AppState>,
-    Json(edge): Json<MemoryEdge>,
-) -> Json<Value> {
+async fn insert_edge(State(state): State<AppState>, Json(edge): Json<MemoryEdge>) -> Json<Value> {
     match state.graph.insert_edge(&edge).await {
         Ok(()) => Json(json!({ "ok": true })),
         Err(e) => Json(json!({ "error": e.to_string() })),

@@ -2,7 +2,9 @@ use metaygn_memory::store::MemoryStore;
 
 #[tokio::test]
 async fn save_and_export_trajectory() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     let trajectory_json = r#"{"session_id":"sess-t1","risk_level":"medium","strategy_used":"verify-first","success":true,"confidence":0.85}"#;
     let sig_hash = "abc123hash";
@@ -29,7 +31,9 @@ async fn save_and_export_trajectory() {
 
 #[tokio::test]
 async fn export_empty_returns_empty_vec() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     let rows = store
         .export_trajectories(10)

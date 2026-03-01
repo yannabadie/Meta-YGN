@@ -102,7 +102,11 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start { host, port, db_path } => cmd_start(&host, port, db_path.as_deref()).await,
+        Commands::Start {
+            host,
+            port,
+            db_path,
+        } => cmd_start(&host, port, db_path.as_deref()).await,
         Commands::Stop => cmd_stop().await,
         Commands::Status => cmd_status().await,
         Commands::Recall { query, limit } => cmd_recall(&query, limit).await,
@@ -259,7 +263,10 @@ async fn cmd_status() -> Result<()> {
 
     match client.get(&url).send().await {
         Ok(resp) if resp.status().is_success() => {
-            let body: Value = resp.json().await.context("failed to parse health response")?;
+            let body: Value = resp
+                .json()
+                .await
+                .context("failed to parse health response")?;
 
             let status = body
                 .get("status")
@@ -323,7 +330,10 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
         return Ok(());
     }
 
-    let result: Value = resp.json().await.context("failed to parse recall response")?;
+    let result: Value = resp
+        .json()
+        .await
+        .context("failed to parse recall response")?;
 
     // Check for error in response
     if let Some(err) = result.get("error").and_then(|v| v.as_str()) {
@@ -343,7 +353,10 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
         return Ok(());
     }
 
-    println!("Found {} memory event(s) for query: \"{query}\"\n", events.len());
+    println!(
+        "Found {} memory event(s) for query: \"{query}\"\n",
+        events.len()
+    );
 
     for (i, event) in events.iter().enumerate() {
         let event_type = event
@@ -360,9 +373,7 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
             .unwrap_or("?");
         let payload = event
             .get("payload")
-            .map(|v| {
-                serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string())
-            })
+            .map(|v| serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string()))
             .unwrap_or_default();
 
         println!("--- Event {} ---", i + 1);
@@ -439,19 +450,10 @@ async fn cmd_replay(session_id: Option<&str>) -> Result<()> {
             );
             println!("{}", "-".repeat(90));
             for s in &sessions {
-                let sid = s
-                    .get("session_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let sid = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
                 let count = s.get("event_count").and_then(|v| v.as_u64()).unwrap_or(0);
-                let first = s
-                    .get("first_event")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
-                let last = s
-                    .get("last_event")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let first = s.get("first_event").and_then(|v| v.as_str()).unwrap_or("?");
+                let last = s.get("last_event").and_then(|v| v.as_str()).unwrap_or("?");
                 println!("{:<40} {:>6}  {:<20}  {:<20}", sid, count, first, last);
             }
         }
@@ -525,7 +527,10 @@ async fn cmd_export(limit: u32) -> Result<()> {
         }
     };
 
-    let body: serde_json::Value = resp.json().await.context("failed to parse export response")?;
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .context("failed to parse export response")?;
 
     let trajectories = body
         .get("trajectories")

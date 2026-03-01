@@ -1,15 +1,15 @@
-pub mod classify;
-pub mod assess;
-pub mod competence;
-pub mod tool_need;
-pub mod budget;
-pub mod strategy;
 pub mod act;
-pub mod verify;
+pub mod assess;
+pub mod budget;
 pub mod calibrate;
+pub mod classify;
 pub mod compact;
+pub mod competence;
 pub mod decide;
 pub mod learn;
+pub mod strategy;
+pub mod tool_need;
+pub mod verify;
 
 use crate::context::LoopContext;
 

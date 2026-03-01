@@ -161,11 +161,7 @@ impl MemoryStore {
     }
 
     /// Return recent events for a session, ordered by timestamp ascending.
-    pub async fn recent_events(
-        &self,
-        session_id: &str,
-        limit: u32,
-    ) -> Result<Vec<EventRow>> {
+    pub async fn recent_events(&self, session_id: &str, limit: u32) -> Result<Vec<EventRow>> {
         let session_id = session_id.to_owned();
         let rows = self
             .conn
@@ -195,11 +191,7 @@ impl MemoryStore {
     }
 
     /// Full-text search over event payloads using FTS5.
-    pub async fn search_events(
-        &self,
-        query: &str,
-        limit: u32,
-    ) -> Result<Vec<EventRow>> {
+    pub async fn search_events(&self, query: &str, limit: u32) -> Result<Vec<EventRow>> {
         let query = query.to_owned();
         let rows = self
             .conn
@@ -478,7 +470,10 @@ impl MemoryStore {
 
     /// Export recent RL2F trajectories, ordered by timestamp descending.
     /// Returns Vec of (id, session_id, trajectory_json, signature_hash, timestamp).
-    pub async fn export_trajectories(&self, limit: u32) -> Result<Vec<(i64, String, String, Option<String>, String)>> {
+    pub async fn export_trajectories(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<(i64, String, String, Option<String>, String)>> {
         let rows = self
             .conn
             .call(move |conn| {

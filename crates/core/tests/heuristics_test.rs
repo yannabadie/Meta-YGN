@@ -139,12 +139,7 @@ fn population_stays_within_bounds() {
 
     // Record some outcomes so evaluation is meaningful.
     for i in 0..10 {
-        evolver.record_outcome(make_outcome(
-            &format!("s{i}"),
-            i % 3 != 0,
-            15_000,
-            45_000,
-        ));
+        evolver.record_outcome(make_outcome(&format!("s{i}"), i % 3 != 0, 15_000, 45_000));
     }
 
     // Run many evolution cycles.

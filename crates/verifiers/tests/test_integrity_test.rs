@@ -1,6 +1,4 @@
-use metaygn_verifiers::test_integrity::{
-    analyze_test_edit, is_test_file, TestIssueType,
-};
+use metaygn_verifiers::test_integrity::{TestIssueType, analyze_test_edit, is_test_file};
 
 #[test]
 fn detects_test_files() {
@@ -39,10 +37,12 @@ fn it_works() {
     let report = analyze_test_edit("tests/my_test.rs", old, new);
     assert!(report.is_test_file);
     assert!(report.suspicious);
-    assert!(report
-        .issues
-        .iter()
-        .any(|i| i.issue_type == TestIssueType::AssertionRemoved));
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|i| i.issue_type == TestIssueType::AssertionRemoved)
+    );
 }
 
 #[test]
@@ -68,10 +68,12 @@ fn first_test() {
     let report = analyze_test_edit("tests/my_test.rs", old, new);
     assert!(report.is_test_file);
     assert!(report.suspicious);
-    assert!(report
-        .issues
-        .iter()
-        .any(|i| i.issue_type == TestIssueType::TestFunctionRemoved));
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|i| i.issue_type == TestIssueType::TestFunctionRemoved)
+    );
 }
 
 #[test]
@@ -93,10 +95,12 @@ fn important_test() {
     let report = analyze_test_edit("tests/my_test.rs", old, new);
     assert!(report.is_test_file);
     assert!(report.suspicious);
-    assert!(report
-        .issues
-        .iter()
-        .any(|i| i.issue_type == TestIssueType::TestSkipped));
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|i| i.issue_type == TestIssueType::TestSkipped)
+    );
 }
 
 #[test]
@@ -117,10 +121,12 @@ fn it_returns_correct_value() {
     let report = analyze_test_edit("tests/my_test.rs", old, new);
     assert!(report.is_test_file);
     assert!(report.suspicious);
-    assert!(report
-        .issues
-        .iter()
-        .any(|i| i.issue_type == TestIssueType::ExpectedValueChanged));
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|i| i.issue_type == TestIssueType::ExpectedValueChanged)
+    );
 }
 
 #[test]

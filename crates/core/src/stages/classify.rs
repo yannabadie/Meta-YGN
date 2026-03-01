@@ -47,37 +47,83 @@ fn combined_text(ctx: &LoopContext) -> String {
 /// Simple keyword-based classifier. Returns the best-matching `TaskType`.
 fn classify_from_keywords(text: &str) -> TaskType {
     // Security keywords take highest priority.
-    let security_keywords = ["security", "vulnerability", "cve", "auth", "permission", "secret", "credential"];
+    let security_keywords = [
+        "security",
+        "vulnerability",
+        "cve",
+        "auth",
+        "permission",
+        "secret",
+        "credential",
+    ];
     if security_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Security;
     }
 
     // Bug-fix keywords.
-    let bugfix_keywords = ["fix", "bug", "error", "crash", "broken", "issue", "patch", "regression"];
+    let bugfix_keywords = [
+        "fix",
+        "bug",
+        "error",
+        "crash",
+        "broken",
+        "issue",
+        "patch",
+        "regression",
+    ];
     if bugfix_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Bugfix;
     }
 
     // Refactor keywords.
-    let refactor_keywords = ["refactor", "cleanup", "reorganize", "rename", "simplify", "extract", "deduplicate"];
+    let refactor_keywords = [
+        "refactor",
+        "cleanup",
+        "reorganize",
+        "rename",
+        "simplify",
+        "extract",
+        "deduplicate",
+    ];
     if refactor_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Refactor;
     }
 
     // Architecture keywords.
-    let arch_keywords = ["architecture", "design", "system", "infrastructure", "migration", "schema"];
+    let arch_keywords = [
+        "architecture",
+        "design",
+        "system",
+        "infrastructure",
+        "migration",
+        "schema",
+    ];
     if arch_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Architecture;
     }
 
     // Release keywords.
-    let release_keywords = ["release", "deploy", "publish", "version", "tag", "changelog"];
+    let release_keywords = [
+        "release",
+        "deploy",
+        "publish",
+        "version",
+        "tag",
+        "changelog",
+    ];
     if release_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Release;
     }
 
     // Research keywords.
-    let research_keywords = ["research", "investigate", "explore", "prototype", "spike", "experiment"];
+    let research_keywords = [
+        "research",
+        "investigate",
+        "explore",
+        "prototype",
+        "spike",
+        "experiment",
+    ];
     if research_keywords.iter().any(|kw| text.contains(kw)) {
         return TaskType::Research;
     }
@@ -92,21 +138,33 @@ mod tests {
 
     #[test]
     fn classify_bugfix() {
-        assert_eq!(classify_from_keywords("fix the login bug"), TaskType::Bugfix);
+        assert_eq!(
+            classify_from_keywords("fix the login bug"),
+            TaskType::Bugfix
+        );
     }
 
     #[test]
     fn classify_security() {
-        assert_eq!(classify_from_keywords("check for vulnerability"), TaskType::Security);
+        assert_eq!(
+            classify_from_keywords("check for vulnerability"),
+            TaskType::Security
+        );
     }
 
     #[test]
     fn classify_refactor() {
-        assert_eq!(classify_from_keywords("refactor the parser"), TaskType::Refactor);
+        assert_eq!(
+            classify_from_keywords("refactor the parser"),
+            TaskType::Refactor
+        );
     }
 
     #[test]
     fn classify_default_is_feature() {
-        assert_eq!(classify_from_keywords("add a new button"), TaskType::Feature);
+        assert_eq!(
+            classify_from_keywords("add a new button"),
+            TaskType::Feature
+        );
     }
 }

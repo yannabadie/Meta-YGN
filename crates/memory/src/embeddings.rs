@@ -53,9 +53,9 @@ impl EmbeddingProvider for HashEmbedProvider {
         // value = count of words that hash to that bucket.
         for word in text.split_whitespace() {
             let word_lower = word.to_lowercase();
-            let hash: usize = word_lower
-                .bytes()
-                .fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+            let hash: usize = word_lower.bytes().fold(0usize, |acc, b| {
+                acc.wrapping_mul(31).wrapping_add(b as usize)
+            });
             let idx = hash % self.dimension;
             vec[idx] += 1.0;
         }

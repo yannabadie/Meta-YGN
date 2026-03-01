@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::response::Json;
 use axum::{Router, routing::get};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::app_state::AppState;
 
@@ -35,28 +35,27 @@ async fn list_sessions(State(state): State<AppState>) -> Json<Value> {
 ///
 /// Retrieve all replay events for a given session, with request/response
 /// parsed back to JSON values.
-async fn get_session(
-    State(state): State<AppState>,
-    Path(session_id): Path<String>,
-) -> Json<Value> {
+async fn get_session(State(state): State<AppState>, Path(session_id): Path<String>) -> Json<Value> {
     match state.memory.replay_events(&session_id).await {
         Ok(events) => {
             let items: Vec<Value> = events
                 .into_iter()
-                .map(|(id, hook_event, request_json, response_json, latency_ms, timestamp)| {
-                    let request: Value =
-                        serde_json::from_str(&request_json).unwrap_or(Value::String(request_json));
-                    let response: Value = serde_json::from_str(&response_json)
-                        .unwrap_or(Value::String(response_json));
-                    json!({
-                        "id": id,
-                        "hook_event": hook_event,
-                        "request": request,
-                        "response": response,
-                        "latency_ms": latency_ms,
-                        "timestamp": timestamp,
-                    })
-                })
+                .map(
+                    |(id, hook_event, request_json, response_json, latency_ms, timestamp)| {
+                        let request: Value = serde_json::from_str(&request_json)
+                            .unwrap_or(Value::String(request_json));
+                        let response: Value = serde_json::from_str(&response_json)
+                            .unwrap_or(Value::String(response_json));
+                        json!({
+                            "id": id,
+                            "hook_event": hook_event,
+                            "request": request,
+                            "response": response,
+                            "latency_ms": latency_ms,
+                            "timestamp": timestamp,
+                        })
+                    },
+                )
                 .collect();
             Json(json!({
                 "session_id": session_id,

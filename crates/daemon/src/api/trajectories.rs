@@ -23,17 +23,19 @@ async fn export_trajectories(
         Ok(rows) => {
             let items: Vec<Value> = rows
                 .into_iter()
-                .map(|(id, session_id, trajectory_json, signature_hash, timestamp)| {
-                    let trajectory: Value = serde_json::from_str(&trajectory_json)
-                        .unwrap_or(Value::String(trajectory_json));
-                    json!({
-                        "id": id,
-                        "session_id": session_id,
-                        "trajectory": trajectory,
-                        "signature_hash": signature_hash,
-                        "timestamp": timestamp,
-                    })
-                })
+                .map(
+                    |(id, session_id, trajectory_json, signature_hash, timestamp)| {
+                        let trajectory: Value = serde_json::from_str(&trajectory_json)
+                            .unwrap_or(Value::String(trajectory_json));
+                        json!({
+                            "id": id,
+                            "session_id": session_id,
+                            "trajectory": trajectory,
+                            "signature_hash": signature_hash,
+                            "timestamp": timestamp,
+                        })
+                    },
+                )
                 .collect();
             let count = items.len();
             Json(json!({

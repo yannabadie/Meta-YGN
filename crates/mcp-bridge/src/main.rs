@@ -1,6 +1,6 @@
 use anyhow::Context;
 use metaygn_mcp_bridge::handler::AletheiaHandler;
-use metaygn_mcp_bridge::{read_daemon_port, DaemonClient};
+use metaygn_mcp_bridge::{DaemonClient, read_daemon_port};
 use rmcp::ServiceExt;
 use rmcp::transport::io::stdio;
 use tracing_subscriber::EnvFilter;

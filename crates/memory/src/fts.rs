@@ -61,7 +61,11 @@ impl UnifiedSearch {
         results.extend(graph_results);
 
         // 4. Sort by relevance (descending score; events first since higher scores)
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // 5. Truncate to limit
         results.truncate(limit as usize);

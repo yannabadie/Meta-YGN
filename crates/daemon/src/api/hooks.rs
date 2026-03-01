@@ -59,7 +59,13 @@ fn extract_command(input: &HookInput) -> String {
 }
 
 /// Format a human-readable context line from risk, strategy, budget, task, and topology.
-fn format_readable(risk: &str, strategy: &str, budget_tokens: u64, task: &str, topology: &str) -> String {
+fn format_readable(
+    risk: &str,
+    strategy: &str,
+    budget_tokens: u64,
+    task: &str,
+    topology: &str,
+) -> String {
     format!(
         "Risk: {} | Strategy: {} | Budget: {} tokens | Task: {} | Topology: {}",
         risk.to_uppercase(),
@@ -95,7 +101,13 @@ async fn record_replay(
     let latency_ms = start.elapsed().as_millis() as i64;
     let _ = state
         .memory
-        .record_replay_event(session_id, hook_event, request_json, response_json, latency_ms)
+        .record_replay_event(
+            session_id,
+            hook_event,
+            request_json,
+            response_json,
+            latency_ms,
+        )
         .await;
 }
 
@@ -125,13 +137,19 @@ async fn pre_tool_use(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
-    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
+    let session_id = input
+        .session_id
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
     let tool_name = input.tool_name.clone().unwrap_or_default();
     let command = extract_command(&input);
 
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
-    let _ = state.memory.log_event("daemon", "pre_tool_use", &payload).await;
+    let _ = state
+        .memory
+        .log_event("daemon", "pre_tool_use", &payload)
+        .await;
 
     // Step 1: Run the guard pipeline
     let pipeline_decision = state.guard_pipeline.check(&tool_name, &command);
@@ -148,7 +166,9 @@ async fn pre_tool_use(
             .blocking_guard
             .as_deref()
             .map(|g| {
-                let detail = pipeline_decision.results.iter()
+                let detail = pipeline_decision
+                    .results
+                    .iter()
                     .find(|r| r.guard_name == g)
                     .and_then(|r| r.reason.as_deref())
                     .unwrap_or("blocked by guard");
@@ -160,7 +180,15 @@ async fn pre_tool_use(
         append_budget_to_output(&mut output, &state);
         append_latency(&mut output, start);
         let resp_json = serde_json::to_string(&output).unwrap_or_default();
-        record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
+        record_replay(
+            &state,
+            &session_id,
+            "PreToolUse",
+            &payload,
+            &resp_json,
+            start,
+        )
+        .await;
         return Json(output);
     }
 
@@ -200,7 +228,15 @@ async fn pre_tool_use(
                     append_budget_to_output(&mut output, &state);
                     append_latency(&mut output, start);
                     let resp_json = serde_json::to_string(&output).unwrap_or_default();
-                    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
+                    record_replay(
+                        &state,
+                        &session_id,
+                        "PreToolUse",
+                        &payload,
+                        &resp_json,
+                        start,
+                    )
+                    .await;
                     return Json(output);
                 }
             }
@@ -236,7 +272,15 @@ async fn pre_tool_use(
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
-    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
+    record_replay(
+        &state,
+        &session_id,
+        "PreToolUse",
+        &payload,
+        &resp_json,
+        start,
+    )
+    .await;
     Json(output)
 }
 
@@ -246,10 +290,16 @@ async fn post_tool_use(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
-    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
+    let session_id = input
+        .session_id
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
     // Log the tool output for verification signals
     let payload = serde_json::to_string(&input).unwrap_or_default();
-    let _ = state.memory.log_event("daemon", "post_tool_use", &payload).await;
+    let _ = state
+        .memory
+        .log_event("daemon", "post_tool_use", &payload)
+        .await;
 
     // Post-tool-use: emit verification context based on what happened
     let tool_name = input.tool_name.clone().unwrap_or_default();
@@ -294,7 +344,15 @@ async fn post_tool_use(
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
-    record_replay(&state, &session_id, "PostToolUse", &payload, &resp_json, start).await;
+    record_replay(
+        &state,
+        &session_id,
+        "PostToolUse",
+        &payload,
+        &resp_json,
+        start,
+    )
+    .await;
     Json(output)
 }
 
@@ -308,10 +366,16 @@ async fn user_prompt_submit(
     Json(input): Json<HookInput>,
 ) -> Json<HookOutput> {
     let start = std::time::Instant::now();
-    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
+    let session_id = input
+        .session_id
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
     // Log event to memory
     let payload = serde_json::to_string(&input).unwrap_or_default();
-    let _ = state.memory.log_event("daemon", "user_prompt_submit", &payload).await;
+    let _ = state
+        .memory
+        .log_event("daemon", "user_prompt_submit", &payload)
+        .await;
 
     // Wire fatigue signal: record the prompt
     let prompt_text = input.prompt.clone().unwrap_or_default();
@@ -344,7 +408,8 @@ async fn user_prompt_submit(
 
     let strategy_label = format!("{:?}", ctx.strategy).to_lowercase();
     let strategy_kebab = strategy_label.replace('_', "-");
-    let task_label = ctx.task_type
+    let task_label = ctx
+        .task_type
         .map(|t| format!("{:?}", t).to_lowercase())
         .unwrap_or_else(|| "unknown".to_string());
     let topology_label = format!("{:?}", plan.topology).to_lowercase();
@@ -364,7 +429,15 @@ async fn user_prompt_submit(
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
-    record_replay(&state, &session_id, "UserPromptSubmit", &payload, &resp_json, start).await;
+    record_replay(
+        &state,
+        &session_id,
+        "UserPromptSubmit",
+        &payload,
+        &resp_json,
+        start,
+    )
+    .await;
     Json(output)
 }
 
@@ -372,12 +445,12 @@ async fn user_prompt_submit(
 ///
 /// Run ControlLoop stages 9-12 (calibrate, compact, decide, learn)
 /// and return a proof-packet enforcement hint.
-async fn stop(
-    State(state): State<AppState>,
-    Json(input): Json<HookInput>,
-) -> Json<HookOutput> {
+async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Json<HookOutput> {
     let start = std::time::Instant::now();
-    let session_id = input.session_id.clone().unwrap_or_else(|| "unknown".to_string());
+    let session_id = input
+        .session_id
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
     let payload = serde_json::to_string(&input).unwrap_or_default();
     let _ = state.memory.log_event("daemon", "stop", &payload).await;
 
@@ -407,13 +480,15 @@ async fn stop(
     // Pruner analysis: check if the last assistant message shows repeated errors
     let pruner = ContextPruner::with_defaults();
     let last_msg_text = input.last_assistant_message.as_deref().unwrap_or("");
-    let pruner_analysis = pruner.analyze(&[
-        crate::proxy::pruner::Message { role: "assistant".to_string(), content: last_msg_text.to_string() },
-    ]);
+    let pruner_analysis = pruner.analyze(&[crate::proxy::pruner::Message {
+        role: "assistant".to_string(),
+        content: last_msg_text.to_string(),
+    }]);
 
     // If the pruner detects errors, generate an amplified recovery message
     let recovery_note = if pruner_analysis.consecutive_errors > 0 {
-        let reason = pruner_analysis.suggested_injection
+        let reason = pruner_analysis
+            .suggested_injection
             .as_deref()
             .unwrap_or("repeated errors detected");
         let level = state.plasticity.lock().unwrap().amplification_level();

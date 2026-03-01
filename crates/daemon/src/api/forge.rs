@@ -7,9 +7,12 @@ use std::collections::HashMap;
 
 use axum::extract::State;
 use axum::response::Json;
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::app_state::AppState;
 use crate::forge::{ToolSpec, list_templates};
@@ -39,10 +42,7 @@ pub struct ExecuteRequest {
 // ---------------------------------------------------------------------------
 
 /// POST /forge/generate -- Generate a tool from a named template.
-async fn generate(
-    State(state): State<AppState>,
-    Json(req): Json<GenerateRequest>,
-) -> Json<Value> {
+async fn generate(State(state): State<AppState>, Json(req): Json<GenerateRequest>) -> Json<Value> {
     let mut forge = state.forge.lock().expect("forge mutex poisoned");
     match forge.generate(&req.template, &req.params) {
         Ok(spec) => {
@@ -57,10 +57,7 @@ async fn generate(
 ///
 /// Note: We clone the sandbox Arc from the forge so we can drop the mutex
 /// before the async execution.
-async fn execute(
-    State(state): State<AppState>,
-    Json(req): Json<ExecuteRequest>,
-) -> Json<Value> {
+async fn execute(State(state): State<AppState>, Json(req): Json<ExecuteRequest>) -> Json<Value> {
     // We cannot hold the Mutex across an await, so use the sandbox directly
     // via the AppState (which also holds an Arc<ProcessSandbox>).
     let forge = state.forge.lock().expect("forge mutex poisoned");

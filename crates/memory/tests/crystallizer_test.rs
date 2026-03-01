@@ -59,7 +59,10 @@ fn generate_produces_valid_markdown() {
     let md = SkillCrystallizer::generate_skill_md(crystallized[0]);
 
     // YAML front matter
-    assert!(md.starts_with("---\n"), "should start with YAML front matter");
+    assert!(
+        md.starts_with("---\n"),
+        "should start with YAML front matter"
+    );
     assert!(md.contains("name: crystallized-"), "should contain name");
     assert!(
         md.contains("description: Auto-detected pattern"),
@@ -85,6 +88,13 @@ fn hash_is_deterministic() {
     let c1 = sc1.crystallized();
     let c2 = sc2.crystallized();
 
-    assert_eq!(c1[0].hash, c2[0].hash, "same sequence should produce same hash");
-    assert_eq!(c1[0].hash.len(), 64, "SHA-256 hex digest should be 64 chars");
+    assert_eq!(
+        c1[0].hash, c2[0].hash,
+        "same sequence should produce same hash"
+    );
+    assert_eq!(
+        c1[0].hash.len(),
+        64,
+        "SHA-256 hex digest should be 64 chars"
+    );
 }

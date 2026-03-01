@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use metaygn_daemon::app_state::AppState;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 async fn start_test_server() -> SocketAddr {
     let app = metaygn_daemon::build_app().await.unwrap();
@@ -74,7 +74,11 @@ async fn hook_pre_tool_use_denies_destructive() {
     let decision = body
         .pointer("/hookSpecificOutput/permissionDecision")
         .and_then(|v| v.as_str());
-    assert_eq!(decision, Some("deny"), "Expected deny for destructive command, got: {body:?}");
+    assert_eq!(
+        decision,
+        Some("deny"),
+        "Expected deny for destructive command, got: {body:?}"
+    );
 }
 
 #[tokio::test]
@@ -97,7 +101,11 @@ async fn hook_pre_tool_use_asks_high_risk() {
     let decision = body
         .pointer("/hookSpecificOutput/permissionDecision")
         .and_then(|v| v.as_str());
-    assert_eq!(decision, Some("ask"), "Expected ask for high-risk command, got: {body:?}");
+    assert_eq!(
+        decision,
+        Some("ask"),
+        "Expected ask for high-risk command, got: {body:?}"
+    );
 }
 
 #[tokio::test]
@@ -166,7 +174,9 @@ async fn pre_tool_use_uses_guard_pipeline() {
         .and_then(|v| v.as_str())
         .unwrap_or("");
     assert!(
-        reason.contains("guard") || reason.contains("destructive") || reason.contains("Destructive"),
+        reason.contains("guard")
+            || reason.contains("destructive")
+            || reason.contains("Destructive"),
         "Expected guard-related reason, got: {reason}"
     );
 }
@@ -237,23 +247,56 @@ async fn analyze_returns_full_context() {
     let body: Value = resp.json().await.unwrap();
 
     // Full LoopContext should be present
-    assert!(body.get("risk").is_some(), "Expected 'risk' field in analyze response: {body:?}");
-    assert!(body.get("difficulty").is_some(), "Expected 'difficulty' field: {body:?}");
-    assert!(body.get("competence").is_some(), "Expected 'competence' field: {body:?}");
-    assert!(body.get("strategy").is_some(), "Expected 'strategy' field: {body:?}");
-    assert!(body.get("decision").is_some(), "Expected 'decision' field: {body:?}");
-    assert!(body.get("budget").is_some(), "Expected 'budget' field: {body:?}");
-    assert!(body.get("metacog_vector").is_some(), "Expected 'metacog_vector' field: {body:?}");
-    assert!(body.get("lessons").is_some(), "Expected 'lessons' field: {body:?}");
-    assert!(body.get("input").is_some(), "Expected 'input' field: {body:?}");
+    assert!(
+        body.get("risk").is_some(),
+        "Expected 'risk' field in analyze response: {body:?}"
+    );
+    assert!(
+        body.get("difficulty").is_some(),
+        "Expected 'difficulty' field: {body:?}"
+    );
+    assert!(
+        body.get("competence").is_some(),
+        "Expected 'competence' field: {body:?}"
+    );
+    assert!(
+        body.get("strategy").is_some(),
+        "Expected 'strategy' field: {body:?}"
+    );
+    assert!(
+        body.get("decision").is_some(),
+        "Expected 'decision' field: {body:?}"
+    );
+    assert!(
+        body.get("budget").is_some(),
+        "Expected 'budget' field: {body:?}"
+    );
+    assert!(
+        body.get("metacog_vector").is_some(),
+        "Expected 'metacog_vector' field: {body:?}"
+    );
+    assert!(
+        body.get("lessons").is_some(),
+        "Expected 'lessons' field: {body:?}"
+    );
+    assert!(
+        body.get("input").is_some(),
+        "Expected 'input' field: {body:?}"
+    );
 
     // Verify difficulty is a reasonable float
     let difficulty = body["difficulty"].as_f64().unwrap();
-    assert!(difficulty >= 0.0 && difficulty <= 1.0, "difficulty out of range: {difficulty}");
+    assert!(
+        difficulty >= 0.0 && difficulty <= 1.0,
+        "difficulty out of range: {difficulty}"
+    );
 
     // Verify competence is a reasonable float
     let competence = body["competence"].as_f64().unwrap();
-    assert!(competence >= 0.0 && competence <= 1.0, "competence out of range: {competence}");
+    assert!(
+        competence >= 0.0 && competence <= 1.0,
+        "competence out of range: {competence}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -464,7 +507,10 @@ async fn heuristics_evolve() {
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["ok"], true);
-    assert!(body.get("best").is_some(), "Expected 'best' in evolve response: {body:?}");
+    assert!(
+        body.get("best").is_some(),
+        "Expected 'best' in evolve response: {body:?}"
+    );
 
     // Verify population grew
     let url = format!("http://{addr}/heuristics/population");
@@ -472,7 +518,10 @@ async fn heuristics_evolve() {
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
     let size = body["size"].as_u64().unwrap();
-    assert!(size >= 2, "Expected population size >= 2 after evolve, got {size}");
+    assert!(
+        size >= 2,
+        "Expected population size >= 2 after evolve, got {size}"
+    );
     assert!(body["generation"].as_u64().unwrap() >= 1);
 }
 
@@ -483,7 +532,9 @@ async fn forge_list_templates() {
     let resp = reqwest::get(&url).await.unwrap();
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
-    let templates = body["templates"].as_array().expect("expected templates array");
+    let templates = body["templates"]
+        .as_array()
+        .expect("expected templates array");
     assert_eq!(
         templates.len(),
         4,
@@ -690,11 +741,7 @@ async fn hook_responses_include_latency() {
         .pointer("/hookSpecificOutput/additionalContext")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    assert!(
-        ctx.contains("latency:"),
-        "Should include latency: {}",
-        ctx
-    );
+    assert!(ctx.contains("latency:"), "Should include latency: {}", ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -821,10 +868,21 @@ async fn heuristic_persistence_roundtrip() {
 
     // 2. Record an outcome and persist it via the memory store
     let outcome_id = uuid::Uuid::new_v4().to_string();
-    state.memory.save_outcome(
-        &outcome_id, "sess-rt", "bugfix", "medium", "step_by_step",
-        true, 3000, 15000, 0,
-    ).await.unwrap();
+    state
+        .memory
+        .save_outcome(
+            &outcome_id,
+            "sess-rt",
+            "bugfix",
+            "medium",
+            "step_by_step",
+            true,
+            3000,
+            15000,
+            0,
+        )
+        .await
+        .unwrap();
 
     {
         let mut evolver = state.evolver.lock().unwrap();
@@ -851,13 +909,19 @@ async fn heuristic_persistence_roundtrip() {
 
         // Persist the best version
         if let Some(best) = evolver.best() {
-            state.memory.save_heuristic(
-                &best.id, best.generation, best.parent_id.as_deref(),
-                &serde_json::to_string(&best.fitness).unwrap(),
-                &serde_json::to_string(&best.risk_weights).unwrap(),
-                &serde_json::to_string(&best.strategy_scores).unwrap(),
-                &best.created_at,
-            ).await.unwrap();
+            state
+                .memory
+                .save_heuristic(
+                    &best.id,
+                    best.generation,
+                    best.parent_id.as_deref(),
+                    &serde_json::to_string(&best.fitness).unwrap(),
+                    &serde_json::to_string(&best.risk_weights).unwrap(),
+                    &serde_json::to_string(&best.strategy_scores).unwrap(),
+                    &best.created_at,
+                )
+                .await
+                .unwrap();
         }
     }
 

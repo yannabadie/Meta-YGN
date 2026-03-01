@@ -23,11 +23,7 @@ fn single_embedding_returns_384_dim_non_zero() {
 #[test]
 fn batch_embedding_returns_correct_count() {
     let provider = FastEmbedProvider::new().expect("failed to init fastembed");
-    let texts: Vec<&str> = vec![
-        "first document",
-        "second document",
-        "third document",
-    ];
+    let texts: Vec<&str> = vec!["first document", "second document", "third document"];
     let results = provider.embed_batch(&texts).expect("embed_batch failed");
     assert_eq!(results.len(), 3);
     for vec in &results {
@@ -40,7 +36,9 @@ fn similar_texts_higher_cosine_than_unrelated() {
     let provider = FastEmbedProvider::new().expect("failed to init fastembed");
 
     let a = provider.embed("the cat sat on the mat").expect("embed a");
-    let b = provider.embed("a cat is sitting on a mat").expect("embed b");
+    let b = provider
+        .embed("a cat is sitting on a mat")
+        .expect("embed b");
     let c = provider
         .embed("quantum computing and cryptography")
         .expect("embed c");

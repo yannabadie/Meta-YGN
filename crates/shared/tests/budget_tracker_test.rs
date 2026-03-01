@@ -43,10 +43,7 @@ fn utilization_percentage() {
 fn warning_at_80_percent() {
     let mut budget = SessionBudget::new(10_000, 0.10);
     budget.consume(8_500, 0.085);
-    assert!(
-        budget.should_warn(),
-        "Expected warning at 85% utilization"
-    );
+    assert!(budget.should_warn(), "Expected warning at 85% utilization");
 }
 
 #[test]

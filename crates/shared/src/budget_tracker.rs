@@ -81,11 +81,7 @@ impl SessionBudget {
         let pct = (self.utilization() * 100.0) as u64;
         format!(
             "[budget: {}tok/${:.2} used of {}tok/${:.2} | {}%]",
-            self.consumed_tokens,
-            self.consumed_cost_usd,
-            self.max_tokens,
-            self.max_cost_usd,
-            pct,
+            self.consumed_tokens, self.consumed_cost_usd, self.max_tokens, self.max_cost_usd, pct,
         )
     }
 }

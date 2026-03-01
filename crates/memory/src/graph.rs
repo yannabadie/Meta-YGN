@@ -1,8 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 
 use anyhow::Result;
-use rusqlite::params;
 use rusqlite::OptionalExtension;
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tokio_rusqlite::Connection;
 
@@ -282,8 +282,7 @@ impl GraphMemory {
         let scope = node.scope.as_str().to_owned();
         let label = node.label.clone();
         let content = node.content.clone();
-        let embedding: Option<Vec<u8>> =
-            node.embedding.as_ref().map(|e| serialize_embedding(e));
+        let embedding: Option<Vec<u8>> = node.embedding.as_ref().map(|e| serialize_embedding(e));
         let created_at = node.created_at.clone();
         let access_count = node.access_count;
 
@@ -346,9 +345,7 @@ impl GraphMemory {
                      FROM nodes WHERE id = ?1",
                 )?;
                 let node = stmt
-                    .query_row(params![id], |row| {
-                        Ok(row_to_node(row))
-                    })
+                    .query_row(params![id], |row| Ok(row_to_node(row)))
                     .optional()?;
                 Ok::<_, rusqlite::Error>(node)
             })

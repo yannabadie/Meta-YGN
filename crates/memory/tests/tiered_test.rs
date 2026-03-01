@@ -1,5 +1,5 @@
-use metaygn_memory::tiered::{Tier, TieredMemory};
 use metaygn_memory::store::MemoryStore;
+use metaygn_memory::tiered::{Tier, TieredMemory};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -38,7 +38,10 @@ fn hot_tier_expires() {
     std::thread::sleep(Duration::from_millis(80));
 
     // After expiry the hot tier should no longer return it.
-    assert!(mem.get("temp").is_none(), "entry should have expired from hot tier");
+    assert!(
+        mem.get("temp").is_none(),
+        "entry should have expired from hot tier"
+    );
 }
 
 #[test]

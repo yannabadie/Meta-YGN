@@ -39,11 +39,14 @@ pub async fn prune_messages(
 
     if analysis.should_prune {
         let pruned = pruner.prune(&req.messages);
-        let tokens_removed = estimate_tokens(&req.messages)
-            .saturating_sub(estimate_tokens(&pruned));
+        let tokens_removed =
+            estimate_tokens(&req.messages).saturating_sub(estimate_tokens(&pruned));
         let level = state.plasticity.lock().unwrap().amplification_level();
         let reason = pruner.amplified_recovery(
-            &format!("{} consecutive errors detected", analysis.consecutive_errors),
+            &format!(
+                "{} consecutive errors detected",
+                analysis.consecutive_errors
+            ),
             level,
         );
 

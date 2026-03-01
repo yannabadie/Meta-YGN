@@ -92,7 +92,9 @@ fn control_loop_escalates_when_stuck() {
     // - "bash" tool => high risk
     // - "security vulnerability" => TaskType::Security => competence 0.4
     // - "quantum" keyword => competence penalty 0.1 => 0.3 (below 0.4 threshold)
-    let mut input = make_input(Some("check for quantum security vulnerability in the kernel driver"));
+    let mut input = make_input(Some(
+        "check for quantum security vulnerability in the kernel driver",
+    ));
     input.tool_name = Some("bash".to_string());
     let mut ctx = LoopContext::new(input);
 
@@ -157,7 +159,10 @@ fn control_loop_detects_tool_need() {
     input.tool_name = Some("Read".to_string());
     let mut ctx = LoopContext::new(input);
     cl.run(&mut ctx);
-    assert!(ctx.tool_necessary, "tool_name present means tool is necessary");
+    assert!(
+        ctx.tool_necessary,
+        "tool_name present means tool is necessary"
+    );
 }
 
 #[test]

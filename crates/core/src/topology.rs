@@ -54,17 +54,14 @@ impl TopologyPlanner {
     /// | `risk == High` | Horizontal | all 12 + verify + calibrate (14) |
     /// | `risk == Low` AND `difficulty < 0.2` | Single | classify, assess, act, decide (4) |
     /// | otherwise | Vertical | all 12 sequential |
-    pub fn plan(
-        risk: RiskLevel,
-        difficulty: f32,
-        task_type: TaskType,
-    ) -> ExecutionPlan {
+    pub fn plan(risk: RiskLevel, difficulty: f32, task_type: TaskType) -> ExecutionPlan {
         // Security always gets maximum scrutiny, regardless of risk.
         if task_type == TaskType::Security {
             return ExecutionPlan {
                 topology: Topology::Horizontal,
                 stages: Self::horizontal_stages(),
-                rationale: "Security tasks always receive double verification (Horizontal topology)".into(),
+                rationale:
+                    "Security tasks always receive double verification (Horizontal topology)".into(),
             };
         }
 
@@ -73,9 +70,16 @@ impl TopologyPlanner {
             return ExecutionPlan {
                 topology: Topology::Vertical,
                 stages: vec![
-                    "classify", "assess", "competence", "strategy", "act", "learn",
+                    "classify",
+                    "assess",
+                    "competence",
+                    "strategy",
+                    "act",
+                    "learn",
                 ],
-                rationale: "Research tasks use a slim 6-stage pipeline, skipping verification overhead".into(),
+                rationale:
+                    "Research tasks use a slim 6-stage pipeline, skipping verification overhead"
+                        .into(),
             };
         }
 
@@ -84,7 +88,9 @@ impl TopologyPlanner {
             return ExecutionPlan {
                 topology: Topology::Horizontal,
                 stages: Self::horizontal_stages(),
-                rationale: "High-risk tasks receive double verify+calibrate pass (Horizontal topology)".into(),
+                rationale:
+                    "High-risk tasks receive double verify+calibrate pass (Horizontal topology)"
+                        .into(),
             };
         }
 

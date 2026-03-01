@@ -1,8 +1,11 @@
 use axum::extract::State;
 use axum::response::Json;
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::app_state::AppState;
 
@@ -14,10 +17,7 @@ pub struct RecallRequest {
 }
 
 /// POST /memory/recall — FTS search over events.
-async fn recall(
-    State(state): State<AppState>,
-    Json(req): Json<RecallRequest>,
-) -> Json<Value> {
+async fn recall(State(state): State<AppState>, Json(req): Json<RecallRequest>) -> Json<Value> {
     let limit = req.limit.unwrap_or(10);
     match state.memory.search_events(&req.query, limit).await {
         Ok(rows) => {

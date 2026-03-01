@@ -48,7 +48,10 @@ impl Stage for DecideStage {
             .any(|r| r.starts_with("tool_error") || r.starts_with("response_contains"));
         if has_errors {
             ctx.decision = Decision::Revise;
-            tracing::debug!(stage = self.name(), "verification errors detected, revising");
+            tracing::debug!(
+                stage = self.name(),
+                "verification errors detected, revising"
+            );
             return StageResult::Continue;
         }
 

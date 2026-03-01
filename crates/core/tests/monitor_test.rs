@@ -1,6 +1,6 @@
 use chrono::Utc;
 use metaygn_core::monitor::{
-    cosine_similarity, AnomalyReport, MascMonitor, MonitorConfig, ReasoningStep,
+    AnomalyReport, MascMonitor, MonitorConfig, ReasoningStep, cosine_similarity,
 };
 use std::collections::HashMap;
 

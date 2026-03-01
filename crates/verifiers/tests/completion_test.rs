@@ -11,7 +11,8 @@ fn extract_claims_detects_done() {
 
 #[test]
 fn extract_claims_detects_files() {
-    let claims = extract_claims("Created `src/main.rs` and updated `lib/utils.py` for the feature.");
+    let claims =
+        extract_claims("Created `src/main.rs` and updated `lib/utils.py` for the feature.");
     assert!(
         claims.files_mentioned.iter().any(|f| f == "src/main.rs"),
         "Expected src/main.rs in files_mentioned, got: {:?}",
@@ -80,7 +81,10 @@ fn verify_completion_without_files_warns() {
         "Expected verified = true (no blocking issues) for completion without files"
     );
     assert!(
-        result.warnings.iter().any(|w| w.contains("no files were mentioned")),
+        result
+            .warnings
+            .iter()
+            .any(|w| w.contains("no files were mentioned")),
         "Expected warning about no files mentioned, got: {:?}",
         result.warnings
     );

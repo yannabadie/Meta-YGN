@@ -14,8 +14,7 @@ impl Stage for VerifyStage {
 
         // If we have an error from a previous tool invocation, record it.
         if let Some(err) = &ctx.input.error {
-            ctx.verification_results
-                .push(format!("tool_error: {err}"));
+            ctx.verification_results.push(format!("tool_error: {err}"));
         }
 
         // If we have a tool response, do basic sanity checks.

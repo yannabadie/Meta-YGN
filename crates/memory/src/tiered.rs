@@ -174,7 +174,8 @@ impl TieredMemory {
     pub fn evict_expired(&mut self) -> usize {
         let ttl = self.hot_ttl;
         let before = self.hot.len();
-        self.hot.retain(|_k, entry| entry.created_at.elapsed() < ttl);
+        self.hot
+            .retain(|_k, entry| entry.created_at.elapsed() < ttl);
         before - self.hot.len()
     }
 
