@@ -27,7 +27,9 @@ pub mod mcp_handler {
         pub prompt: String,
         /// Optional tool name for context
         pub tool_name: Option<String>,
-        /// Optional tool input for context
+        /// Optional tool input JSON for context.
+        /// Note: MCP callers may omit this; the classify pipeline still works
+        /// without it (tool_input is only used for deeper risk analysis).
         pub tool_input: Option<String>,
     }
 
@@ -35,7 +37,7 @@ pub mod mcp_handler {
     pub struct VerifyParams {
         /// The tool that produced the output
         pub tool_name: String,
-        /// The output returned by the tool
+        /// The tool output to verify (maps to `HookInput.tool_response`)
         pub tool_output: String,
         /// Optional expected output for comparison
         pub expected: Option<String>,
@@ -78,6 +80,10 @@ pub mod mcp_handler {
     #[tool_router]
     impl AletheiaHandler {
         /// Classify a user prompt for metacognitive risk, intent, and tool-necessity.
+        ///
+        /// Constructs a `HookInput` with `hook_event_name = UserPromptSubmit`.
+        /// `tool_input` is optionally parsed from the caller's JSON string; MCP
+        /// callers typically omit it since they don't have structured tool input.
         #[tool(
             name = "metacog_classify",
             description = "Classify a user prompt for metacognitive risk, intent, and tool-necessity."
@@ -224,6 +230,9 @@ pub mod mcp_handler {
         }
 
         /// Prune a message array by detecting error loops and suggesting compaction.
+        ///
+        /// Parses the input as `Vec<pruner::Message>`, runs `ContextPruner::analyze`,
+        /// and returns the analysis (consecutive errors, suggested injection, count).
         #[tool(
             name = "metacog_prune",
             description = "Prune a message array by sending it through the daemon's compaction proxy."
@@ -232,13 +241,18 @@ pub mod mcp_handler {
             &self,
             Parameters(params): Parameters<PruneParams>,
         ) -> Result<String, String> {
-            let messages: serde_json::Value =
-                serde_json::from_str(&params.messages).map_err(|e| format!("invalid JSON: {e}"))?;
-            // For now, pass through — the pruner logic can be wired in later
-            Ok(
-                serde_json::to_string_pretty(&serde_json::json!({"pruned": messages}))
-                    .unwrap_or_default(),
-            )
+            use crate::proxy::pruner::{ContextPruner, Message};
+
+            let messages: Vec<Message> =
+                serde_json::from_str(&params.messages).unwrap_or_default();
+            let pruner = ContextPruner::with_defaults();
+            let analysis = pruner.analyze(&messages);
+            Ok(serde_json::to_string_pretty(&serde_json::json!({
+                "consecutive_errors": analysis.consecutive_errors,
+                "suggested_injection": analysis.suggested_injection,
+                "messages_analyzed": messages.len(),
+            }))
+            .unwrap_or_default())
         }
     }
 
