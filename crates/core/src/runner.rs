@@ -37,7 +37,7 @@ impl ControlLoop {
     /// Run the full pipeline on the given context, returning the final decision.
     pub fn run(&self, ctx: &mut LoopContext) -> Decision {
         for stage in &self.stages {
-            tracing::trace!(stage = stage.name(), "entering stage");
+            let _span = tracing::info_span!("metaygn.stage", name = stage.name()).entered();
             match stage.run(ctx) {
                 StageResult::Continue => continue,
                 StageResult::Skip => {
@@ -77,7 +77,7 @@ impl ControlLoop {
     pub fn run_range(&self, ctx: &mut LoopContext, start: usize, end: usize) -> Decision {
         let end = end.min(self.stages.len());
         for stage in &self.stages[start..end] {
-            tracing::trace!(stage = stage.name(), "entering stage (range)");
+            let _span = tracing::info_span!("metaygn.stage", name = stage.name()).entered();
             match stage.run(ctx) {
                 StageResult::Continue => continue,
                 StageResult::Skip => {
@@ -109,7 +109,7 @@ impl ControlLoop {
     pub fn run_plan(&self, ctx: &mut LoopContext, plan: &ExecutionPlan) -> Decision {
         for stage_name in &plan.stages {
             if let Some(stage) = self.stages.iter().find(|s| s.name() == *stage_name) {
-                tracing::trace!(stage = stage.name(), topology = ?plan.topology, "entering stage (plan)");
+                let _span = tracing::info_span!("metaygn.stage", name = stage.name(), topology = ?plan.topology).entered();
                 match stage.run(ctx) {
                     StageResult::Continue => continue,
                     StageResult::Skip => {

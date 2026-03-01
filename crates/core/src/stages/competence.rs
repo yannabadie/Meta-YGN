@@ -30,6 +30,19 @@ impl Stage for CompetenceStage {
 
         ctx.competence = (ctx.competence - penalty).max(0.0);
 
+        // Adaptive competence: blend with historical success rate if available
+        if let Some(historical) = ctx.historical_success_rate {
+            let base = ctx.competence;
+            ctx.competence = 0.5 * base + 0.5 * historical;
+            tracing::debug!(
+                stage = self.name(),
+                base_competence = base,
+                historical_rate = historical,
+                blended = ctx.competence,
+                "blended competence with historical data"
+            );
+        }
+
         tracing::debug!(
             stage = self.name(),
             competence = ctx.competence,

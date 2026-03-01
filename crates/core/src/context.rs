@@ -63,6 +63,9 @@ pub struct LoopContext {
     /// Whether plasticity is lost (model ignoring recovery feedback). Set by hook handler.
     pub plasticity_lost: bool,
 
+    /// Historical success rate for this task type (from past sessions). Set by hook handler.
+    pub historical_success_rate: Option<f32>,
+
     /// Entropy tracker for overconfidence detection (EGPO).
     #[serde(skip)]
     pub entropy_tracker: EntropyTracker,
@@ -99,6 +102,7 @@ impl LoopContext {
             intended_action: None,
             overconfidence_score: 0.0,
             plasticity_lost: false,
+            historical_success_rate: None,
             entropy_tracker: EntropyTracker::new(20),
         }
     }

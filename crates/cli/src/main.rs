@@ -87,6 +87,12 @@ enum Commands {
 
     /// Launch MCP stdio server (for Claude Code / MCP clients)
     Mcp,
+
+    /// Run calibration evaluation on session data
+    Eval,
+
+    /// Check MetaYGN installation health
+    Doctor,
 }
 
 #[tokio::main]
@@ -103,6 +109,8 @@ async fn main() -> Result<()> {
         Commands::Replay { session_id } => cmd_replay(session_id.as_deref()).await,
         Commands::Export { limit } => cmd_export(limit).await,
         Commands::Mcp => cmd_mcp().await,
+        Commands::Eval => cmd_eval().await,
+        Commands::Doctor => cmd_doctor().await,
     }
 }
 
@@ -614,4 +622,232 @@ async fn cmd_top() -> Result<()> {
             Ok(())
         }
     }
+}
+
+/// Eval command: compute and display calibration metrics from daemon data.
+async fn cmd_eval() -> Result<()> {
+    let Some(port) = read_daemon_port() else {
+        println!("Daemon not running. Start with: aletheia start");
+        return Ok(());
+    };
+
+    let client = http_client()?;
+    let base = format!("http://127.0.0.1:{port}");
+
+    // 1. Get heuristic outcomes
+    let resp = client
+        .get(format!("{base}/heuristics/population"))
+        .send()
+        .await?;
+    let _pop: Value = resp.json().await?;
+
+    // 2. Get session replay data
+    let resp = client.get(format!("{base}/replay/sessions")).send().await?;
+    let sessions: Value = resp.json().await?;
+
+    // 3. Get memory stats
+    let resp = client.get(format!("{base}/memory/stats")).send().await?;
+    let memory: Value = resp.json().await?;
+
+    // 4. Get graph stats
+    let resp = client
+        .get(format!("{base}/memory/graph/stats"))
+        .send()
+        .await?;
+    let graph: Value = resp.json().await?;
+
+    // Compute metrics
+    let session_count = sessions
+        .get("sessions")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let event_count = memory
+        .get("event_count")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let node_count = graph
+        .get("node_count")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let edge_count = graph
+        .get("edge_count")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    // Display report
+    println!("\u{2554}{}\u{2557}", "\u{2550}".repeat(46));
+    println!("\u{2551}     Aletheia Calibration Report              \u{2551}");
+    println!("\u{2560}{}\u{2563}", "\u{2550}".repeat(46));
+    println!(
+        "\u{2551}  Sessions recorded:  {:>6}                  \u{2551}",
+        session_count
+    );
+    println!(
+        "\u{2551}  Events logged:      {:>6}                  \u{2551}",
+        event_count
+    );
+    println!(
+        "\u{2551}  Graph nodes:        {:>6}                  \u{2551}",
+        node_count
+    );
+    println!(
+        "\u{2551}  Graph edges:        {:>6}                  \u{2551}",
+        edge_count
+    );
+    println!("\u{2560}{}\u{2563}", "\u{2550}".repeat(46));
+
+    if session_count < 5 {
+        println!("\u{2551}  Insufficient data for calibration metrics   \u{2551}");
+        println!("\u{2551}  (need at least 5 sessions)                  \u{2551}");
+    } else {
+        // Get best heuristic fitness
+        let resp = client.get(format!("{base}/heuristics/best")).send().await?;
+        let best: Value = resp.json().await?;
+        let fitness = best
+            .get("fitness")
+            .and_then(|f| f.get("composite"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let success_rate = best
+            .get("fitness")
+            .and_then(|f| f.get("verification_success_rate"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        println!(
+            "\u{2551}  Best heuristic fitness:  {:.3}              \u{2551}",
+            fitness
+        );
+        println!(
+            "\u{2551}  Verification success:    {:.1}%              \u{2551}",
+            success_rate * 100.0
+        );
+    }
+
+    // Get fatigue
+    let resp = client
+        .get(format!("{base}/profiler/fatigue"))
+        .send()
+        .await?;
+    let fatigue: Value = resp.json().await?;
+    let fatigue_score = fatigue.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    println!(
+        "\u{2551}  Current fatigue:       {:.2}                \u{2551}",
+        fatigue_score
+    );
+
+    println!("\u{255a}{}\u{255d}", "\u{2550}".repeat(46));
+
+    Ok(())
+}
+
+/// Doctor command: check MetaYGN installation health.
+async fn cmd_doctor() -> Result<()> {
+    println!("Aletheia Doctor\n");
+    let mut issues = 0;
+
+    // 1. Check daemon
+    if let Some(port) = read_daemon_port() {
+        let client = http_client()?;
+        match client
+            .get(format!("http://127.0.0.1:{port}/health"))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                let body: Value = resp.json().await.unwrap_or_default();
+                let version = body.get("version").and_then(|v| v.as_str()).unwrap_or("?");
+                println!("  Daemon:     RUNNING (port {port}, version {version})");
+            }
+            _ => {
+                println!("  Daemon:     NOT RESPONDING (port file exists but daemon unreachable)");
+                issues += 1;
+            }
+        }
+    } else {
+        println!("  Daemon:     STOPPED");
+        issues += 1;
+    }
+
+    // 2. Check plugin.json
+    let plugin_path = std::path::Path::new(".claude-plugin/plugin.json");
+    if plugin_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(plugin_path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&content) {
+                let version = json.get("version").and_then(|v| v.as_str()).unwrap_or("?");
+                println!("  Plugin:     VALID (version {version})");
+            } else {
+                println!("  Plugin:     INVALID JSON");
+                issues += 1;
+            }
+        }
+    } else {
+        println!("  Plugin:     NOT FOUND (.claude-plugin/plugin.json missing)");
+        issues += 1;
+    }
+
+    // 3. Check hooks
+    let hooks_path = std::path::Path::new("hooks/hooks.json");
+    if hooks_path.exists()
+        && let Ok(content) = std::fs::read_to_string(hooks_path)
+        && let Ok(json) = serde_json::from_str::<Value>(&content)
+    {
+        let count = json.as_array().map(|a| a.len()).unwrap_or(0);
+        println!("  Hooks:      {count}/8 configured");
+    } else {
+        println!("  Hooks:      NOT FOUND");
+        issues += 1;
+    }
+
+    // 4. Check skills
+    let skills_dir = std::path::Path::new("skills");
+    if skills_dir.exists() {
+        let count = std::fs::read_dir(skills_dir)
+            .map(|d| {
+                d.filter(|e| e.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
+                    .count()
+            })
+            .unwrap_or(0);
+        println!("  Skills:     {count}/8 present");
+    } else {
+        println!("  Skills:     NOT FOUND");
+    }
+
+    // 5. Check agents
+    let agents_dir = std::path::Path::new("agents");
+    if agents_dir.exists() {
+        let count = std::fs::read_dir(agents_dir)
+            .map(|d| {
+                d.filter(|e| {
+                    e.as_ref()
+                        .map(|e| e.path().extension().map(|ext| ext == "md").unwrap_or(false))
+                        .unwrap_or(false)
+                })
+                .count()
+            })
+            .unwrap_or(0);
+        println!("  Agents:     {count}/6 present");
+    } else {
+        println!("  Agents:     NOT FOUND");
+    }
+
+    // 6. Check database
+    let home = dirs::home_dir().unwrap_or_default();
+    let db_path = home.join(".claude").join("aletheia").join("metaygn.db");
+    if db_path.exists() {
+        let size = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
+        println!("  Database:   {} ({} KB)", db_path.display(), size / 1024);
+    } else {
+        println!("  Database:   NOT FOUND (start daemon first)");
+    }
+
+    println!();
+    if issues == 0 {
+        println!("  Status: ALL CHECKS PASSED");
+    } else {
+        println!("  Status: {} ISSUE(S) FOUND", issues);
+    }
+
+    Ok(())
 }

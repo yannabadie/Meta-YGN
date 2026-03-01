@@ -1,7 +1,7 @@
 {
   "name": "aletheia-nexus",
   "description": "Local-first metacognitive control plane for coding agents. End-to-end session lifecycle with auto-populated graph memory, heuristic evolution, entropy calibration, and dynamic topology routing.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "author": {
     "name": "Yann Abadie"
   },
