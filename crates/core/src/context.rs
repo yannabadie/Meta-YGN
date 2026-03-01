@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::heuristics::entropy::EntropyTracker;
 use metaygn_shared::protocol::HookInput;
 use metaygn_shared::state::*;
 
@@ -55,6 +56,10 @@ pub struct LoopContext {
 
     /// Intended action recorded by the `act` stage for post-verification.
     pub intended_action: Option<IntendedAction>,
+
+    /// Entropy tracker for overconfidence detection (EGPO).
+    #[serde(skip)]
+    pub entropy_tracker: EntropyTracker,
 }
 
 impl LoopContext {
@@ -86,6 +91,7 @@ impl LoopContext {
             verification_results: Vec::new(),
             lessons: Vec::new(),
             intended_action: None,
+            entropy_tracker: EntropyTracker::new(20),
         }
     }
 }

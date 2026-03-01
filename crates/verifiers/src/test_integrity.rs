@@ -17,8 +17,8 @@ pub struct TestIntegrityIssue {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TestIssueType {
-    AssertionRemoved,      // assert! or assert_eq! line deleted
-    AssertionWeakened,     // assert_eq! changed to weaker check
+    AssertionRemoved,     // assert! or assert_eq! line deleted
+    AssertionWeakened,    // assert_eq! changed to weaker check
     ExpectedValueChanged, // expected value in assertion changed
     TestFunctionRemoved,  // #[test] function deleted
     TestSkipped,          // #[ignore] or @pytest.mark.skip added

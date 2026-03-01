@@ -101,6 +101,17 @@ impl MemoryStore {
 
                     CREATE INDEX IF NOT EXISTS idx_replay_session
                         ON replay_events(session_id, timestamp);
+
+                    CREATE TABLE IF NOT EXISTS rl2f_trajectories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        trajectory_json TEXT NOT NULL,
+                        signature_hash TEXT,
+                        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_trajectories_session
+                        ON rl2f_trajectories(session_id, timestamp);
                     ",
                 )?;
                 Ok::<_, rusqlite::Error>(())
@@ -150,11 +161,7 @@ impl MemoryStore {
     }
 
     /// Return recent events for a session, ordered by timestamp ascending.
-    pub async fn recent_events(
-        &self,
-        session_id: &str,
-        limit: u32,
-    ) -> Result<Vec<EventRow>> {
+    pub async fn recent_events(&self, session_id: &str, limit: u32) -> Result<Vec<EventRow>> {
         let session_id = session_id.to_owned();
         let rows = self
             .conn
@@ -184,11 +191,7 @@ impl MemoryStore {
     }
 
     /// Full-text search over event payloads using FTS5.
-    pub async fn search_events(
-        &self,
-        query: &str,
-        limit: u32,
-    ) -> Result<Vec<EventRow>> {
+    pub async fn search_events(&self, query: &str, limit: u32) -> Result<Vec<EventRow>> {
         let query = query.to_owned();
         let rows = self
             .conn
@@ -218,6 +221,7 @@ impl MemoryStore {
     }
 
     /// Persist a heuristic version snapshot.
+    #[allow(clippy::too_many_arguments)]
     pub async fn save_heuristic(
         &self,
         id: &str,
@@ -283,6 +287,7 @@ impl MemoryStore {
     }
 
     /// Record a session outcome for heuristic fitness tracking.
+    #[allow(clippy::too_many_arguments)]
     pub async fn save_outcome(
         &self,
         id: &str,
@@ -434,6 +439,60 @@ impl MemoryStore {
                             row.get::<_, String>(3)?,
                             row.get::<_, i64>(4)?,
                             row.get::<_, String>(5)?,
+                        ))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
+    /// Save an RL2F trajectory record for fine-tuning data export.
+    pub async fn save_trajectory(
+        &self,
+        session_id: &str,
+        trajectory_json: &str,
+        signature_hash: Option<&str>,
+    ) -> Result<()> {
+        let session_id = session_id.to_owned();
+        let trajectory_json = trajectory_json.to_owned();
+        let signature_hash = signature_hash.map(|s| s.to_owned());
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "INSERT INTO rl2f_trajectories (session_id, trajectory_json, signature_hash) VALUES (?1, ?2, ?3)",
+                    params![session_id, trajectory_json, signature_hash],
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Export recent RL2F trajectories, ordered by timestamp descending.
+    /// Returns Vec of (id, session_id, trajectory_json, signature_hash, timestamp).
+    pub async fn export_trajectories(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<(i64, String, String, Option<String>, String)>> {
+        let rows = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, session_id, trajectory_json, signature_hash, timestamp
+                     FROM rl2f_trajectories
+                     ORDER BY timestamp DESC
+                     LIMIT ?1",
+                )?;
+                let rows = stmt
+                    .query_map(params![limit], |row| {
+                        Ok((
+                            row.get::<_, i64>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, Option<String>>(3)?,
+                            row.get::<_, String>(4)?,
                         ))
                     })?
                     .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;

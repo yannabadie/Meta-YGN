@@ -7,8 +7,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use crossterm::event::{self, Event};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
+use ratatui::backend::CrosstermBackend;
 
 use self::app::TuiApp;
 use self::ui::render;
@@ -52,10 +52,10 @@ async fn run_event_loop(
         terminal.draw(|frame| render(frame, app))?;
 
         // Wait up to `tick_rate` for a keyboard event
-        if event::poll(tick_rate)? {
-            if let Event::Key(key) = event::read()? {
-                app.handle_key(key);
-            }
+        if event::poll(tick_rate)?
+            && let Event::Key(key) = event::read()?
+        {
+            app.handle_key(key);
         }
 
         if app.should_quit {

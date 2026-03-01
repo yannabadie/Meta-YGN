@@ -1,8 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 
 use anyhow::Result;
-use rusqlite::params;
 use rusqlite::OptionalExtension;
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tokio_rusqlite::Connection;
 
@@ -26,6 +26,7 @@ impl Scope {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Session" => Some(Scope::Session),
@@ -62,6 +63,7 @@ impl NodeType {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Task" => Some(NodeType::Task),
@@ -99,6 +101,7 @@ impl EdgeType {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "DependsOn" => Some(EdgeType::DependsOn),
@@ -254,6 +257,19 @@ impl GraphMemory {
                     CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
                     ",
                 )?;
+
+                // Add UCB columns (silently fails if already exist)
+                conn.execute(
+                    "ALTER TABLE nodes ADD COLUMN hit_count INTEGER DEFAULT 0",
+                    [],
+                )
+                .ok();
+                conn.execute(
+                    "ALTER TABLE nodes ADD COLUMN reward_sum REAL DEFAULT 0.0",
+                    [],
+                )
+                .ok();
+
                 Ok::<_, rusqlite::Error>(())
             })
             .await?;
@@ -269,8 +285,7 @@ impl GraphMemory {
         let scope = node.scope.as_str().to_owned();
         let label = node.label.clone();
         let content = node.content.clone();
-        let embedding: Option<Vec<u8>> =
-            node.embedding.as_ref().map(|e| serialize_embedding(e));
+        let embedding: Option<Vec<u8>> = node.embedding.as_ref().map(|e| serialize_embedding(e));
         let created_at = node.created_at.clone();
         let access_count = node.access_count;
 
@@ -333,9 +348,7 @@ impl GraphMemory {
                      FROM nodes WHERE id = ?1",
                 )?;
                 let node = stmt
-                    .query_row(params![id], |row| {
-                        Ok(row_to_node(row))
-                    })
+                    .query_row(params![id], |row| Ok(row_to_node(row)))
                     .optional()?;
                 Ok::<_, rusqlite::Error>(node)
             })
@@ -506,6 +519,84 @@ impl GraphMemory {
                         Some((node, score))
                     })
                     .collect();
+                scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                scored.truncate(limit as usize);
+                Ok::<_, rusqlite::Error>(scored)
+            })
+            .await?;
+        Ok(results)
+    }
+
+    // -- UCB adaptive recall --------------------------------------------------
+
+    /// Record a reward signal for a recalled node (UCB bandit update).
+    pub async fn record_recall_reward(&self, node_id: &str, reward: f64) -> Result<()> {
+        let node_id = node_id.to_owned();
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "UPDATE nodes SET hit_count = hit_count + 1, reward_sum = reward_sum + ?1 WHERE id = ?2",
+                    params![reward, node_id],
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Adaptive recall: combines cosine similarity with UCB exploration bonus.
+    ///
+    /// The final score is `0.7 * cosine + 0.3 * ucb_normalized` where UCB is
+    /// computed from per-node reward statistics using the Upper Confidence Bound
+    /// formula. Nodes that have never been recalled get a high exploration bonus.
+    pub async fn adaptive_recall(
+        &self,
+        query_embedding: &[f32],
+        limit: u32,
+    ) -> Result<Vec<(MemoryNode, f32)>> {
+        let query_emb = query_embedding.to_vec();
+        let results = self
+            .conn
+            .call(move |conn| {
+                let total_queries: f64 = conn
+                    .query_row(
+                        "SELECT COALESCE(SUM(hit_count), 1) FROM nodes",
+                        [],
+                        |row| row.get::<_, f64>(0),
+                    )
+                    .unwrap_or(1.0_f64)
+                    .max(1.0);
+
+                let mut stmt = conn.prepare(
+                    "SELECT id, node_type, scope, label, content, embedding,
+                            created_at, access_count, COALESCE(hit_count, 0), COALESCE(reward_sum, 0.0)
+                     FROM nodes WHERE embedding IS NOT NULL",
+                )?;
+
+                let mut scored: Vec<(MemoryNode, f32)> = stmt
+                    .query_map([], |row| {
+                        let node = row_to_node(row);
+                        let hit_count: i64 = row.get(8)?;
+                        let reward_sum: f64 = row.get(9)?;
+                        Ok((node, hit_count, reward_sum))
+                    })?
+                    .filter_map(|r| r.ok())
+                    .filter_map(|(node, hit_count, reward_sum)| {
+                        let emb = node.embedding.as_ref()?;
+                        if emb.is_empty() {
+                            return None;
+                        }
+                        let cosine = cosine_similarity(&query_emb, emb);
+                        let hits = (hit_count as f64).max(1.0);
+                        let mean_reward = reward_sum / hits;
+                        let exploration = (2.0 * total_queries.ln() / hits).sqrt();
+                        let ucb = mean_reward + exploration;
+                        let ucb_normalized = (ucb / 3.0).min(1.0) as f32;
+                        let final_score = 0.7 * cosine + 0.3 * ucb_normalized;
+                        Some((node, final_score))
+                    })
+                    .collect();
+
                 scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
                 scored.truncate(limit as usize);
                 Ok::<_, rusqlite::Error>(scored)

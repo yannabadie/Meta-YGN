@@ -92,11 +92,7 @@ impl ProcessSandbox {
     ///
     /// Supported languages: `"python"`, `"node"`, `"bash"`.
     /// `"rust"` is not yet supported (compilation is too slow for sandboxing).
-    pub async fn execute(
-        &self,
-        language: &str,
-        code: &str,
-    ) -> Result<SandboxResult, SandboxError> {
+    pub async fn execute(&self, language: &str, code: &str) -> Result<SandboxResult, SandboxError> {
         let (program, args) = Self::build_command(language, code)?;
 
         debug!(language, "sandbox: spawning process");
@@ -174,7 +170,10 @@ impl ProcessSandbox {
             Ok(Err(e)) => Err(e),
             Err(_) => {
                 // Timeout -- try to kill the child.
-                warn!(language, duration_ms, "sandbox: execution timed out, killing child");
+                warn!(
+                    language,
+                    duration_ms, "sandbox: execution timed out, killing child"
+                );
                 let _ = child.kill().await;
 
                 Ok(SandboxResult {
@@ -257,7 +256,10 @@ impl ProcessSandbox {
 // ---------------------------------------------------------------------------
 
 /// Read from an async reader up to `max_bytes`, returning the collected buffer.
-async fn read_limited<R: tokio::io::AsyncRead + Unpin>(reader: &mut R, max_bytes: usize) -> Vec<u8> {
+async fn read_limited<R: tokio::io::AsyncRead + Unpin>(
+    reader: &mut R,
+    max_bytes: usize,
+) -> Vec<u8> {
     let mut buf = vec![0u8; max_bytes + 1];
     let mut total = 0;
     loop {
@@ -344,10 +346,7 @@ mod tests {
         let (prog, args) = ProcessSandbox::build_command("bash", "echo hi").unwrap();
         if cfg!(windows) {
             // On Windows we prefer Git Bash over WSL bash.
-            assert!(
-                prog.contains("bash"),
-                "expected a bash path, got: {prog}"
-            );
+            assert!(prog.contains("bash"), "expected a bash path, got: {prog}");
         } else {
             assert_eq!(prog, "bash");
         }
@@ -358,14 +357,20 @@ mod tests {
     fn build_command_rust_unsupported() {
         let result = ProcessSandbox::build_command("rust", "fn main() {}");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), SandboxError::UnsupportedLanguage(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            SandboxError::UnsupportedLanguage(_)
+        ));
     }
 
     #[test]
     fn build_command_unknown_language() {
         let result = ProcessSandbox::build_command("cobol", "DISPLAY 'HI'");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), SandboxError::UnsupportedLanguage(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            SandboxError::UnsupportedLanguage(_)
+        ));
     }
 
     #[test]

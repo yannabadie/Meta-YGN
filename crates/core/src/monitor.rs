@@ -276,11 +276,7 @@ fn term_frequency(tokens: &[String]) -> HashMap<String, f64> {
 
 /// Inverse document frequency for a single term.
 /// IDF(t) = ln(1 + N / (1 + df(t)))   (smoothed, always non-negative)
-fn inverse_document_frequency(
-    term: &str,
-    doc_count: usize,
-    df: &HashMap<String, usize>,
-) -> f64 {
+fn inverse_document_frequency(term: &str, doc_count: usize, df: &HashMap<String, usize>) -> f64 {
     let n = doc_count as f64;
     let df_t = df.get(term).copied().unwrap_or(0) as f64;
     (1.0 + n / (1.0 + df_t)).ln()

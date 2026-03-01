@@ -1,6 +1,6 @@
 use metaygn_core::context::LoopContext;
 use metaygn_core::runner::ControlLoop;
-use metaygn_core::topology::{TopologyPlanner, ALL_STAGES};
+use metaygn_core::topology::{ALL_STAGES, TopologyPlanner};
 use metaygn_shared::protocol::{HookEvent, HookInput};
 use metaygn_shared::state::{Decision, RiskLevel, TaskType, Topology};
 
@@ -27,10 +27,7 @@ fn trivial_task_gets_4_stages() {
     let plan = TopologyPlanner::plan(RiskLevel::Low, 0.1, TaskType::Bugfix);
     assert_eq!(plan.topology, Topology::Single);
     assert_eq!(plan.stages.len(), 4);
-    assert_eq!(
-        plan.stages,
-        vec!["classify", "assess", "act", "decide"]
-    );
+    assert_eq!(plan.stages, vec!["classify", "assess", "act", "decide"]);
 }
 
 #[test]
@@ -45,7 +42,11 @@ fn medium_risk_gets_full_pipeline() {
 fn high_risk_gets_double_verify() {
     let plan = TopologyPlanner::plan(RiskLevel::High, 0.8, TaskType::Architecture);
     assert_eq!(plan.topology, Topology::Horizontal);
-    assert_eq!(plan.stages.len(), 14, "12 base + 2 extra (verify + calibrate)");
+    assert_eq!(
+        plan.stages.len(),
+        14,
+        "12 base + 2 extra (verify + calibrate)"
+    );
     // The last two stages should be the extra verify + calibrate pass.
     assert_eq!(plan.stages[12], "verify");
     assert_eq!(plan.stages[13], "calibrate");
@@ -72,7 +73,14 @@ fn research_gets_slim_pipeline() {
     assert_eq!(plan.stages.len(), 6);
     assert_eq!(
         plan.stages,
-        vec!["classify", "assess", "competence", "strategy", "act", "learn"]
+        vec![
+            "classify",
+            "assess",
+            "competence",
+            "strategy",
+            "act",
+            "learn"
+        ]
     );
 }
 

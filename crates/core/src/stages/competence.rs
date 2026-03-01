@@ -16,14 +16,17 @@ impl Stage for CompetenceStage {
         // Lower competence when the prompt mentions unfamiliar domains.
         let prompt = ctx.input.prompt.as_deref().unwrap_or("").to_lowercase();
         let unfamiliar = [
-            "kernel", "driver", "gpu", "cuda", "fpga", "assembly",
-            "verilog", "quantum", "blockchain",
+            "kernel",
+            "driver",
+            "gpu",
+            "cuda",
+            "fpga",
+            "assembly",
+            "verilog",
+            "quantum",
+            "blockchain",
         ];
-        let penalty = unfamiliar
-            .iter()
-            .filter(|kw| prompt.contains(*kw))
-            .count() as f32
-            * 0.1;
+        let penalty = unfamiliar.iter().filter(|kw| prompt.contains(*kw)).count() as f32 * 0.1;
 
         ctx.competence = (ctx.competence - penalty).max(0.0);
 

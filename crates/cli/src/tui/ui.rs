@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, Paragraph};
-use ratatui::Frame;
 
 use super::app::TuiApp;
 
@@ -91,9 +91,7 @@ fn render_daemon_status(frame: &mut Frame, app: &TuiApp, area: Rect) {
             Span::raw("  Status:  "),
             Span::styled(
                 "OFFLINE",
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             ),
         ]));
         lines.push(Line::from(format!("  Port:    {}", app.daemon_port)));
@@ -183,10 +181,7 @@ fn render_fatigue(frame: &mut Frame, app: &TuiApp, area: Rect) {
     let mut lines = Vec::new();
 
     if let Some(ref fatigue) = app.fatigue {
-        let score = fatigue
-            .get("score")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+        let score = fatigue.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
         let high_friction = fatigue
             .get("high_friction")
             .and_then(|v| v.as_bool())
@@ -237,8 +232,7 @@ fn render_fatigue(frame: &mut Frame, app: &TuiApp, area: Rect) {
         lines.push(Line::from("  Score:   --").style(Style::default().fg(Color::DarkGray)));
         lines.push(Line::from("  Mode:    --").style(Style::default().fg(Color::DarkGray)));
         lines.push(
-            Line::from("  (endpoint not available)")
-                .style(Style::default().fg(Color::DarkGray)),
+            Line::from("  (endpoint not available)").style(Style::default().fg(Color::DarkGray)),
         );
 
         let text = Paragraph::new(lines);

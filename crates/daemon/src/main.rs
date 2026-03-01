@@ -29,8 +29,7 @@ async fn main() -> Result<()> {
     // Create a shutdown watch channel for the /admin/shutdown endpoint
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    let app = metaygn_daemon::build_app_with_state(state)
-        .layer(axum::Extension(shutdown_tx));
+    let app = metaygn_daemon::build_app_with_state(state).layer(axum::Extension(shutdown_tx));
 
     // Bind to dynamic port on localhost
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;

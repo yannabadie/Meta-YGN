@@ -1,6 +1,4 @@
-use metaygn_shared::protocol::{
-    HookEvent, HookInput, HookOutput, PermissionDecision,
-};
+use metaygn_shared::protocol::{HookEvent, HookInput, HookOutput, PermissionDecision};
 
 #[test]
 fn hook_input_deserializes_pre_tool_use() {
@@ -20,10 +18,7 @@ fn hook_input_deserializes_pre_tool_use() {
 
 #[test]
 fn hook_output_serializes_deny() {
-    let output = HookOutput::permission(
-        PermissionDecision::Deny,
-        "dangerous command".to_string(),
-    );
+    let output = HookOutput::permission(PermissionDecision::Deny, "dangerous command".to_string());
 
     let json = serde_json::to_string(&output).unwrap();
     assert!(json.contains("deny"), "expected 'deny' in: {json}");
@@ -41,8 +36,7 @@ fn hook_output_serializes_allow_by_empty() {
     let value: serde_json::Value = serde_json::from_str(&json).unwrap();
     // hookSpecificOutput should be absent or null
     assert!(
-        value.get("hookSpecificOutput").is_none()
-            || value["hookSpecificOutput"].is_null(),
+        value.get("hookSpecificOutput").is_none() || value["hookSpecificOutput"].is_null(),
         "expected empty/null hookSpecificOutput in: {json}"
     );
 }

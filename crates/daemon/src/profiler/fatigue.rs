@@ -104,20 +104,30 @@ impl FatigueProfiler {
 
         // 1. Short prompt?
         if prompt.len() < self.config.short_prompt_threshold {
-            self.push_signal(now, FatigueSignal::ShortPrompt { length: prompt.len() });
+            self.push_signal(
+                now,
+                FatigueSignal::ShortPrompt {
+                    length: prompt.len(),
+                },
+            );
         }
 
         // 2. Rapid retry?
         if let Some(last) = self.last_prompt_time {
             let elapsed_ms = now.duration_since(last).as_millis() as u64;
             if elapsed_ms < self.config.rapid_retry_ms {
-                self.push_signal(now, FatigueSignal::RapidRetry { interval_ms: elapsed_ms });
+                self.push_signal(
+                    now,
+                    FatigueSignal::RapidRetry {
+                        interval_ms: elapsed_ms,
+                    },
+                );
             }
         }
 
         // 3. Late night?
         let hour = timestamp.hour();
-        if hour >= 23 || hour < 5 {
+        if !(5..23).contains(&hour) {
             self.push_signal(now, FatigueSignal::LateNight { hour });
         }
 

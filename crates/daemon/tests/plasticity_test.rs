@@ -83,22 +83,38 @@ fn amplification_level_increases() {
     let mut tracker = PlasticityTracker::new();
 
     // No failures yet: level 1 (standard)
-    assert_eq!(tracker.amplification_level(), 1, "expected level 1 with 0 failures");
+    assert_eq!(
+        tracker.amplification_level(),
+        1,
+        "expected level 1 with 0 failures"
+    );
 
     // One failure: level 2 (emphatic)
     tracker.record_recovery_injected();
     tracker.record_outcome(RecoveryOutcome::Failure);
-    assert_eq!(tracker.amplification_level(), 2, "expected level 2 after 1 failure");
+    assert_eq!(
+        tracker.amplification_level(),
+        2,
+        "expected level 2 after 1 failure"
+    );
 
     // Two failures: level 3 (escalate)
     tracker.record_recovery_injected();
     tracker.record_outcome(RecoveryOutcome::Failure);
-    assert_eq!(tracker.amplification_level(), 3, "expected level 3 after 2 failures");
+    assert_eq!(
+        tracker.amplification_level(),
+        3,
+        "expected level 3 after 2 failures"
+    );
 
     // Three failures: still level 3 (capped)
     tracker.record_recovery_injected();
     tracker.record_outcome(RecoveryOutcome::Failure);
-    assert_eq!(tracker.amplification_level(), 3, "expected level 3 capped at max");
+    assert_eq!(
+        tracker.amplification_level(),
+        3,
+        "expected level 3 capped at max"
+    );
 }
 
 // -----------------------------------------------------------------------

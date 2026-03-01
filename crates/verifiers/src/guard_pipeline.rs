@@ -41,7 +41,7 @@ impl DestructiveGuard {
             r"\bdd\s+if=",
             r"\bshutdown\b",
             r"\breboot\b",
-            r":\(\)\{.*\|.*\}",   // fork bomb
+            r":\(\)\{.*\|.*\}", // fork bomb
             r"chmod\s+777\s+/",
         ]
         .iter()

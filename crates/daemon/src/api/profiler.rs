@@ -1,6 +1,9 @@
 use axum::extract::State;
 use axum::response::Json;
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use serde::Deserialize;
 
 use crate::app_state::AppState;

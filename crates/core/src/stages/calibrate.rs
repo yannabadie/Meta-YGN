@@ -34,6 +34,21 @@ impl Stage for CalibrateStage {
             v.grounding = (v.grounding - 0.1).max(0.0);
         }
 
+        // --- Overconfidence detection (EGPO) ---
+        let was_correct = error_count == 0;
+        ctx.entropy_tracker.record(v.confidence, was_correct);
+
+        if ctx.entropy_tracker.is_overconfident() {
+            let oc_score = ctx.entropy_tracker.overconfidence_score();
+            let oc_penalty = oc_score * 0.2;
+            v.confidence = (v.confidence - oc_penalty).max(0.0);
+            tracing::warn!(
+                stage = self.name(),
+                overconfidence_score = oc_score,
+                "overconfidence detected, applying calibration penalty"
+            );
+        }
+
         // Complexity tracks the difficulty estimate.
         v.complexity = ctx.difficulty as f64;
 

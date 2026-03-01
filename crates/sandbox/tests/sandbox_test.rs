@@ -53,7 +53,10 @@ async fn execute_python_hello() {
     }
 
     let sandbox = ProcessSandbox::with_defaults();
-    let result = sandbox.execute("python", r#"print("hello")"#).await.unwrap();
+    let result = sandbox
+        .execute("python", r#"print("hello")"#)
+        .await
+        .unwrap();
 
     assert!(result.success, "expected success, got: {:?}", result);
     assert_eq!(result.exit_code, Some(0));
@@ -99,7 +102,10 @@ async fn execute_bash_echo() {
     }
 
     let sandbox = ProcessSandbox::with_defaults();
-    let result = sandbox.execute("bash", "echo hello_from_bash").await.unwrap();
+    let result = sandbox
+        .execute("bash", "echo hello_from_bash")
+        .await
+        .unwrap();
 
     assert!(result.success, "expected success, got: {:?}", result);
     assert_eq!(result.exit_code, Some(0));
@@ -284,10 +290,7 @@ async fn output_truncation() {
     });
 
     // Python prints 100 'A' characters.
-    let result = sandbox
-        .execute("python", "print('A' * 100)")
-        .await
-        .unwrap();
+    let result = sandbox.execute("python", "print('A' * 100)").await.unwrap();
 
     assert!(result.success);
     // stdout should be truncated to roughly max_output_bytes.

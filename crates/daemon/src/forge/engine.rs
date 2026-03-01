@@ -186,9 +186,7 @@ impl ForgeEngine {
                     .replace('\n', "\\n")
                     .replace('\r', "\\r");
 
-                format!(
-                    "import sys, io\nsys.stdin = io.StringIO('{escaped}')\n{source}"
-                )
+                format!("import sys, io\nsys.stdin = io.StringIO('{escaped}')\n{source}")
             }
             ScriptLang::Bash => {
                 // Use a heredoc to feed stdin into the script via a pipe.

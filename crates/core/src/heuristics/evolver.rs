@@ -160,9 +160,12 @@ impl HeuristicEvolver {
 
     /// Get the current best heuristic version (highest composite fitness).
     pub fn best(&self) -> Option<&HeuristicVersion> {
-        self.population
-            .iter()
-            .max_by(|a, b| a.fitness.composite.partial_cmp(&b.fitness.composite).unwrap())
+        self.population.iter().max_by(|a, b| {
+            a.fitness
+                .composite
+                .partial_cmp(&b.fitness.composite)
+                .unwrap()
+        })
     }
 
     /// Create a mutated child from the best parent.
@@ -289,14 +292,12 @@ impl HeuristicEvolver {
             let success_rate = (base_success_rate + strategy_modifier).clamp(0.0, 1.0);
 
             // Token efficiency: 1.0 - (avg_tokens / max_expected).
-            let avg_tokens =
-                outcomes.iter().map(|o| o.tokens_consumed).sum::<u64>() as f64 / total;
+            let avg_tokens = outcomes.iter().map(|o| o.tokens_consumed).sum::<u64>() as f64 / total;
             let token_efficiency = (1.0 - avg_tokens / MAX_EXPECTED_TOKENS as f64).clamp(0.0, 1.0);
 
             // Latency score: 1.0 - (avg_duration / max_expected).
             let avg_duration = outcomes.iter().map(|o| o.duration_ms).sum::<u64>() as f64 / total;
-            let latency_score =
-                (1.0 - avg_duration / MAX_EXPECTED_DURATION as f64).clamp(0.0, 1.0);
+            let latency_score = (1.0 - avg_duration / MAX_EXPECTED_DURATION as f64).clamp(0.0, 1.0);
 
             version.fitness = FitnessScore::compute(success_rate, token_efficiency, latency_score);
         }
@@ -314,8 +315,12 @@ impl HeuristicEvolver {
         self.evaluate_all();
 
         // 2. Sort by composite fitness, descending.
-        self.population
-            .sort_by(|a, b| b.fitness.composite.partial_cmp(&a.fitness.composite).unwrap());
+        self.population.sort_by(|a, b| {
+            b.fitness
+                .composite
+                .partial_cmp(&a.fitness.composite)
+                .unwrap()
+        });
 
         // 3. Truncate to max_population (tournament selection — keep the best).
         if self.population.len() > self.max_population {

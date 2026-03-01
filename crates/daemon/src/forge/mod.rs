@@ -8,4 +8,4 @@ pub mod engine;
 pub mod templates;
 
 pub use engine::{ForgeEngine, ForgeResult, ScriptLang, ToolSpec};
-pub use templates::{get_template, list_templates, Template, TEMPLATES};
+pub use templates::{TEMPLATES, Template, get_template, list_templates};

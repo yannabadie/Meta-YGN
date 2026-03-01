@@ -71,7 +71,10 @@ impl AletheiaHandler {
 #[tool_router]
 impl AletheiaHandler {
     /// Classify a user prompt for metacognitive risk, intent, and tool-necessity.
-    #[tool(name = "metacog_classify", description = "Classify a user prompt for metacognitive risk, intent, and tool-necessity.")]
+    #[tool(
+        name = "metacog_classify",
+        description = "Classify a user prompt for metacognitive risk, intent, and tool-necessity."
+    )]
     async fn metacog_classify(
         &self,
         Parameters(params): Parameters<ClassifyParams>,
@@ -89,7 +92,10 @@ impl AletheiaHandler {
     }
 
     /// Verify a tool's output against expectations and detect anomalies.
-    #[tool(name = "metacog_verify", description = "Verify a tool's output against expectations and detect anomalies.")]
+    #[tool(
+        name = "metacog_verify",
+        description = "Verify a tool's output against expectations and detect anomalies."
+    )]
     async fn metacog_verify(
         &self,
         Parameters(params): Parameters<VerifyParams>,
@@ -107,7 +113,10 @@ impl AletheiaHandler {
     }
 
     /// Recall relevant memories (heuristics, episodic traces) by semantic query.
-    #[tool(name = "metacog_recall", description = "Recall relevant memories (heuristics, episodic traces) by semantic query.")]
+    #[tool(
+        name = "metacog_recall",
+        description = "Recall relevant memories (heuristics, episodic traces) by semantic query."
+    )]
     async fn metacog_recall(
         &self,
         Parameters(params): Parameters<RecallParams>,
@@ -125,7 +134,10 @@ impl AletheiaHandler {
     }
 
     /// Get the current metacognitive status: health, fatigue, budget, and best heuristics.
-    #[tool(name = "metacog_status", description = "Get the current metacognitive status: health, fatigue, budget, and best heuristics.")]
+    #[tool(
+        name = "metacog_status",
+        description = "Get the current metacognitive status: health, fatigue, budget, and best heuristics."
+    )]
     async fn metacog_status(&self) -> Result<String, String> {
         let health = self.daemon.get("/health").await.unwrap_or_default();
         let fatigue = self
@@ -150,7 +162,10 @@ impl AletheiaHandler {
     }
 
     /// Prune a message array by sending it through the daemon's compaction proxy.
-    #[tool(name = "metacog_prune", description = "Prune a message array by sending it through the daemon's compaction proxy.")]
+    #[tool(
+        name = "metacog_prune",
+        description = "Prune a message array by sending it through the daemon's compaction proxy."
+    )]
     async fn metacog_prune(
         &self,
         Parameters(params): Parameters<PruneParams>,

@@ -85,7 +85,9 @@ impl ContextPruner {
         for &idx in indices {
             if let Some(msg) = messages.get(idx) {
                 for pattern in &self.config.error_patterns {
-                    if msg.content.contains(pattern.as_str()) && !found_patterns.contains(&pattern.as_str()) {
+                    if msg.content.contains(pattern.as_str())
+                        && !found_patterns.contains(&pattern.as_str())
+                    {
                         found_patterns.push(pattern.as_str());
                     }
                 }
@@ -200,11 +202,7 @@ impl ContextPruner {
             .error_indices
             .iter()
             .copied()
-            .filter(|&i| {
-                i != 0
-                    && i != last_idx
-                    && messages[i].role != "user"
-            })
+            .filter(|&i| i != 0 && i != last_idx && messages[i].role != "user")
             .collect();
 
         let mut result: Vec<Message> = Vec::with_capacity(messages.len());
@@ -214,14 +212,12 @@ impl ContextPruner {
             if removable.contains(&i) {
                 // Insert the recovery injection once, at the position of the
                 // first removed message.
-                if !injection_placed {
-                    if let Some(ref injection) = analysis.suggested_injection {
-                        result.push(Message {
-                            role: "assistant".to_string(),
-                            content: injection.clone(),
-                        });
-                        injection_placed = true;
-                    }
+                if !injection_placed && let Some(ref injection) = analysis.suggested_injection {
+                    result.push(Message {
+                        role: "assistant".to_string(),
+                        content: injection.clone(),
+                    });
+                    injection_placed = true;
                 }
                 // Skip the error message.
                 continue;
@@ -334,8 +330,7 @@ mod tests {
         ];
         let pruned = pruner.prune(&messages);
 
-        let user_messages: Vec<&Message> =
-            pruned.iter().filter(|m| m.role == "user").collect();
+        let user_messages: Vec<&Message> = pruned.iter().filter(|m| m.role == "user").collect();
         assert_eq!(user_messages.len(), 2);
         assert_eq!(user_messages[0].content, "Step one");
         assert_eq!(user_messages[1].content, "Step two");
@@ -352,10 +347,13 @@ mod tests {
             msg("user", "Any ideas?"),
         ];
         let pruned = pruner.prune(&messages);
-        let has_injection = pruned
-            .iter()
-            .any(|m| m.content.contains("ALETHEIA") && m.content.contains("fundamentally different approach"));
-        assert!(has_injection, "Recovery injection not found in pruned messages");
+        let has_injection = pruned.iter().any(|m| {
+            m.content.contains("ALETHEIA") && m.content.contains("fundamentally different approach")
+        });
+        assert!(
+            has_injection,
+            "Recovery injection not found in pruned messages"
+        );
     }
 
     #[test]

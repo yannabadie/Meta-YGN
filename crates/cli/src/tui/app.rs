@@ -52,15 +52,13 @@ impl TuiApp {
 
         // Fetch health
         match self.client.get(format!("{base}/health")).send().await {
-            Ok(resp) if resp.status().is_success() => {
-                match resp.json::<Value>().await {
-                    Ok(v) => {
-                        self.health = Some(v);
-                        self.last_error = None;
-                    }
-                    Err(e) => self.last_error = Some(format!("parse /health: {e}")),
+            Ok(resp) if resp.status().is_success() => match resp.json::<Value>().await {
+                Ok(v) => {
+                    self.health = Some(v);
+                    self.last_error = None;
                 }
-            }
+                Err(e) => self.last_error = Some(format!("parse /health: {e}")),
+            },
             Ok(resp) => {
                 self.last_error = Some(format!("/health returned {}", resp.status()));
             }
@@ -71,12 +69,7 @@ impl TuiApp {
         }
 
         // Fetch memory stats
-        match self
-            .client
-            .get(format!("{base}/memory/stats"))
-            .send()
-            .await
-        {
+        match self.client.get(format!("{base}/memory/stats")).send().await {
             Ok(resp) if resp.status().is_success() => {
                 if let Ok(v) = resp.json::<Value>().await {
                     self.memory_stats = Some(v);

@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 /// What Claude claims to have done (extracted from last_assistant_message)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompletionClaim {
-    pub files_mentioned: Vec<String>,     // paths extracted from response
-    pub claims_completion: bool,          // "done", "finished", "implemented", etc.
-    pub claims_tests_pass: bool,          // "tests pass", "all tests green", etc.
-    pub claims_compiles: bool,            // "compiles", "builds successfully", etc.
+    pub files_mentioned: Vec<String>, // paths extracted from response
+    pub claims_completion: bool,      // "done", "finished", "implemented", etc.
+    pub claims_tests_pass: bool,      // "tests pass", "all tests green", etc.
+    pub claims_compiles: bool,        // "compiles", "builds successfully", etc.
 }
 
 /// Result of verifying claims
@@ -14,8 +14,8 @@ pub struct CompletionClaim {
 pub struct VerificationResult {
     pub verified: bool,
     pub checks: Vec<Check>,
-    pub blocking_issues: Vec<String>,     // issues that should block "Done!" claim
-    pub warnings: Vec<String>,            // non-blocking concerns
+    pub blocking_issues: Vec<String>, // issues that should block "Done!" claim
+    pub warnings: Vec<String>,        // non-blocking concerns
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,10 +31,8 @@ pub fn extract_claims(text: &str) -> CompletionClaim {
 
     // Extract file paths (patterns like `path/to/file.rs`, src/main.py, etc.)
     // Must handle: backtick-quoted, space-delimited, end-of-line, after punctuation
-    let file_pattern = regex::Regex::new(
-        r"(?:^|[\s`(])((?:[\w.\-]+/)+[\w.\-]+\.\w{1,10})",
-    )
-    .unwrap();
+    let file_pattern =
+        regex::Regex::new(r"(?:^|[\s`(])((?:[\w.\-]+/)+[\w.\-]+\.\w{1,10})").unwrap();
     let mut files_mentioned: Vec<String> = file_pattern
         .captures_iter(text)
         .map(|c| c[1].to_string())
@@ -71,9 +69,7 @@ pub fn extract_claims(text: &str) -> CompletionClaim {
         "everything is",
         "that's it",
     ];
-    let claims_completion = completion_markers
-        .iter()
-        .any(|m| lower.contains(m));
+    let claims_completion = completion_markers.iter().any(|m| lower.contains(m));
 
     let test_markers = [
         "tests pass",
@@ -171,9 +167,8 @@ pub fn verify_completion(text: &str, cwd: &str) -> VerificationResult {
 
     // Check 4: Completion without any files = suspicious
     if claims.claims_completion && claims.files_mentioned.is_empty() {
-        warnings.push(
-            "Claude claims completion but no files were mentioned in the response".into(),
-        );
+        warnings
+            .push("Claude claims completion but no files were mentioned in the response".into());
     }
 
     let verified = blocking_issues.is_empty();

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0 "Calibrated Mind"
+### Added
+- **Entropy calibration (EGPO)**: `EntropyTracker` detects overconfidence via sliding window of high-confidence errors
+  - Wired into calibrate stage (stage 9): penalizes confidence when overconfidence exceeds 0.3 threshold
+  - 20-entry sliding window, configurable
+- **Plasticity detection (RL2F)**: 3-level `PlasticityLevel` enum (Responsive/Degraded/Lost)
+  - Extends existing `PlasticityTracker` with `plasticity_level()` and `is_plasticity_lost()`
+  - Detects when the LLM ignores recovery feedback (2+ consecutive failures)
+- **UCB-scored memory retrieval (U-Mem)**: `adaptive_recall` method on `GraphMemory`
+  - Blends 70% cosine similarity + 30% UCB exploration bonus
+  - `record_recall_reward` for bandit-style feedback on recalled nodes
+  - Nodes with `hit_count` and `reward_sum` fields for exploration-exploitation
+- **RL trajectory export (RL2F/RLVR)**: structured trajectory capture for external RL pipelines
+  - `Rl2fTrajectory` struct with full lifecycle fields (attempt, error, critique, revision, outcome, calibration)
+  - `rl2f_trajectories` SQLite table with signature hash for integrity
+  - `GET /trajectories/export` daemon endpoint returning signed JSONL
+  - `aletheia export` CLI command writes to `~/.claude/aletheia/trajectories/`
+
 ## 0.8.0 "Neural Bridge"
 ### Added
 - **MCP Bridge**: new `metaygn-mcp-bridge` crate with 5 metacognitive MCP tools via stdio transport (rmcp 0.17)

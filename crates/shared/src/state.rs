@@ -51,7 +51,11 @@ impl MetacognitiveVector {
     ///
     /// Complexity is inverted because higher complexity reduces quality.
     pub fn overall_quality(&self) -> f64 {
-        (self.confidence + self.coherence + self.grounding + (1.0 - self.complexity) + self.progress)
+        (self.confidence
+            + self.coherence
+            + self.grounding
+            + (1.0 - self.complexity)
+            + self.progress)
             / 5.0
     }
 

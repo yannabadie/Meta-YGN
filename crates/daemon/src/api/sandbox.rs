@@ -40,10 +40,7 @@ fn default_expected_success() -> bool {
 // ---------------------------------------------------------------------------
 
 /// POST /sandbox/exec -- execute code in the process sandbox.
-async fn exec(
-    State(state): State<AppState>,
-    Json(req): Json<ExecRequest>,
-) -> Json<SandboxResult> {
+async fn exec(State(state): State<AppState>, Json(req): Json<ExecRequest>) -> Json<SandboxResult> {
     let result = match state.sandbox.execute(&req.language, &req.code).await {
         Ok(r) => r,
         Err(e) => SandboxResult {

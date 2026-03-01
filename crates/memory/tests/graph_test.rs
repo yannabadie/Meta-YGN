@@ -1,12 +1,18 @@
 use metaygn_memory::graph::{
-    cosine_similarity, EdgeType, GraphMemory, MemoryEdge, MemoryNode, NodeType, Scope,
+    EdgeType, GraphMemory, MemoryEdge, MemoryNode, NodeType, Scope, cosine_similarity,
 };
 
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
 
-fn make_node(id: &str, node_type: NodeType, scope: Scope, label: &str, content: &str) -> MemoryNode {
+fn make_node(
+    id: &str,
+    node_type: NodeType,
+    scope: Scope,
+    label: &str,
+    content: &str,
+) -> MemoryNode {
     MemoryNode {
         id: id.to_owned(),
         node_type,
@@ -37,7 +43,13 @@ fn make_edge(source: &str, target: &str, edge_type: EdgeType) -> MemoryEdge {
 async fn insert_and_get_node() {
     let gm = GraphMemory::open_in_memory().await.expect("open graph");
 
-    let node = make_node("n1", NodeType::Task, Scope::Session, "My Task", "Do something important");
+    let node = make_node(
+        "n1",
+        NodeType::Task,
+        Scope::Session,
+        "My Task",
+        "Do something important",
+    );
     gm.insert_node(&node).await.expect("insert node");
 
     let fetched = gm.get_node("n1").await.expect("get node");
@@ -61,14 +73,30 @@ async fn insert_edge_and_find_neighbors() {
 
     // Create chain: A -> B -> C
     let a = make_node("a", NodeType::Task, Scope::Project, "Node A", "content A");
-    let b = make_node("b", NodeType::Decision, Scope::Project, "Node B", "content B");
-    let c = make_node("c", NodeType::Evidence, Scope::Project, "Node C", "content C");
+    let b = make_node(
+        "b",
+        NodeType::Decision,
+        Scope::Project,
+        "Node B",
+        "content B",
+    );
+    let c = make_node(
+        "c",
+        NodeType::Evidence,
+        Scope::Project,
+        "Node C",
+        "content C",
+    );
     gm.insert_node(&a).await.unwrap();
     gm.insert_node(&b).await.unwrap();
     gm.insert_node(&c).await.unwrap();
 
-    gm.insert_edge(&make_edge("a", "b", EdgeType::DependsOn)).await.unwrap();
-    gm.insert_edge(&make_edge("b", "c", EdgeType::Produces)).await.unwrap();
+    gm.insert_edge(&make_edge("a", "b", EdgeType::DependsOn))
+        .await
+        .unwrap();
+    gm.insert_edge(&make_edge("b", "c", EdgeType::Produces))
+        .await
+        .unwrap();
 
     // Neighbors of B at depth 1: should include A and C
     let neighbors = gm.find_neighbors("b", 1).await.unwrap();
@@ -94,12 +122,27 @@ async fn insert_edge_and_find_neighbors() {
 async fn search_content_fts() {
     let gm = GraphMemory::open_in_memory().await.expect("open graph");
 
-    let n1 = make_node("s1", NodeType::Lesson, Scope::Global, "Rust ownership",
-                        "Rust enforces ownership rules at compile time");
-    let n2 = make_node("s2", NodeType::Lesson, Scope::Global, "Python GIL",
-                        "Python has a Global Interpreter Lock");
-    let n3 = make_node("s3", NodeType::Lesson, Scope::Global, "Concurrency",
-                        "Concurrent programming requires careful synchronization");
+    let n1 = make_node(
+        "s1",
+        NodeType::Lesson,
+        Scope::Global,
+        "Rust ownership",
+        "Rust enforces ownership rules at compile time",
+    );
+    let n2 = make_node(
+        "s2",
+        NodeType::Lesson,
+        Scope::Global,
+        "Python GIL",
+        "Python has a Global Interpreter Lock",
+    );
+    let n3 = make_node(
+        "s3",
+        NodeType::Lesson,
+        Scope::Global,
+        "Concurrency",
+        "Concurrent programming requires careful synchronization",
+    );
     gm.insert_node(&n1).await.unwrap();
     gm.insert_node(&n2).await.unwrap();
     gm.insert_node(&n3).await.unwrap();
@@ -127,10 +170,42 @@ async fn search_content_fts() {
 async fn nodes_by_type_filters() {
     let gm = GraphMemory::open_in_memory().await.expect("open graph");
 
-    gm.insert_node(&make_node("t1", NodeType::Task, Scope::Session, "Task 1", "c1")).await.unwrap();
-    gm.insert_node(&make_node("t2", NodeType::Task, Scope::Session, "Task 2", "c2")).await.unwrap();
-    gm.insert_node(&make_node("d1", NodeType::Decision, Scope::Session, "Dec 1", "c3")).await.unwrap();
-    gm.insert_node(&make_node("e1", NodeType::Error, Scope::Global, "Err 1", "c4")).await.unwrap();
+    gm.insert_node(&make_node(
+        "t1",
+        NodeType::Task,
+        Scope::Session,
+        "Task 1",
+        "c1",
+    ))
+    .await
+    .unwrap();
+    gm.insert_node(&make_node(
+        "t2",
+        NodeType::Task,
+        Scope::Session,
+        "Task 2",
+        "c2",
+    ))
+    .await
+    .unwrap();
+    gm.insert_node(&make_node(
+        "d1",
+        NodeType::Decision,
+        Scope::Session,
+        "Dec 1",
+        "c3",
+    ))
+    .await
+    .unwrap();
+    gm.insert_node(&make_node(
+        "e1",
+        NodeType::Error,
+        Scope::Global,
+        "Err 1",
+        "c4",
+    ))
+    .await
+    .unwrap();
 
     let tasks = gm.nodes_by_type(NodeType::Task, 100).await.unwrap();
     assert_eq!(tasks.len(), 2);
@@ -150,10 +225,30 @@ async fn nodes_by_type_filters() {
 async fn nodes_by_scope_filters() {
     let gm = GraphMemory::open_in_memory().await.expect("open graph");
 
-    gm.insert_node(&make_node("s1", NodeType::Task, Scope::Session, "S1", "c1")).await.unwrap();
-    gm.insert_node(&make_node("s2", NodeType::Decision, Scope::Session, "S2", "c2")).await.unwrap();
-    gm.insert_node(&make_node("p1", NodeType::Task, Scope::Project, "P1", "c3")).await.unwrap();
-    gm.insert_node(&make_node("g1", NodeType::Lesson, Scope::Global, "G1", "c4")).await.unwrap();
+    gm.insert_node(&make_node("s1", NodeType::Task, Scope::Session, "S1", "c1"))
+        .await
+        .unwrap();
+    gm.insert_node(&make_node(
+        "s2",
+        NodeType::Decision,
+        Scope::Session,
+        "S2",
+        "c2",
+    ))
+    .await
+    .unwrap();
+    gm.insert_node(&make_node("p1", NodeType::Task, Scope::Project, "P1", "c3"))
+        .await
+        .unwrap();
+    gm.insert_node(&make_node(
+        "g1",
+        NodeType::Lesson,
+        Scope::Global,
+        "G1",
+        "c4",
+    ))
+    .await
+    .unwrap();
 
     let session_nodes = gm.nodes_by_scope(Scope::Session, 100).await.unwrap();
     assert_eq!(session_nodes.len(), 2);
@@ -176,19 +271,28 @@ async fn cosine_similarity_basic() {
     let a = vec![1.0, 0.0, 0.0];
     let b = vec![1.0, 0.0, 0.0];
     let sim = cosine_similarity(&a, &b);
-    assert!((sim - 1.0).abs() < 1e-6, "identical vectors should be 1.0, got {sim}");
+    assert!(
+        (sim - 1.0).abs() < 1e-6,
+        "identical vectors should be 1.0, got {sim}"
+    );
 
     // Orthogonal vectors -> 0.0
     let c = vec![1.0, 0.0, 0.0];
     let d = vec![0.0, 1.0, 0.0];
     let sim2 = cosine_similarity(&c, &d);
-    assert!(sim2.abs() < 1e-6, "orthogonal vectors should be 0.0, got {sim2}");
+    assert!(
+        sim2.abs() < 1e-6,
+        "orthogonal vectors should be 0.0, got {sim2}"
+    );
 
     // Opposite vectors -> -1.0
     let e = vec![1.0, 0.0];
     let f = vec![-1.0, 0.0];
     let sim3 = cosine_similarity(&e, &f);
-    assert!((sim3 + 1.0).abs() < 1e-6, "opposite vectors should be -1.0, got {sim3}");
+    assert!(
+        (sim3 + 1.0).abs() < 1e-6,
+        "opposite vectors should be -1.0, got {sim3}"
+    );
 
     // Empty -> 0.0
     let sim4 = cosine_similarity(&[], &[]);
@@ -210,15 +314,25 @@ async fn node_and_edge_counts() {
     assert_eq!(gm.node_count().await.unwrap(), 0);
     assert_eq!(gm.edge_count().await.unwrap(), 0);
 
-    gm.insert_node(&make_node("n1", NodeType::Task, Scope::Session, "N1", "c1")).await.unwrap();
-    gm.insert_node(&make_node("n2", NodeType::Task, Scope::Session, "N2", "c2")).await.unwrap();
-    gm.insert_node(&make_node("n3", NodeType::Code, Scope::Global, "N3", "c3")).await.unwrap();
+    gm.insert_node(&make_node("n1", NodeType::Task, Scope::Session, "N1", "c1"))
+        .await
+        .unwrap();
+    gm.insert_node(&make_node("n2", NodeType::Task, Scope::Session, "N2", "c2"))
+        .await
+        .unwrap();
+    gm.insert_node(&make_node("n3", NodeType::Code, Scope::Global, "N3", "c3"))
+        .await
+        .unwrap();
 
     assert_eq!(gm.node_count().await.unwrap(), 3);
     assert_eq!(gm.edge_count().await.unwrap(), 0);
 
-    gm.insert_edge(&make_edge("n1", "n2", EdgeType::DependsOn)).await.unwrap();
-    gm.insert_edge(&make_edge("n2", "n3", EdgeType::Produces)).await.unwrap();
+    gm.insert_edge(&make_edge("n1", "n2", EdgeType::DependsOn))
+        .await
+        .unwrap();
+    gm.insert_edge(&make_edge("n2", "n3", EdgeType::Produces))
+        .await
+        .unwrap();
 
     assert_eq!(gm.node_count().await.unwrap(), 3);
     assert_eq!(gm.edge_count().await.unwrap(), 2);

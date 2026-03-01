@@ -2,7 +2,9 @@ use metaygn_memory::store::MemoryStore;
 
 #[tokio::test]
 async fn record_and_retrieve_replay_events() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     store
         .record_replay_event(
@@ -48,7 +50,9 @@ async fn record_and_retrieve_replay_events() {
 
 #[tokio::test]
 async fn replay_sessions_lists_with_counts() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     // Record events across two sessions
     store
@@ -73,8 +77,14 @@ async fn replay_sessions_lists_with_counts() {
     assert_eq!(sessions.len(), 2);
 
     // Find each session by id (ordering may vary when timestamps are identical)
-    let sess_a = sessions.iter().find(|s| s.0 == "sess-a").expect("sess-a present");
-    let sess_b = sessions.iter().find(|s| s.0 == "sess-b").expect("sess-b present");
+    let sess_a = sessions
+        .iter()
+        .find(|s| s.0 == "sess-a")
+        .expect("sess-a present");
+    let sess_b = sessions
+        .iter()
+        .find(|s| s.0 == "sess-b")
+        .expect("sess-b present");
 
     assert_eq!(sess_a.1, 3); // event_count for sess-a
     assert_eq!(sess_b.1, 1); // event_count for sess-b
@@ -88,7 +98,9 @@ async fn replay_sessions_lists_with_counts() {
 
 #[tokio::test]
 async fn empty_session_returns_empty_vec() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     let events = store
         .replay_events("nonexistent-session")
@@ -96,6 +108,9 @@ async fn empty_session_returns_empty_vec() {
         .expect("replay_events for nonexistent session");
     assert!(events.is_empty());
 
-    let sessions = store.replay_sessions().await.expect("replay_sessions empty");
+    let sessions = store
+        .replay_sessions()
+        .await
+        .expect("replay_sessions empty");
     assert!(sessions.is_empty());
 }

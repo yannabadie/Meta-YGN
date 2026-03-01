@@ -86,6 +86,13 @@ enum Commands {
         session_id: Option<String>,
     },
 
+    /// Export RL trajectories to JSONL file
+    Export {
+        /// Maximum number of trajectories to export
+        #[arg(long, default_value_t = 100)]
+        limit: u32,
+    },
+
     /// Launch MCP stdio server (for Claude Code / MCP clients)
     Mcp,
 }
@@ -95,13 +102,18 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start { host, port, db_path } => cmd_start(&host, port, db_path.as_deref()).await,
+        Commands::Start {
+            host,
+            port,
+            db_path,
+        } => cmd_start(&host, port, db_path.as_deref()).await,
         Commands::Stop => cmd_stop().await,
         Commands::Status => cmd_status().await,
         Commands::Recall { query, limit } => cmd_recall(&query, limit).await,
         Commands::Top => cmd_top().await,
         Commands::Init { force } => cmd_init(force),
         Commands::Replay { session_id } => cmd_replay(session_id.as_deref()).await,
+        Commands::Export { limit } => cmd_export(limit).await,
         Commands::Mcp => cmd_mcp().await,
     }
 }
@@ -115,11 +127,10 @@ async fn cmd_start(_host: &str, _port: u16, db_path: Option<&std::path::Path>) -
             .get(format!("http://127.0.0.1:{existing_port}/health"))
             .send()
             .await
+            && resp.status().is_success()
         {
-            if resp.status().is_success() {
-                println!("Daemon already running on port {existing_port}");
-                return Ok(());
-            }
+            println!("Daemon already running on port {existing_port}");
+            return Ok(());
         }
         // Port file exists but daemon not responding -- stale
         if let Ok(pf) = port_file_path() {
@@ -251,7 +262,10 @@ async fn cmd_status() -> Result<()> {
 
     match client.get(&url).send().await {
         Ok(resp) if resp.status().is_success() => {
-            let body: Value = resp.json().await.context("failed to parse health response")?;
+            let body: Value = resp
+                .json()
+                .await
+                .context("failed to parse health response")?;
 
             let status = body
                 .get("status")
@@ -315,7 +329,10 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
         return Ok(());
     }
 
-    let result: Value = resp.json().await.context("failed to parse recall response")?;
+    let result: Value = resp
+        .json()
+        .await
+        .context("failed to parse recall response")?;
 
     // Check for error in response
     if let Some(err) = result.get("error").and_then(|v| v.as_str()) {
@@ -335,7 +352,10 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
         return Ok(());
     }
 
-    println!("Found {} memory event(s) for query: \"{query}\"\n", events.len());
+    println!(
+        "Found {} memory event(s) for query: \"{query}\"\n",
+        events.len()
+    );
 
     for (i, event) in events.iter().enumerate() {
         let event_type = event
@@ -352,9 +372,7 @@ async fn cmd_recall(query: &str, limit: u32) -> Result<()> {
             .unwrap_or("?");
         let payload = event
             .get("payload")
-            .map(|v| {
-                serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string())
-            })
+            .map(|v| serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string()))
             .unwrap_or_default();
 
         println!("--- Event {} ---", i + 1);
@@ -431,19 +449,10 @@ async fn cmd_replay(session_id: Option<&str>) -> Result<()> {
             );
             println!("{}", "-".repeat(90));
             for s in &sessions {
-                let sid = s
-                    .get("session_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let sid = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
                 let count = s.get("event_count").and_then(|v| v.as_u64()).unwrap_or(0);
-                let first = s
-                    .get("first_event")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
-                let last = s
-                    .get("last_event")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let first = s.get("first_event").and_then(|v| v.as_str()).unwrap_or("?");
+                let last = s.get("last_event").and_then(|v| v.as_str()).unwrap_or("?");
                 println!("{:<40} {:>6}  {:<20}  {:<20}", sid, count, first, last);
             }
         }
@@ -496,6 +505,64 @@ async fn cmd_replay(session_id: Option<&str>) -> Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+/// Export command: fetch RL trajectories from daemon and write to a JSONL file.
+async fn cmd_export(limit: u32) -> Result<()> {
+    let Some(port) = read_daemon_port() else {
+        println!("Daemon not running (no port file found).");
+        return Ok(());
+    };
+
+    let client = http_client()?;
+    let url = format!("http://127.0.0.1:{port}/trajectories/export?limit={limit}");
+
+    let resp = match client.get(&url).send().await {
+        Ok(r) => r,
+        Err(_) => {
+            println!("Cannot connect to daemon on port {port}.");
+            return Ok(());
+        }
+    };
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .context("failed to parse export response")?;
+
+    let trajectories = body
+        .get("trajectories")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    if trajectories.is_empty() {
+        println!("No trajectories to export.");
+        return Ok(());
+    }
+
+    // Write to ~/.claude/aletheia/trajectories/
+    let home = dirs::home_dir().context("could not determine home directory")?;
+    let export_dir = home.join(".claude").join("aletheia").join("trajectories");
+    std::fs::create_dir_all(&export_dir)?;
+
+    let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
+    let filename = format!("export-{timestamp}.jsonl");
+    let filepath = export_dir.join(&filename);
+
+    let mut output = String::new();
+    for t in &trajectories {
+        output.push_str(&serde_json::to_string(t).unwrap_or_default());
+        output.push('\n');
+    }
+    std::fs::write(&filepath, &output)?;
+
+    println!(
+        "Exported {} trajectories to {}",
+        trajectories.len(),
+        filepath.display()
+    );
     Ok(())
 }
 

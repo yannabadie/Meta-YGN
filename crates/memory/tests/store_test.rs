@@ -2,14 +2,18 @@ use metaygn_memory::store::MemoryStore;
 
 #[tokio::test]
 async fn store_opens_and_creates_tables() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
     let count = store.event_count().await.expect("event_count");
     assert_eq!(count, 0);
 }
 
 #[tokio::test]
 async fn store_logs_and_retrieves_events() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     let id1 = store
         .log_event("sess-1", "test_event", r#"{"key":"value1"}"#)
@@ -44,7 +48,9 @@ async fn store_logs_and_retrieves_events() {
 
 #[tokio::test]
 async fn store_fts_search() {
-    let store = MemoryStore::open_in_memory().await.expect("open in-memory store");
+    let store = MemoryStore::open_in_memory()
+        .await
+        .expect("open in-memory store");
 
     store
         .log_event(
@@ -119,7 +125,9 @@ async fn save_and_load_outcomes() {
         .await
         .unwrap();
     store
-        .save_outcome("o2", "s2", "Feature", "High", "Cautious", false, 1200, 5000, 3)
+        .save_outcome(
+            "o2", "s2", "Feature", "High", "Cautious", false, 1200, 5000, 3,
+        )
         .await
         .unwrap();
     let loaded = store.load_recent_outcomes(10).await.unwrap();

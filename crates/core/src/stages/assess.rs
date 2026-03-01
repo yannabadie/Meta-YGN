@@ -52,9 +52,19 @@ fn estimate_difficulty(text: &str) -> f32 {
     let base = (word_count as f32 / 200.0).min(0.6);
 
     let complexity_keywords = [
-        "complex", "concurren", "async", "parallel", "distributed",
-        "performance", "optimize", "scale", "migration", "backward",
-        "compatibility", "recursive", "cryptograph",
+        "complex",
+        "concurren",
+        "async",
+        "parallel",
+        "distributed",
+        "performance",
+        "optimize",
+        "scale",
+        "migration",
+        "backward",
+        "compatibility",
+        "recursive",
+        "cryptograph",
     ];
     let bonus = complexity_keywords
         .iter()
@@ -74,8 +84,17 @@ fn estimate_risk(ctx: &LoopContext) -> RiskLevel {
 
     // High-risk command patterns (dangerous operations and sensitive domains)
     let high_risk = [
-        "delete", "rm ", "rm\t", "drop", "force", "deploy",
-        "push", "credential", "secret", "vulnerability", "exploit",
+        "delete",
+        "rm ",
+        "rm\t",
+        "drop",
+        "force",
+        "deploy",
+        "push",
+        "credential",
+        "secret",
+        "vulnerability",
+        "exploit",
     ];
     if high_risk.iter().any(|kw| combined.contains(kw)) {
         return RiskLevel::High;
@@ -87,11 +106,33 @@ fn estimate_risk(ctx: &LoopContext) -> RiskLevel {
     // for safe patterns — read-only commands are low risk.
     if is_bash && !prompt.is_empty() {
         let safe_prefixes = [
-            "ls", "cat", "head", "tail", "wc", "echo", "pwd", "date",
-            "whoami", "uname", "find", "grep", "rg", "which", "env",
-            "printenv", "cargo test", "cargo check", "cargo build",
-            "cargo clippy", "cargo fmt", "npm test", "npm run",
-            "git status", "git log", "git diff", "git branch",
+            "ls",
+            "cat",
+            "head",
+            "tail",
+            "wc",
+            "echo",
+            "pwd",
+            "date",
+            "whoami",
+            "uname",
+            "find",
+            "grep",
+            "rg",
+            "which",
+            "env",
+            "printenv",
+            "cargo test",
+            "cargo check",
+            "cargo build",
+            "cargo clippy",
+            "cargo fmt",
+            "npm test",
+            "npm run",
+            "git status",
+            "git log",
+            "git diff",
+            "git branch",
         ];
         let cmd_lower = prompt.to_lowercase();
         let cmd_trimmed = cmd_lower.trim();
@@ -112,9 +153,7 @@ fn estimate_risk(ctx: &LoopContext) -> RiskLevel {
     let is_write = tool_lower == "write";
 
     // Medium-risk keywords in prompt/tool context
-    let medium_risk_keywords = [
-        "edit", "replace", "modify", "update", "install", "create",
-    ];
+    let medium_risk_keywords = ["edit", "replace", "modify", "update", "install", "create"];
     if is_write || medium_risk_keywords.iter().any(|kw| combined.contains(kw)) {
         return RiskLevel::Medium;
     }
@@ -134,7 +173,9 @@ mod tests {
 
     #[test]
     fn complexity_keywords_increase_difficulty() {
-        let d = estimate_difficulty("implement a distributed concurrent system with async parallel processing");
+        let d = estimate_difficulty(
+            "implement a distributed concurrent system with async parallel processing",
+        );
         assert!(d > 0.3, "got {d}");
     }
 }

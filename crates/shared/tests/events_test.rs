@@ -52,27 +52,60 @@ fn serialization_roundtrip() {
 #[test]
 fn all_variants_have_unique_types() {
     let events: Vec<MetaEvent> = vec![
-        MetaEvent::SessionStarted { stack: vec![], source: String::new() },
-        MetaEvent::PromptClassified { risk: String::new(), strategy: String::new(), topology: String::new() },
-        MetaEvent::ToolGated { tool: String::new(), decision: String::new(), guard: String::new(), score: 0 },
-        MetaEvent::ToolCompleted { tool: String::new(), success: true, duration_ms: 0 },
-        MetaEvent::ToolFailed { tool: String::new(), error: String::new() },
-        MetaEvent::RecoveryInjected { level: 0, reason: String::new() },
-        MetaEvent::RecoveryOutcome { success: true, plasticity_score: 0.0 },
-        MetaEvent::CompletionVerified { verified: true, issues: vec![] },
-        MetaEvent::TestIntegrityWarning { file: String::new(), issues: vec![] },
-        MetaEvent::BudgetConsumed { tokens: 0, cost_usd: 0.0, utilization: 0.0 },
-        MetaEvent::SessionEnded { reason: String::new() },
+        MetaEvent::SessionStarted {
+            stack: vec![],
+            source: String::new(),
+        },
+        MetaEvent::PromptClassified {
+            risk: String::new(),
+            strategy: String::new(),
+            topology: String::new(),
+        },
+        MetaEvent::ToolGated {
+            tool: String::new(),
+            decision: String::new(),
+            guard: String::new(),
+            score: 0,
+        },
+        MetaEvent::ToolCompleted {
+            tool: String::new(),
+            success: true,
+            duration_ms: 0,
+        },
+        MetaEvent::ToolFailed {
+            tool: String::new(),
+            error: String::new(),
+        },
+        MetaEvent::RecoveryInjected {
+            level: 0,
+            reason: String::new(),
+        },
+        MetaEvent::RecoveryOutcome {
+            success: true,
+            plasticity_score: 0.0,
+        },
+        MetaEvent::CompletionVerified {
+            verified: true,
+            issues: vec![],
+        },
+        MetaEvent::TestIntegrityWarning {
+            file: String::new(),
+            issues: vec![],
+        },
+        MetaEvent::BudgetConsumed {
+            tokens: 0,
+            cost_usd: 0.0,
+            utilization: 0.0,
+        },
+        MetaEvent::SessionEnded {
+            reason: String::new(),
+        },
     ];
 
     let mut types: HashSet<&str> = HashSet::new();
     for event in &events {
         let t = event.event_type();
-        assert!(
-            types.insert(t),
-            "duplicate event_type: {}",
-            t
-        );
+        assert!(types.insert(t), "duplicate event_type: {}", t);
     }
 
     assert_eq!(types.len(), 11, "expected 11 unique event types");

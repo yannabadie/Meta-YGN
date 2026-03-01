@@ -60,8 +60,7 @@ impl AppState {
         // Load persisted outcomes
         if let Ok(outcomes) = memory.load_recent_outcomes(50).await {
             for outcome_json in &outcomes {
-                if let Ok(outcome) =
-                    serde_json::from_value::<SessionOutcome>(outcome_json.clone())
+                if let Ok(outcome) = serde_json::from_value::<SessionOutcome>(outcome_json.clone())
                 {
                     evolver.record_outcome(outcome);
                 }

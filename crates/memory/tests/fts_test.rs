@@ -10,7 +10,11 @@ async fn search_finds_events() {
     let graph = Arc::new(GraphMemory::open_in_memory().await.unwrap());
 
     store
-        .log_event("sess1", "tool_gated", "bash command was denied by risk gate")
+        .log_event(
+            "sess1",
+            "tool_gated",
+            "bash command was denied by risk gate",
+        )
         .await
         .unwrap();
 
@@ -74,10 +78,18 @@ async fn results_merged() {
     let search = UnifiedSearch::new(store, graph);
     let results = search.search("deploy", 10).await.unwrap();
 
-    assert!(results.len() >= 2, "should find both event and graph node, got {}", results.len());
+    assert!(
+        results.len() >= 2,
+        "should find both event and graph node, got {}",
+        results.len()
+    );
 
-    let has_event = results.iter().any(|r| matches!(r.source, SearchSource::Event));
-    let has_graph = results.iter().any(|r| matches!(r.source, SearchSource::GraphNode));
+    let has_event = results
+        .iter()
+        .any(|r| matches!(r.source, SearchSource::Event));
+    let has_graph = results
+        .iter()
+        .any(|r| matches!(r.source, SearchSource::GraphNode));
 
     assert!(has_event, "should contain an event result");
     assert!(has_graph, "should contain a graph node result");

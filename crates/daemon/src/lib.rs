@@ -15,8 +15,7 @@ use crate::app_state::AppState;
 pub async fn build_app() -> Result<Router> {
     let state = AppState::new_in_memory().await?;
     let (shutdown_tx, _shutdown_rx) = watch::channel(false);
-    Ok(build_app_with_state(state)
-        .layer(axum::Extension(shutdown_tx)))
+    Ok(build_app_with_state(state).layer(axum::Extension(shutdown_tx)))
 }
 
 /// Build the app with the given state (shared builder).

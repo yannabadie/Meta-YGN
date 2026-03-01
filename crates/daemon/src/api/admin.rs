@@ -1,7 +1,7 @@
 use axum::response::Json;
 use axum::routing::post;
 use axum::{Extension, Router};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::sync::watch;
 
 use crate::app_state::AppState;

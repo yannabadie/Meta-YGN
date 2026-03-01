@@ -20,8 +20,7 @@ impl FastEmbedProvider {
     /// Download progress is suppressed to keep daemon/CLI output clean.
     pub fn new() -> Result<Self> {
         let model = TextEmbedding::try_new(
-            InitOptions::new(EmbeddingModel::BGESmallENV15)
-                .with_show_download_progress(false),
+            InitOptions::new(EmbeddingModel::BGESmallENV15).with_show_download_progress(false),
         )?;
         Ok(Self { model })
     }

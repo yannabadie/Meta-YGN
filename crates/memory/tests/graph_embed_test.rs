@@ -1,5 +1,5 @@
 use metaygn_memory::embeddings::{EmbeddingProvider, HashEmbedProvider};
-use metaygn_memory::graph::{cosine_similarity, GraphMemory, MemoryNode, NodeType, Scope};
+use metaygn_memory::graph::{GraphMemory, MemoryNode, NodeType, Scope, cosine_similarity};
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -48,12 +48,7 @@ async fn semantic_search_returns_most_similar() {
         "rust systems programming",
         Some(emb_rust_sys),
     );
-    let n3 = make_node_with_embedding(
-        "n3",
-        "Cake",
-        "chocolate cake recipe",
-        Some(emb_cake),
-    );
+    let n3 = make_node_with_embedding("n3", "Cake", "chocolate cake recipe", Some(emb_cake));
 
     gm.insert_node(&n1).await.unwrap();
     gm.insert_node(&n2).await.unwrap();
@@ -116,12 +111,7 @@ async fn semantic_search_skips_nodes_without_embedding() {
         "rust programming",
         Some(emb.clone()),
     );
-    let without_emb = make_node_with_embedding(
-        "without",
-        "No embedding",
-        "also about rust",
-        None,
-    );
+    let without_emb = make_node_with_embedding("without", "No embedding", "also about rust", None);
 
     gm.insert_node(&with_emb).await.unwrap();
     gm.insert_node(&without_emb).await.unwrap();
@@ -129,6 +119,10 @@ async fn semantic_search_skips_nodes_without_embedding() {
     let query = provider.embed("rust code").unwrap();
     let results = gm.semantic_search(&query, 10).await.unwrap();
 
-    assert_eq!(results.len(), 1, "should return only the node with embedding");
+    assert_eq!(
+        results.len(),
+        1,
+        "should return only the node with embedding"
+    );
     assert_eq!(results[0].0.id, "with");
 }
