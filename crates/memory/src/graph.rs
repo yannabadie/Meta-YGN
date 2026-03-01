@@ -474,6 +474,46 @@ impl GraphMemory {
         Ok(nodes)
     }
 
+    // -- Semantic search -----------------------------------------------------
+
+    /// Semantic search: find the top-N nodes whose stored embedding is most
+    /// similar to the given query embedding (cosine similarity).
+    /// Only considers nodes that have a non-empty embedding.
+    pub async fn semantic_search(
+        &self,
+        query_embedding: &[f32],
+        limit: u32,
+    ) -> Result<Vec<(MemoryNode, f32)>> {
+        let query = query_embedding.to_vec();
+        let results = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, node_type, scope, label, content, embedding,
+                            created_at, access_count
+                     FROM nodes
+                     WHERE embedding IS NOT NULL",
+                )?;
+                let mut scored: Vec<(MemoryNode, f32)> = stmt
+                    .query_map([], |row| Ok(row_to_node(row)))?
+                    .filter_map(|r| r.ok())
+                    .filter_map(|node| {
+                        let emb = node.embedding.as_ref()?;
+                        if emb.is_empty() {
+                            return None;
+                        }
+                        let score = cosine_similarity(&query, emb);
+                        Some((node, score))
+                    })
+                    .collect();
+                scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                scored.truncate(limit as usize);
+                Ok::<_, rusqlite::Error>(scored)
+            })
+            .await?;
+        Ok(results)
+    }
+
     // -- Counts --------------------------------------------------------------
 
     /// Total number of nodes in the graph.

@@ -115,11 +115,24 @@
 - [x] All 4 stub modules (events, fts, act, compact) fully implemented
 - [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
 
+## Phase 10: Neural Bridge (v0.8.0) -- COMPLETE
+
+- [x] MCP Bridge crate (`metaygn-mcp-bridge`) with 5 metacognitive tools via rmcp 0.17 stdio
+- [x] Tools: metacog_classify, metacog_verify, metacog_recall, metacog_status, metacog_prune
+- [x] CLI `aletheia mcp` command launches MCP stdio server
+- [x] `FastEmbedProvider` implementing `EmbeddingProvider` trait (bge-small-en-v1.5, 384 dim)
+- [x] Feature-gated behind `--features embeddings` — zero overhead when disabled
+- [x] `GraphMemory.semantic_search()` for cosine-similarity vector search
+- [x] `POST /memory/semantic` daemon endpoint for vector-based node retrieval
+- [x] Session replay: `replay_events` SQLite table with request/response/latency
+- [x] `GET /replay/sessions` and `GET /replay/{session_id}` daemon API endpoints
+- [x] `aletheia replay` CLI command: list sessions or view hook timeline
+- [x] All hook handlers record replay events automatically
+- [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
+
 ## Next
 
-- [ ] MCP bridge crate (mcp-bridge) for native MCP server integration
 - [ ] WASM sandbox backend (feature-gated behind wasmtime)
-- [ ] Embedding generation pipeline for graph memory cosine search
 - [ ] Publish to Claude Code marketplace
 - [ ] Multi-agent orchestration improvements
-- [ ] Session replay and debugging tools
+- [ ] A2A protocol adapter

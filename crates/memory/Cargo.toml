@@ -4,6 +4,10 @@ edition.workspace = true
 version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+embeddings = ["fastembed"]
+
 [dependencies]
 metaygn-shared = { path = "../shared" }
 rusqlite = { version = "0.37", features = ["bundled"] }
@@ -16,6 +20,7 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 sha2 = "0.10"
+fastembed = { version = "4", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
