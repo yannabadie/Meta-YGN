@@ -2,37 +2,37 @@
 
 ## Current State
 
-v0.6.0 "Solid Ground" is feature-complete. All eight phases (Foundation,
+v0.7.0 "Deep Foundation" is feature-complete. All nine phases (Foundation,
 Plugin Shell, Rust Runtime, Advanced Cognitive, Distribution, Developer-First,
-Smart Recovery, Solid Ground) are done. This release delivers complete TypeScript
-hooks running via Bun, daemon graceful lifecycle (start/stop), persistent
-heuristics in SQLite, CI integration tests, and plugin validation.
+Smart Recovery, Solid Ground, Deep Foundation) are done. This release delivers
+typed events, unified FTS search, context pruning service, embedding provider
+trait, skill crystallizer, and cross-session learning wire-up.
 
-## v0.6.0 Completion Summary
+## v0.7.0 Completion Summary
 
-### Solid Ground Features (new in v0.6.0)
-- **Complete TypeScript hooks**: all 8 hooks (session-start, user-prompt-submit, pre-tool-use, post-tool-use, post-tool-use-failure, stop, pre-compact, session-end) implemented in TypeScript with Bun runtime
-- **Daemon graceful lifecycle**: `POST /admin/shutdown` endpoint triggers clean shutdown with port file cleanup
-- **`aletheia start`**: spawns daemon as detached process, polls for port file, health checks
-- **`aletheia stop`**: sends shutdown request, waits for clean termination
-- **Persistent heuristics**: HeuristicVersion and SessionOutcome stored in SQLite, survive daemon restart
-- **CI integration tests**: GitHub Actions job that starts daemon, tests hooks, verifies budget, shuts down
-- **Plugin validation script**: `scripts/validate-plugin.sh` checks all 26 plugin components
-- Local fallback functions for user-prompt-submit, post-tool-use, and stop hooks
+### Deep Foundation Features (new in v0.7.0)
+- **Typed event system**: 11 `MetaEvent` variants replacing ad-hoc string logging
+- **Unified FTS search**: single query across events and graph nodes
+- **Context pruning service**: `POST /proxy/anthropic` analyzes and prunes error loops from message payloads
+- **Embedding provider trait**: pluggable `EmbeddingProvider` with hash-based and no-op implementations
+- **Skill crystallizer**: auto-detects recurring tool patterns and generates SKILL.md templates
+- **Cross-session learning**: daemon loads heuristic versions and outcomes from SQLite at startup
 
-### Hook Pipeline Changes in v0.6.0
-- `hooks/hooks.json` now uses `bun run` for all hooks (was `bash hook-runner.sh`)
-- All hooks have 350ms timeout with local fallback
-- Daemon supports dual shutdown triggers: Ctrl+C and `/admin/shutdown`
-- CLI `start` finds `aletheiad` binary automatically next to the CLI executable
+### Implementation Changes in v0.7.0
+- `act` stage now records intended actions for post-verification comparison
+- `compact` stage generates real summaries and deduplicates lessons (was no-op)
+- Heuristic mutations and outcomes are persisted to SQLite after every change
+- All 4 stub modules (events, fts, act, compact) are now fully implemented
+- `HeuristicEvolver.restore_version()` loads persisted versions at startup
+- API handlers persist outcomes and evolved versions to SQLite after every mutation
 
-### Rust Runtime (7 crates, updated for v0.6.0)
-- `metaygn-shared`: Protocol types, state enums, kernel, plasticity types
-- `metaygn-core`: 12-stage control loop, topology planner, MASC monitor, heuristic evolver, plasticity tracker
-- `metaygn-memory`: Episodic memory (FTS5), graph memory (nodes+edges+FTS5+cosine), persistent heuristic storage
+### Rust Runtime (7 crates, updated for v0.7.0)
+- `metaygn-shared`: Protocol types, state enums, kernel, plasticity types, typed events
+- `metaygn-core`: 12-stage control loop (all stages implemented), topology planner, MASC monitor, heuristic evolver
+- `metaygn-memory`: Episodic memory (FTS5), graph memory (nodes+edges+FTS5+cosine), persistent heuristics, unified FTS, embedding providers, skill crystallizer
 - `metaygn-verifiers`: Guard pipeline (5 guards), evidence packs (hash+Merkle+ed25519)
 - `metaygn-sandbox`: Process sandbox (Python/Node/Bash, 5s timeout)
-- `metaygn-daemon`: Axum HTTP server, forge engine, fatigue profiler, context pruner, budget endpoints, latency tracking, graceful shutdown
+- `metaygn-daemon`: Axum HTTP server, forge engine, fatigue profiler, context pruner, budget endpoints, latency tracking, graceful shutdown, cross-session learning
 - `metaygn-cli`: CLI (start/stop/status/recall/top/init), Glass-Box TUI, daemon spawning
 
 ### Plugin Shell
@@ -42,28 +42,25 @@ heuristics in SQLite, CI integration tests, and plugin validation.
 - Proof packet output style with evidence tagging
 - TypeScript hook packages (@metaygn/hooks, @metaygn/shared)
 
-## Key Architecture Decisions in v0.6.0
-- All hooks migrated from `bash hook-runner.sh` to `bun run` TypeScript execution
-- Daemon shutdown via both SIGINT (Ctrl+C) and HTTP `/admin/shutdown` endpoint
-- Port file written on startup, cleaned up on shutdown for daemon discovery
-- CLI `start` spawns daemon as detached child, polls port file, then health-checks
-- Heuristic versions and session outcomes persisted to SQLite for cross-restart learning
-- CI pipeline starts daemon, runs hook round-trips, verifies budget, shuts down cleanly
-
-## Resolved Limitations (fixed in v0.6.0)
-- Daemon `start` command now spawns the daemon process (was: run `aletheiad` directly)
-- Daemon `stop` command now sends shutdown signal (was: use Ctrl+C only)
-- Heuristic evolver state now persisted in SQLite (was: in-memory only, lost on restart)
-- CI integration tests now exist for daemon round-trips
+## Key Architecture Decisions in v0.7.0
+- All 4 previously-stub modules (events, fts, act, compact) are fully implemented
+- Typed event variants replace string-based logging for type safety and pattern matching
+- Unified FTS merges event and graph node search into a single query interface
+- Context pruning service detects 3+ consecutive error messages and prunes them with recovery injection
+- Embedding provider trait allows swapping in real embedding models later (hash-based for now)
+- Skill crystallizer observes tool sequences and auto-generates SKILL.md templates at 3+ repetitions
+- Cross-session learning loads heuristic population and outcomes from SQLite at daemon startup
+- API handlers persist mutations to SQLite after every evolve/record_outcome call
 
 ## Remaining Limitations
 - No WASM sandbox backend yet (process-based only)
-- Graph memory cosine search requires externally-generated embeddings
+- Graph memory cosine search uses hash-based embeddings (no neural model yet)
 - No MCP bridge crate yet
 
-## What Comes Next (v0.7.0+)
+## What Comes Next (v0.8.0+)
 - MCP bridge crate for native MCP server integration
 - WASM sandbox backend (feature-gated)
+- Neural embedding provider (e.g., via ONNX Runtime)
 - Multi-agent orchestration improvements
 - Session replay and debugging tools
 - Marketplace publication

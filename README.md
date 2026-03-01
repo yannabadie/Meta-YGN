@@ -75,6 +75,17 @@ MetaYGN tracks whether recovery prompts work without asking the developer. If th
 ### Latency Transparency
 Every hook response includes `[latency: Nms]` so developers know exactly how much overhead MetaYGN adds.
 
+## Deep Foundation (v0.7.0)
+
+### No More Stubs
+Every declared module is now fully implemented. The `act` stage records intentions, the `compact` stage deduplicates and summarizes, the event system is typed, and FTS search spans both events and graph memory.
+
+### Context Pruning Service
+`POST /proxy/anthropic` accepts Anthropic message payloads, detects reasoning lock-in (3+ consecutive errors), and returns pruned messages with recovery prompts injected.
+
+### Skill Crystallizer
+MetaYGN observes your tool usage patterns. When a sequence repeats 3+ times, it generates a reusable SKILL.md template automatically.
+
 ## Solid Ground (v0.6.0)
 
 ### Full Plugin Pipeline

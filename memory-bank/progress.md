@@ -101,6 +101,20 @@
 - [x] CLI `start` finds `aletheiad` binary automatically next to CLI executable
 - [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
 
+## Phase 9: Deep Foundation (v0.7.0) -- COMPLETE
+
+- [x] Typed event system: 11 `MetaEvent` variants replacing ad-hoc string logging
+- [x] Unified FTS search: single query across events and graph nodes
+- [x] Context pruning service: `POST /proxy/anthropic` analyzes and prunes error loops
+- [x] Embedding provider trait: pluggable `EmbeddingProvider` with hash-based and no-op implementations
+- [x] Skill crystallizer: auto-detects recurring tool patterns and generates SKILL.md templates
+- [x] Cross-session learning: daemon loads heuristic versions and outcomes from SQLite at startup
+- [x] `act` stage records intended actions for post-verification comparison
+- [x] `compact` stage generates real summaries and deduplicates lessons (was no-op)
+- [x] Heuristic mutations and outcomes persisted to SQLite after every change
+- [x] All 4 stub modules (events, fts, act, compact) fully implemented
+- [x] Updated CHANGELOG.md, README.md, plugin.json, memory-bank
+
 ## Next
 
 - [ ] MCP bridge crate (mcp-bridge) for native MCP server integration
