@@ -49,11 +49,13 @@ pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<Sessio
 
 /// After `post_tool_use`: update the entropy tracker with the latest
 /// confidence / success signal, then insert an Evidence node into the graph.
+/// Tier 2: run async forge verification for Python files written by the agent.
 pub async fn after_post_tool_use(
     state: AppState,
     session: Arc<Mutex<SessionContext>>,
     tool_name: String,
     was_error: bool,
+    tool_response: String,
 ) {
     // 1. Update entropy tracker in session
     {
@@ -80,6 +82,33 @@ pub async fn after_post_tool_use(
 
     if let Err(e) = state.graph.insert_node(&node).await {
         tracing::warn!("failed to insert Evidence node into graph: {e}");
+    }
+
+    // 3. Tier 2: async forge verification for Python files
+    if tool_name == "Write" && tool_response.contains(".py") {
+        let content = &tool_response;
+        if !content.is_empty() && content.len() < 10_000 {
+            let mut tmp_forge = crate::forge::ForgeEngine::new(state.sandbox.clone());
+            let params = std::collections::HashMap::new();
+            if let Ok(spec) = tmp_forge.generate("syntax-checker", &params) {
+                match tmp_forge.execute(&spec, content).await {
+                    Ok(result) => {
+                        if !result.success
+                            || result.stdout.contains("\"valid\": false")
+                            || result.stdout.contains("\"valid\":false")
+                        {
+                            let mut sess = session.lock().unwrap();
+                            sess.verification_results.push(
+                                "syntax_check_failed: Python syntax error detected by forge"
+                                    .to_string(),
+                            );
+                            tracing::warn!("Tier 2 forge: Python syntax error detected");
+                        }
+                    }
+                    Err(e) => tracing::debug!("Tier 2 forge execution failed: {e}"),
+                }
+            }
+        }
     }
 }
 
@@ -126,7 +155,7 @@ pub async fn after_stop(
     }
 
     // 3. Record session outcome for heuristic evolution
-    let (task_type, risk, strategy, errors, _success_count, duration_ms) = {
+    let (task_type, risk, strategy, errors, _success_count, duration_ms, tokens_consumed) = {
         let sess = session.lock().unwrap();
         (
             sess.task_type
@@ -137,6 +166,7 @@ pub async fn after_stop(
             sess.errors,
             sess.success_count,
             sess.created_at.elapsed().as_millis() as u64,
+            sess.tokens_consumed,
         )
     };
 
@@ -146,7 +176,7 @@ pub async fn after_stop(
         risk_level: risk.clone(),
         strategy_used: strategy.clone(),
         success: errors == 0,
-        tokens_consumed: 0, // TODO: wire from budget tracker
+        tokens_consumed,
         duration_ms,
         errors_encountered: errors,
     };

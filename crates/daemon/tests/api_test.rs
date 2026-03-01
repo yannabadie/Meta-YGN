@@ -537,12 +537,12 @@ async fn forge_list_templates() {
         .expect("expected templates array");
     assert_eq!(
         templates.len(),
-        4,
-        "Expected 4 templates, got {}: {body:?}",
+        5,
+        "Expected 5 templates, got {}: {body:?}",
         templates.len()
     );
 
-    // Verify the 4 expected template names are present
+    // Verify the 5 expected template names are present
     let names: Vec<&str> = templates
         .iter()
         .map(|t| t["name"].as_str().unwrap())
@@ -551,6 +551,7 @@ async fn forge_list_templates() {
     assert!(names.contains(&"import-validator"));
     assert!(names.contains(&"json-validator"));
     assert!(names.contains(&"file-exists-checker"));
+    assert!(names.contains(&"syntax-checker"));
 }
 
 // ---------------------------------------------------------------------------

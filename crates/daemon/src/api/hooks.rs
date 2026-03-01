@@ -315,8 +315,21 @@ async fn post_tool_use(
     // Get or create session context for cross-hook state persistence
     let session_ctx = state.sessions.get_or_create(&session_id);
 
-    // Wire fatigue signals: record error or success
+    // Wire fatigue signals: record in both session-local and global profilers.
+    // Session-local prevents cross-session bleed; global feeds /profiler/fatigue.
     let is_error = response_looks_like_error(&tool_name, &response);
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        if is_error {
+            sess.fatigue.on_error();
+            sess.errors += 1;
+        } else {
+            sess.fatigue.on_success();
+            sess.success_count += 1;
+        }
+        // Sync session budget tokens
+        sess.tokens_consumed = sess.budget.consumed_tokens();
+    }
     {
         let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
         if is_error {
@@ -326,18 +339,19 @@ async fn post_tool_use(
         }
     }
 
-    // Persist error/success counts into session context
+    // Wire plasticity signals: record in both session-local and global trackers.
+    // Session-local prevents cross-session bleed; global feeds /profiler endpoints.
     {
+        use crate::profiler::plasticity::RecoveryOutcome;
         let mut sess = session_ctx.lock().unwrap();
-        if is_error {
-            sess.errors += 1;
-        } else {
-            sess.success_count += 1;
+        if sess.plasticity.has_pending_recovery() {
+            if is_error {
+                sess.plasticity.record_outcome(RecoveryOutcome::Failure);
+            } else {
+                sess.plasticity.record_outcome(RecoveryOutcome::Success);
+            }
         }
     }
-
-    // Wire plasticity signals: if a recovery was injected and is pending,
-    // record whether the outcome suggests success or failure.
     {
         use crate::profiler::plasticity::RecoveryOutcome;
         let mut tracker = state.plasticity.lock().expect("plasticity mutex poisoned");
@@ -350,6 +364,21 @@ async fn post_tool_use(
         }
     }
 
+    // Tier 1 verification: validate config files in-process
+    let mut verification_context = String::new();
+    if (tool_name == "Write" || tool_name == "Edit")
+        && let Some(ref tool_input) = input.tool_input
+        && let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str())
+        && tool_name == "Write"
+        && let Some(content) = tool_input.get("content").and_then(|v| v.as_str())
+        && let Some(error) = crate::verification::validate_file_content(file_path, content)
+    {
+        verification_context = format!(" SYNTAX ERROR in {}: {}", file_path, error);
+        let mut sess = session_ctx.lock().unwrap();
+        sess.verification_results
+            .push(format!("syntax_error: {} — {}", file_path, error));
+    }
+
     let context = if tool_name == "Bash" && response.contains("FAIL") {
         "Test failure detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
@@ -360,7 +389,10 @@ async fn post_tool_use(
         "Tool output recorded."
     };
 
-    let mut output = HookOutput::context("PostToolUse".to_string(), context.to_string());
+    let mut output = HookOutput::context(
+        "PostToolUse".to_string(),
+        format!("{}{}", context, verification_context),
+    );
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
@@ -379,12 +411,14 @@ async fn post_tool_use(
         let state_clone = state.clone();
         let session_clone = session_ctx.clone();
         let tool_name_clone = tool_name.clone();
+        let response_clone = response.clone();
         tokio::spawn(async move {
             crate::postprocess::after_post_tool_use(
                 state_clone,
                 session_clone,
                 tool_name_clone,
                 is_error,
+                response_clone,
             )
             .await;
         });
@@ -414,23 +448,30 @@ async fn user_prompt_submit(
         .log_event("daemon", "user_prompt_submit", &payload)
         .await;
 
-    // Wire fatigue signal: record the prompt
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
+    // Wire fatigue signal: record in both session-local and global profilers.
     let prompt_text = input.prompt.clone().unwrap_or_default();
+    let now_utc = chrono::Utc::now();
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        sess.fatigue.on_prompt(&prompt_text, now_utc);
+    }
     {
         let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        profiler.on_prompt(&prompt_text, chrono::Utc::now());
+        profiler.on_prompt(&prompt_text, now_utc);
     }
 
-    // Estimate and consume tokens for the prompt (~4 chars per token, $0.000003/token)
+    // Estimate and consume tokens: both session-local and global budget.
     {
         let estimated_tokens = (prompt_text.len() / 4) as u64;
         let estimated_cost = estimated_tokens as f64 * 0.000003;
+        let mut sess = session_ctx.lock().unwrap();
+        sess.budget.consume(estimated_tokens, estimated_cost);
         let mut budget = state.budget.lock().expect("budget mutex poisoned");
         budget.consume(estimated_tokens, estimated_cost);
     }
-
-    // Get or create session context for cross-hook state persistence
-    let session_ctx = state.sessions.get_or_create(&session_id);
 
     // Run ControlLoop stages 1-6 for analysis
     let mut ctx = LoopContext::new(input);
@@ -444,6 +485,12 @@ async fn user_prompt_submit(
         sess.strategy = ctx.strategy;
         sess.difficulty = ctx.difficulty;
         sess.competence = ctx.competence;
+    }
+
+    // Sync tokens_consumed from session-local budget
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        sess.tokens_consumed = sess.budget.consumed_tokens();
     }
 
     let risk_label = match ctx.risk {
@@ -551,22 +598,28 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         content: last_msg_text.to_string(),
     }]);
 
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
     // If the pruner detects errors, generate an amplified recovery message
+    // using the session-local plasticity tracker. Also update global tracker.
     let recovery_note = if pruner_analysis.consecutive_errors > 0 {
         let reason = pruner_analysis
             .suggested_injection
             .as_deref()
             .unwrap_or("repeated errors detected");
-        let level = state.plasticity.lock().unwrap().amplification_level();
+        let level = session_ctx.lock().unwrap().plasticity.amplification_level();
         let recovery_msg = pruner.amplified_recovery(reason, level);
+        session_ctx
+            .lock()
+            .unwrap()
+            .plasticity
+            .record_recovery_injected();
         state.plasticity.lock().unwrap().record_recovery_injected();
         Some(recovery_msg)
     } else {
         None
     };
-
-    // Get or create session context for cross-hook state persistence
-    let session_ctx = state.sessions.get_or_create(&session_id);
 
     let mut ctx = LoopContext::new(input);
 

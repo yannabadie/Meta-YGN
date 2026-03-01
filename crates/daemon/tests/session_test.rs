@@ -86,3 +86,46 @@ fn session_context_defaults() {
     assert!((ctx.metacog_vector.progress - 0.0).abs() < f64::EPSILON);
     assert!(ctx.entropy_tracker.is_empty());
 }
+
+// -----------------------------------------------------------------------
+// 5. Session-scoped profilers are isolated across sessions
+// -----------------------------------------------------------------------
+#[test]
+fn session_profilers_are_isolated() {
+    let store = SessionStore::new();
+
+    let sess1 = store.get_or_create("sess-1");
+    let sess2 = store.get_or_create("sess-2");
+
+    // Drive sess1's fatigue up with errors
+    sess1.lock().unwrap().fatigue.on_error();
+    sess1.lock().unwrap().fatigue.on_error();
+    sess1.lock().unwrap().fatigue.on_error(); // triggers ErrorLoop signal
+
+    // sess2 should be completely unaffected
+    let report1 = sess1.lock().unwrap().fatigue.assess();
+    let report2 = sess2.lock().unwrap().fatigue.assess();
+    assert!(
+        report1.score > report2.score,
+        "session 1 fatigue ({}) should be higher than session 2 ({})",
+        report1.score,
+        report2.score,
+    );
+
+    // Plasticity: inject a recovery in sess1 only
+    sess1.lock().unwrap().plasticity.record_recovery_injected();
+    assert!(sess1.lock().unwrap().plasticity.has_pending_recovery());
+    assert!(
+        !sess2.lock().unwrap().plasticity.has_pending_recovery(),
+        "session 2 plasticity should have no pending recovery",
+    );
+
+    // Budget: consume tokens in sess1 only
+    sess1.lock().unwrap().budget.consume(5_000, 0.05);
+    assert_eq!(sess1.lock().unwrap().budget.consumed_tokens(), 5_000);
+    assert_eq!(
+        sess2.lock().unwrap().budget.consumed_tokens(),
+        0,
+        "session 2 budget should be untouched",
+    );
+}

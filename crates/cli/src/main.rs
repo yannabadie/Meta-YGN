@@ -40,14 +40,6 @@ struct Cli {
 enum Commands {
     /// Start the aletheia daemon
     Start {
-        /// Host to bind to
-        #[arg(long, default_value = "127.0.0.1")]
-        host: String,
-
-        /// Port to bind to (0 = auto)
-        #[arg(long, default_value_t = 0)]
-        port: u16,
-
         /// Path to the SQLite database
         #[arg(long)]
         db_path: Option<PathBuf>,
@@ -102,11 +94,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start {
-            host,
-            port,
-            db_path,
-        } => cmd_start(&host, port, db_path.as_deref()).await,
+        Commands::Start { db_path } => cmd_start(db_path.as_deref()).await,
         Commands::Stop => cmd_stop().await,
         Commands::Status => cmd_status().await,
         Commands::Recall { query, limit } => cmd_recall(&query, limit).await,
@@ -119,7 +107,7 @@ async fn main() -> Result<()> {
 }
 
 /// Start command: spawn the aletheiad daemon as a detached process.
-async fn cmd_start(_host: &str, _port: u16, db_path: Option<&std::path::Path>) -> Result<()> {
+async fn cmd_start(db_path: Option<&std::path::Path>) -> Result<()> {
     // 1. Check if already running
     if let Some(existing_port) = read_daemon_port() {
         let client = http_client()?;
@@ -566,30 +554,31 @@ async fn cmd_export(limit: u32) -> Result<()> {
     Ok(())
 }
 
-/// Mcp command: launch the MCP stdio bridge (aletheia-mcp) with inherited I/O.
+/// Mcp command: launch the daemon in MCP stdio mode (aletheiad --mcp).
 async fn cmd_mcp() -> Result<()> {
     let exe = std::env::current_exe().context("could not determine own executable path")?;
     let exe_dir = exe.parent().context("executable has no parent directory")?;
-    let mcp_name = if cfg!(windows) {
-        "aletheia-mcp.exe"
+    let daemon_name = if cfg!(windows) {
+        "aletheiad.exe"
     } else {
-        "aletheia-mcp"
+        "aletheiad"
     };
-    let mcp_path = exe_dir.join(mcp_name);
+    let daemon_path = exe_dir.join(daemon_name);
 
-    if !mcp_path.exists() {
+    if !daemon_path.exists() {
         anyhow::bail!(
-            "Cannot find aletheia-mcp at {:?}. Build with: cargo build --workspace",
-            mcp_path
+            "Cannot find aletheiad at {:?}. Build with: cargo build --workspace --features mcp",
+            daemon_path
         );
     }
 
-    let status = std::process::Command::new(&mcp_path)
+    let status = std::process::Command::new(&daemon_path)
+        .arg("--mcp")
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
         .status()
-        .context("Failed to launch aletheia-mcp")?;
+        .context("Failed to launch aletheiad --mcp")?;
 
     std::process::exit(status.code().unwrap_or(1));
 }

@@ -19,6 +19,9 @@ impl Stage for CalibrateStage {
             .filter(|r| {
                 r.starts_with("tool_error")
                     || r.starts_with("response_contains")
+                    || r.starts_with("test_failures")
+                    || r.starts_with("tool_mismatch")
+                    || r.starts_with("syntax_error")
                     || r.contains("empty tool response")
             })
             .count();
