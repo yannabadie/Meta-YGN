@@ -41,6 +41,11 @@ struct SemanticResult {
 // ---------------------------------------------------------------------------
 
 /// POST /memory/semantic -- vector-similarity search over graph nodes.
+///
+/// NOTE: Uses HashEmbedProvider (64 dim) by default. Nodes embedded with a
+/// different provider (e.g. FastEmbedProvider at 384 dim) will not match due
+/// to dimension mismatch. A future version should accept provider config from
+/// AppState or auto-detect from stored node dimensions.
 async fn semantic_search(
     State(state): State<AppState>,
     Json(req): Json<SemanticSearchRequest>,
@@ -57,6 +62,14 @@ async fn semantic_search(
 
     match state.graph.semantic_search(&query_emb, limit).await {
         Ok(results) => {
+            let all_zero = !results.is_empty() && results.iter().all(|(_, s)| *s == 0.0);
+            if all_zero {
+                tracing::warn!(
+                    "semantic search returned all-zero scores — possible embedding dimension mismatch \
+                     (query dim={}, stored nodes may use a different provider)",
+                    query_emb.len()
+                );
+            }
             let items: Vec<SemanticResult> = results
                 .into_iter()
                 .map(|(node, score)| SemanticResult {
@@ -69,6 +82,7 @@ async fn semantic_search(
             Json(json!({
                 "results": items,
                 "provider": provider.provider_name(),
+                "dimension_warning": all_zero,
             }))
         }
         Err(e) => Json(json!({ "error": format!("semantic search failed: {e}") })),

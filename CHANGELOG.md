@@ -15,7 +15,7 @@
   - `aletheia replay` CLI command: list sessions or view hook timeline
 
 ### Changed
-- All 5 hook handlers (pre-tool-use, post-tool-use, post-tool-use-failure, user-prompt-submit, stop) now record replay events automatically
+- All 4 hook handlers (pre-tool-use, post-tool-use, user-prompt-submit, stop) now record replay events automatically
 - Workspace expanded to 8 crates (added `mcp-bridge`)
 
 ## 0.7.0 "Deep Foundation"
