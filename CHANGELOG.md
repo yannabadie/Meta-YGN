@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0 "Deep Foundation"
+### Added
+- **Typed event system**: 11 `MetaEvent` variants replacing ad-hoc string logging
+- **Unified FTS search**: single query across events and graph nodes
+- **Context pruning service**: `POST /proxy/anthropic` analyzes and prunes error loops from message payloads
+- **Embedding provider trait**: pluggable `EmbeddingProvider` with hash-based and no-op implementations
+- **Skill crystallizer**: auto-detects recurring tool patterns and generates SKILL.md templates
+- **Cross-session learning**: daemon loads heuristic versions and outcomes from SQLite at startup
+
+### Changed
+- `act` stage now records intended actions for post-verification comparison
+- `compact` stage generates real summaries and deduplicates lessons (was no-op)
+- Heuristic mutations and outcomes are persisted to SQLite after every change
+- All 4 stub modules (events, fts, act, compact) are now fully implemented
+
 ## 0.6.0 "Solid Ground"
 ### Added
 - **Complete TypeScript hooks**: all 8 hooks (session-start, user-prompt-submit, pre-tool-use, post-tool-use, post-tool-use-failure, stop, pre-compact, session-end) implemented in TypeScript with Bun runtime

@@ -1,7 +1,14 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use metaygn_shared::protocol::HookInput;
 use metaygn_shared::state::*;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntendedAction {
+    pub tool: String,
+    pub target: String,
+    pub purpose: String,
+}
 
 /// Mutable context that flows through all 12 stages of the control loop.
 ///
@@ -45,6 +52,9 @@ pub struct LoopContext {
 
     /// Lessons learned (populated by `learn` stage and escalation events).
     pub lessons: Vec<String>,
+
+    /// Intended action recorded by the `act` stage for post-verification.
+    pub intended_action: Option<IntendedAction>,
 }
 
 impl LoopContext {
@@ -75,6 +85,7 @@ impl LoopContext {
             },
             verification_results: Vec::new(),
             lessons: Vec::new(),
+            intended_action: None,
         }
     }
 }

@@ -9,9 +9,11 @@ pub mod memory;
 pub mod profiler;
 pub mod sandbox;
 
+use axum::routing::post;
 use axum::Router;
 
 use crate::app_state::AppState;
+use crate::proxy::service;
 
 /// Build the full router with all routes.
 pub fn router(state: AppState) -> Router {
@@ -26,5 +28,6 @@ pub fn router(state: AppState) -> Router {
         .merge(forge::routes())
         .merge(budget::routes())
         .merge(admin::routes())
+        .route("/proxy/anthropic", post(service::prune_messages))
         .with_state(state)
 }

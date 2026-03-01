@@ -140,6 +140,14 @@ impl HeuristicEvolver {
         }
     }
 
+    /// Restore a previously persisted version into the population.
+    /// Used at daemon startup to load state from SQLite.
+    pub fn restore_version(&mut self, version: HeuristicVersion) {
+        if self.population.len() < self.max_population {
+            self.population.push(version);
+        }
+    }
+
     /// Record a session outcome for future fitness evaluation.
     ///
     /// Outcomes are kept in a rolling window of the most recent [`MAX_OUTCOMES`].

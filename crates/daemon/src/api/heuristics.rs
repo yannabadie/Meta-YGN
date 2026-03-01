@@ -21,6 +21,15 @@ async fn record_outcome(
     State(state): State<AppState>,
     Json(outcome): Json<SessionOutcome>,
 ) -> Json<Value> {
+    // Persist outcome to SQLite
+    let id = uuid::Uuid::new_v4().to_string();
+    let _ = state.memory.save_outcome(
+        &id, &outcome.session_id, &outcome.task_type,
+        &outcome.risk_level, &outcome.strategy_used,
+        outcome.success, outcome.tokens_consumed,
+        outcome.duration_ms, outcome.errors_encountered,
+    ).await;
+
     let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
     evolver.record_outcome(outcome);
     Json(json!({ "ok": true }))
@@ -30,10 +39,30 @@ async fn record_outcome(
 async fn evolve(
     State(state): State<AppState>,
 ) -> Json<Value> {
-    let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
-    match evolver.evolve_generation() {
-        Some(best) => {
-            let best_json = serde_json::to_value(best).unwrap_or_default();
+    let (best_json, best_clone) = {
+        let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
+        match evolver.evolve_generation() {
+            Some(best) => {
+                let best_json = serde_json::to_value(best).unwrap_or_default();
+                let best_clone = evolver.best().cloned();
+                (Some(best_json), best_clone)
+            }
+            None => (None, None),
+        }
+    };
+
+    match best_json {
+        Some(best_json) => {
+            // Persist the new best version to SQLite (lock already released)
+            if let Some(best) = best_clone {
+                let _ = state.memory.save_heuristic(
+                    &best.id, best.generation, best.parent_id.as_deref(),
+                    &serde_json::to_string(&best.fitness).unwrap_or_default(),
+                    &serde_json::to_string(&best.risk_weights).unwrap_or_default(),
+                    &serde_json::to_string(&best.strategy_scores).unwrap_or_default(),
+                    &best.created_at,
+                ).await;
+            }
             Json(json!({ "ok": true, "best": best_json }))
         }
         None => Json(json!({ "ok": false, "error": "empty population" })),

@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use metaygn_daemon::app_state::AppState;
 use serde_json::{json, Value};
 
 async fn start_test_server() -> SocketAddr {
@@ -746,5 +747,130 @@ async fn pre_tool_use_safe_command_not_high_risk() {
         !ctx.contains("risk:high"),
         "ls -la should not be HIGH risk: {}",
         ctx
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 5: Context pruning service endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn proxy_passes_clean_messages() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/proxy/anthropic"))
+        .json(&json!({
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hi there"}
+            ],
+            "model": "claude-sonnet",
+            "max_tokens": 1000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["pruned"], false);
+    assert_eq!(body["recovery_injected"], false);
+    assert_eq!(body["tokens_removed"], 0);
+    assert!(body["reason"].is_null());
+    assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn proxy_prunes_error_loop() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("http://{addr}/proxy/anthropic"))
+        .json(&json!({
+            "messages": [
+                {"role": "user", "content": "fix this"},
+                {"role": "assistant", "content": "Error: compilation failed"},
+                {"role": "user", "content": "try again"},
+                {"role": "assistant", "content": "Error: same compilation failed"},
+                {"role": "user", "content": "please fix"},
+                {"role": "assistant", "content": "Error: still failing"}
+            ],
+            "model": "claude-sonnet",
+            "max_tokens": 1000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["pruned"], true);
+    assert!(body["recovery_injected"].as_bool().unwrap());
+    assert!(body["reason"].as_str().unwrap().contains("ALETHEIA"));
+    // Pruned messages should be shorter than the original 6
+    assert!(body["messages"].as_array().unwrap().len() < 6);
+}
+
+// ---------------------------------------------------------------------------
+// Task 8 (v0.7.0): Cross-session learning persistence roundtrip
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn heuristic_persistence_roundtrip() {
+    // 1. Create AppState (in-memory)
+    let state = AppState::new_in_memory().await.unwrap();
+
+    // 2. Record an outcome and persist it via the memory store
+    let outcome_id = uuid::Uuid::new_v4().to_string();
+    state.memory.save_outcome(
+        &outcome_id, "sess-rt", "bugfix", "medium", "step_by_step",
+        true, 3000, 15000, 0,
+    ).await.unwrap();
+
+    {
+        let mut evolver = state.evolver.lock().unwrap();
+        evolver.record_outcome(metaygn_core::heuristics::fitness::SessionOutcome {
+            session_id: "sess-rt".into(),
+            task_type: "bugfix".into(),
+            risk_level: "medium".into(),
+            strategy_used: "step_by_step".into(),
+            success: true,
+            tokens_consumed: 3000,
+            duration_ms: 15000,
+            errors_encountered: 0,
+        });
+
+        // 3. Evolve via evolver directly
+        evolver.evolve_generation();
+
+        // 4. Check population > 1 (seed + mutated child)
+        assert!(
+            evolver.population_size() > 1,
+            "Expected population > 1 after evolve, got {}",
+            evolver.population_size()
+        );
+
+        // Persist the best version
+        if let Some(best) = evolver.best() {
+            state.memory.save_heuristic(
+                &best.id, best.generation, best.parent_id.as_deref(),
+                &serde_json::to_string(&best.fitness).unwrap(),
+                &serde_json::to_string(&best.risk_weights).unwrap(),
+                &serde_json::to_string(&best.strategy_scores).unwrap(),
+                &best.created_at,
+            ).await.unwrap();
+        }
+    }
+
+    // 5. Verify persistence: load back from SQLite
+    let versions = state.memory.load_heuristics().await.unwrap();
+    assert!(
+        !versions.is_empty(),
+        "Expected at least one heuristic version persisted"
+    );
+
+    let outcomes = state.memory.load_recent_outcomes(10).await.unwrap();
+    assert!(
+        !outcomes.is_empty(),
+        "Expected at least one outcome persisted"
     );
 }
