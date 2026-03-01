@@ -68,7 +68,13 @@ impl Stage for DecideStage {
         let has_errors = ctx
             .verification_results
             .iter()
-            .any(|r| r.starts_with("tool_error") || r.starts_with("response_contains"));
+            .any(|r| {
+                r.starts_with("tool_error")
+                    || r.starts_with("response_contains")
+                    || r.starts_with("test_failures")
+                    || r.starts_with("tool_mismatch")
+                    || r.starts_with("syntax_error")
+            });
         if has_errors {
             ctx.decision = Decision::Revise;
             tracing::debug!(
@@ -147,5 +153,28 @@ mod tests {
         let stage = DecideStage;
         stage.run(&mut ctx);
         assert_eq!(ctx.decision, Decision::Continue);
+    }
+
+    #[test]
+    fn verification_errors_force_revise() {
+        let patterns = [
+            "test_failures: 3 tests failed",
+            "tool_mismatch: expected Write, got Read",
+            "syntax_error: unexpected token",
+            "tool_error: command failed",
+            "response_contains: error pattern detected",
+        ];
+        for pattern in &patterns {
+            let mut ctx = LoopContext::new(make_input());
+            ctx.verification_results = vec![pattern.to_string()];
+            let stage = DecideStage;
+            stage.run(&mut ctx);
+            assert_eq!(
+                ctx.decision,
+                Decision::Revise,
+                "pattern '{}' should force Revise",
+                pattern
+            );
+        }
     }
 }
