@@ -2126,21 +2126,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metaygn-mcp-bridge"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dirs",
- "reqwest",
- "rmcp",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "metaygn-memory"
 version = "0.1.0"
 dependencies = [
