@@ -1,6 +1,8 @@
 pub mod api;
 pub mod app_state;
 pub mod forge;
+#[cfg(feature = "mcp")]
+pub mod mcp;
 pub mod postprocess;
 pub mod profiler;
 pub mod proxy;

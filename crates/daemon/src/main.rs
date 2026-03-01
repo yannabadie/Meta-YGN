@@ -1,19 +1,39 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use clap::Parser;
 use tokio::sync::watch;
 use tracing_subscriber::EnvFilter;
 
 use metaygn_daemon::app_state::AppState;
 
+#[derive(Parser)]
+#[command(name = "aletheiad", about = "Aletheia metacognitive daemon")]
+struct Args {
+    /// Run as MCP stdio server instead of HTTP daemon
+    #[arg(long)]
+    mcp: bool,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    let args = Args::parse();
+
+    // In MCP mode, tracing must go to stderr (stdout is reserved for MCP stdio transport).
+    if args.mcp {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            )
+            .with_writer(std::io::stderr)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            )
+            .init();
+    }
 
     // Determine database path: ~/.claude/aletheia/metaygn.db
     let db_dir = dirs::home_dir()
@@ -26,6 +46,35 @@ async fn main() -> Result<()> {
     tracing::info!("Opening database at {}", db_path.display());
     let state = AppState::new(db_path.to_str().unwrap()).await?;
 
+    if args.mcp {
+        run_mcp_server(state).await
+    } else {
+        run_http_server(state, db_dir).await
+    }
+}
+
+/// Run the daemon as an MCP stdio server (--mcp flag).
+async fn run_mcp_server(state: AppState) -> Result<()> {
+    #[cfg(feature = "mcp")]
+    {
+        use rmcp::ServiceExt;
+        tracing::info!("aletheiad starting in MCP stdio mode...");
+        let handler = metaygn_daemon::mcp::mcp_handler::AletheiaHandler::new(state);
+        let service = handler.serve(rmcp::transport::io::stdio()).await?;
+        service.waiting().await?;
+        Ok(())
+    }
+    #[cfg(not(feature = "mcp"))]
+    {
+        let _ = state; // suppress unused warning
+        anyhow::bail!(
+            "MCP feature not enabled. Rebuild with: cargo build -p metaygn-daemon --features mcp"
+        );
+    }
+}
+
+/// Run the daemon as an HTTP server (default mode).
+async fn run_http_server(state: AppState, db_dir: PathBuf) -> Result<()> {
     // Create a shutdown watch channel for the /admin/shutdown endpoint
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
