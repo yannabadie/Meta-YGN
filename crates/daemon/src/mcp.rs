@@ -67,10 +67,7 @@ pub mod mcp_handler {
     impl AletheiaHandler {
         pub fn new(state: AppState) -> Self {
             let tool_router = Self::tool_router();
-            Self {
-                state,
-                tool_router,
-            }
+            Self { state, tool_router }
         }
     }
 
@@ -174,10 +171,10 @@ pub mod mcp_handler {
                             })
                         })
                         .collect();
-                    Ok(serde_json::to_string_pretty(
-                        &serde_json::json!({"events": results}),
+                    Ok(
+                        serde_json::to_string_pretty(&serde_json::json!({"events": results}))
+                            .unwrap_or_default(),
                     )
-                    .unwrap_or_default())
                 }
                 Err(e) => Err(format!("recall failed: {e}")),
             }
@@ -235,11 +232,13 @@ pub mod mcp_handler {
             &self,
             Parameters(params): Parameters<PruneParams>,
         ) -> Result<String, String> {
-            let messages: serde_json::Value = serde_json::from_str(&params.messages)
-                .map_err(|e| format!("invalid JSON: {e}"))?;
+            let messages: serde_json::Value =
+                serde_json::from_str(&params.messages).map_err(|e| format!("invalid JSON: {e}"))?;
             // For now, pass through — the pruner logic can be wired in later
-            Ok(serde_json::to_string_pretty(&serde_json::json!({"pruned": messages}))
-                .unwrap_or_default())
+            Ok(
+                serde_json::to_string_pretty(&serde_json::json!({"pruned": messages}))
+                    .unwrap_or_default(),
+            )
         }
     }
 

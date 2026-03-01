@@ -366,29 +366,17 @@ async fn post_tool_use(
 
     // Tier 1 verification: validate config files in-process
     let mut verification_context = String::new();
-    if tool_name == "Write" || tool_name == "Edit" {
-        if let Some(ref tool_input) = input.tool_input {
-            if let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str()) {
-                // For Write tool, content is in tool_input.content
-                // For Edit tool, we don't have the full file content — skip
-                if tool_name == "Write" {
-                    if let Some(content) = tool_input.get("content").and_then(|v| v.as_str()) {
-                        if let Some(error) =
-                            crate::verification::validate_file_content(file_path, content)
-                        {
-                            verification_context =
-                                format!(" SYNTAX ERROR in {}: {}", file_path, error);
-                            // Also store in session
-                            let mut sess = session_ctx.lock().unwrap();
-                            sess.verification_results.push(format!(
-                                "syntax_error: {} — {}",
-                                file_path, error
-                            ));
-                        }
-                    }
-                }
-            }
-        }
+    if (tool_name == "Write" || tool_name == "Edit")
+        && let Some(ref tool_input) = input.tool_input
+        && let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str())
+        && tool_name == "Write"
+        && let Some(content) = tool_input.get("content").and_then(|v| v.as_str())
+        && let Some(error) = crate::verification::validate_file_content(file_path, content)
+    {
+        verification_context = format!(" SYNTAX ERROR in {}: {}", file_path, error);
+        let mut sess = session_ctx.lock().unwrap();
+        sess.verification_results
+            .push(format!("syntax_error: {} — {}", file_path, error));
     }
 
     let context = if tool_name == "Bash" && response.contains("FAIL") {
@@ -622,7 +610,11 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
             .unwrap_or("repeated errors detected");
         let level = session_ctx.lock().unwrap().plasticity.amplification_level();
         let recovery_msg = pruner.amplified_recovery(reason, level);
-        session_ctx.lock().unwrap().plasticity.record_recovery_injected();
+        session_ctx
+            .lock()
+            .unwrap()
+            .plasticity
+            .record_recovery_injected();
         state.plasticity.lock().unwrap().record_recovery_injected();
         Some(recovery_msg)
     } else {

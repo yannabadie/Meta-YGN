@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.0 "Hardened Core"
+### Fixed (P0 — Expert-Identified)
+- **Token accounting**: `SessionOutcome.tokens_consumed` now carries real values (was always 0)
+- **Session-scoped profilers**: Fatigue, Plasticity, Budget are now per-session (was global, cross-session bleed)
+- **Verification → Decide pipeline**: calibrate and decide stages read all verification patterns
+- **CLI truth**: Removed misleading `--host`/`--port` flags from `aletheia start`
+
+### Added
+- **ForgeEngine Tier 1**: In-process JSON/YAML/TOML validation in `post_tool_use` (<100ms)
+- **ForgeEngine Tier 2**: Async Python syntax checking via `syntax-checker` template (<2s)
+- **MCP fusion**: 5 MCP tools moved into daemon behind `--mcp` feature flag
+- **Verify stage upgrade**: intended_action mismatch detection + test result parsing
+- **In-process verification module**: `verification.rs` for config file validation
+
+### Changed
+- `aletheia mcp` launches `aletheiad --mcp` (single binary, no HTTP round-trip)
+- Forge template catalogue: 5 templates (added `syntax-checker`)
+
 ## 0.10.0 "Full Circuit"
 ### Added
 - **SessionContext**: persistent cross-hook state — task classification, risk, strategy, entropy tracker, and execution plan survive across all hooks of a session
