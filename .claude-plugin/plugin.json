@@ -1,7 +1,7 @@
 {
   "name": "aletheia-nexus",
-  "description": "Local-first metacognitive runtime for coding agents. MCP bridge with 5 metacognitive tools, neural embeddings, session replay, plus risk classification, factored verification, evidence packs, dynamic topology, context pruning, and skill crystallizer.",
-  "version": "0.9.0",
+  "description": "Local-first metacognitive control plane for coding agents. End-to-end session lifecycle with auto-populated graph memory, heuristic evolution, entropy calibration, and dynamic topology routing.",
+  "version": "0.10.0",
   "author": {
     "name": "Yann Abadie"
   },

@@ -14,6 +14,7 @@ use metaygn_verifiers::guard_pipeline::GuardPipeline;
 use crate::forge::ForgeEngine;
 use crate::profiler::fatigue::FatigueProfiler;
 use crate::profiler::plasticity::PlasticityTracker;
+use crate::session::SessionStore;
 
 /// Shared application state for the daemon.
 #[derive(Clone)]
@@ -28,6 +29,7 @@ pub struct AppState {
     pub forge: Arc<Mutex<ForgeEngine>>,
     pub budget: Arc<Mutex<SessionBudget>>,
     pub plasticity: Arc<Mutex<PlasticityTracker>>,
+    pub sessions: Arc<SessionStore>,
 }
 
 impl AppState {
@@ -90,6 +92,7 @@ impl AppState {
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
+            sessions: Arc::new(SessionStore::new()),
         })
     }
 
@@ -115,6 +118,7 @@ impl AppState {
             forge: Arc::new(Mutex::new(ForgeEngine::new(sandbox))),
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
+            sessions: Arc::new(SessionStore::new()),
         })
     }
 }

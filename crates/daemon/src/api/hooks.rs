@@ -241,6 +241,9 @@ async fn pre_tool_use(
         }
     }
 
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
     // Step 2: Run ControlLoop stages 1-6 for risk assessment
     // Fix: inject the actual command text as the prompt so the classify/assess
     // stages can evaluate the real content rather than defaulting to high risk
@@ -252,6 +255,12 @@ async fn pre_tool_use(
     }
     let mut ctx = LoopContext::new(input_for_loop);
     state.control_loop.run_range(&mut ctx, 0, 6);
+
+    // Persist tool call count into session context
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        sess.tool_calls += 1;
+    }
 
     let risk_label = match ctx.risk {
         RiskLevel::Low => "low",
@@ -303,6 +312,9 @@ async fn post_tool_use(
     let tool_name = input.tool_name.clone().unwrap_or_default();
     let response = input.tool_response.clone().unwrap_or_default();
 
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
     // Wire fatigue signals: record error or success
     let is_error = response_looks_like_error(&tool_name, &response);
     {
@@ -311,6 +323,16 @@ async fn post_tool_use(
             profiler.on_error();
         } else {
             profiler.on_success();
+        }
+    }
+
+    // Persist error/success counts into session context
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        if is_error {
+            sess.errors += 1;
+        } else {
+            sess.success_count += 1;
         }
     }
 
@@ -351,6 +373,23 @@ async fn post_tool_use(
         start,
     )
     .await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        let tool_name_clone = tool_name.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_post_tool_use(
+                state_clone,
+                session_clone,
+                tool_name_clone,
+                is_error,
+            )
+            .await;
+        });
+    }
+
     Json(output)
 }
 
@@ -390,9 +429,22 @@ async fn user_prompt_submit(
         budget.consume(estimated_tokens, estimated_cost);
     }
 
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
     // Run ControlLoop stages 1-6 for analysis
     let mut ctx = LoopContext::new(input);
     state.control_loop.run_range(&mut ctx, 0, 6);
+
+    // Persist control loop results into session context
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        sess.task_type = ctx.task_type;
+        sess.risk = ctx.risk;
+        sess.strategy = ctx.strategy;
+        sess.difficulty = ctx.difficulty;
+        sess.competence = ctx.competence;
+    }
 
     let risk_label = match ctx.risk {
         RiskLevel::Low => "low",
@@ -403,6 +455,12 @@ async fn user_prompt_submit(
     // Run TopologyPlanner to determine execution topology
     let task_type = ctx.task_type.unwrap_or(TaskType::Bugfix);
     let plan = TopologyPlanner::plan(ctx.risk, ctx.difficulty, task_type);
+
+    // Store execution plan in session for use by the stop handler
+    {
+        let mut sess = session_ctx.lock().unwrap();
+        sess.execution_plan = Some(plan.clone());
+    }
 
     let strategy_label = format!("{:?}", ctx.strategy).to_lowercase();
     let strategy_kebab = strategy_label.replace('_', "-");
@@ -436,6 +494,16 @@ async fn user_prompt_submit(
         start,
     )
     .await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_user_prompt_submit(state_clone, session_clone).await;
+        });
+    }
+
     Json(output)
 }
 
@@ -497,8 +565,36 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         None
     };
 
+    // Get or create session context for cross-hook state persistence
+    let session_ctx = state.sessions.get_or_create(&session_id);
+
     let mut ctx = LoopContext::new(input);
-    let decision = state.control_loop.run_range(&mut ctx, 8, 12);
+
+    // Feed accumulated session data into the LoopContext so that stop-phase
+    // stages (calibrate, compact, decide, learn) operate on the full session
+    // picture rather than starting from scratch.
+    {
+        let sess = session_ctx.lock().unwrap();
+        ctx.task_type = sess.task_type;
+        ctx.risk = sess.risk;
+        ctx.strategy = sess.strategy;
+        ctx.difficulty = sess.difficulty;
+        ctx.competence = sess.competence;
+        ctx.verification_results = sess.verification_results.clone();
+        ctx.lessons = sess.lessons.clone();
+    }
+
+    // Use the stored execution plan if available; otherwise fall back to
+    // running stages 8-12 directly (backward-compatible path).
+    let plan = {
+        let sess = session_ctx.lock().unwrap();
+        sess.execution_plan.clone()
+    };
+    let decision = if let Some(ref plan) = plan {
+        state.control_loop.run_plan(&mut ctx, plan)
+    } else {
+        state.control_loop.run_range(&mut ctx, 8, 12)
+    };
 
     let metacog = ctx.metacog_vector.compact_encode();
     let lessons_summary = if ctx.lessons.is_empty() {
@@ -529,6 +625,22 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(&state, &session_id, "Stop", &payload, &resp_json, start).await;
+
+    // System 2: async post-processing (fire-and-forget)
+    {
+        let state_clone = state.clone();
+        let session_clone = session_ctx.clone();
+        let decision_str = format!("{:?}", decision);
+        let lessons_clone = ctx.lessons.clone();
+        tokio::spawn(async move {
+            crate::postprocess::after_stop(state_clone, session_clone, decision_str, lessons_clone)
+                .await;
+        });
+    }
+
+    // Clean up session context now that the session is ending
+    state.sessions.remove(&session_id);
+
     Json(output)
 }
 
