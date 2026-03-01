@@ -88,25 +88,40 @@ aletheia export [--limit N]                              Export RL trajectories 
 
 ## Installation
 
-### Local development
+### Prerequisites
+- **Rust** 1.85+ (`rustup update`)
+- **Bun** 1.0+ (`curl -fsSL https://bun.sh/install | bash`) — required for hook execution
+- **pnpm** 9+ (`npm install -g pnpm`) — for TypeScript workspace dependencies
+
+### Setup
 ```bash
-cargo build --workspace          # build daemon + CLI + MCP bridge
+git clone https://github.com/yannabadie/Meta-YGN && cd Meta-YGN
+cargo build --workspace          # build daemon + CLI (7 crates)
+pnpm install                     # install TypeScript hook dependencies
+```
+
+### Running with Claude Code
+```bash
+aletheia start                   # start the daemon (background, auto port)
 claude --plugin-dir .            # run Claude Code with the plugin
 ```
 
+The daemon listens on a dynamic port (written to `~/.claude/aletheia/daemon.port`).
+Without the daemon, hooks fall back to lightweight local heuristics.
+
 ### Validation
 ```bash
-claude plugin validate
-claude --debug --plugin-dir .
+aletheia status                  # check daemon health
+aletheia doctor                  # check plugin + hooks + agents + DB
+claude plugin validate .         # validate plugin structure
 ```
 
-### Wiring the daemon
+### Optional features
 ```bash
-export ALETHEIA_DAEMON_URL=http://localhost:9000
-aletheia start
-aletheia status
+cargo build --features mcp       # MCP stdio server (aletheiad --mcp)
+cargo build --features syntax    # tree-sitter multi-language verification
+cargo build --features otel      # OpenTelemetry tracing spans
 ```
-Without the daemon, hooks fall back to lightweight local heuristics.
 
 ## Research Foundation
 
