@@ -93,6 +93,21 @@ while IFS= read -r file; do
 done"#,
         params: &[],
     },
+    // 5. syntax-checker — validate Python syntax via ast.parse()
+    Template {
+        name: "syntax-checker",
+        language: ScriptLang::Python,
+        description: "Check Python syntax via ast.parse()",
+        source: r#"import ast, sys, json
+code = sys.stdin.read()
+try:
+    ast.parse(code)
+    print(json.dumps({"valid": True}))
+except SyntaxError as e:
+    print(json.dumps({"valid": False, "error": str(e), "line": e.lineno}))
+"#,
+        params: &[],
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -118,8 +133,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn catalogue_has_four_entries() {
-        assert_eq!(TEMPLATES.len(), 4);
+    fn catalogue_has_five_entries() {
+        assert_eq!(TEMPLATES.len(), 5);
     }
 
     #[test]
@@ -136,10 +151,11 @@ mod tests {
     #[test]
     fn list_returns_all_names() {
         let names = list_templates();
-        assert_eq!(names.len(), 4);
+        assert_eq!(names.len(), 5);
         assert!(names.contains(&"grep-pattern-checker"));
         assert!(names.contains(&"import-validator"));
         assert!(names.contains(&"json-validator"));
         assert!(names.contains(&"file-exists-checker"));
+        assert!(names.contains(&"syntax-checker"));
     }
 }

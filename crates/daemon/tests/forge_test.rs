@@ -104,9 +104,52 @@ async fn cache_stores_by_hash() {
 #[tokio::test]
 async fn list_templates_returns_all() {
     let names = list_templates();
-    assert_eq!(names.len(), 4);
+    assert_eq!(names.len(), 5);
     assert!(names.contains(&"grep-pattern-checker"));
     assert!(names.contains(&"import-validator"));
     assert!(names.contains(&"json-validator"));
     assert!(names.contains(&"file-exists-checker"));
+    assert!(names.contains(&"syntax-checker"));
+}
+
+// -----------------------------------------------------------------------
+// Syntax checker tests
+// -----------------------------------------------------------------------
+
+#[tokio::test]
+async fn syntax_checker_valid_python() {
+    let mut eng = engine();
+    let params = HashMap::new();
+    let spec = eng.generate("syntax-checker", &params).unwrap();
+
+    assert_eq!(spec.name, "syntax-checker");
+    assert_eq!(spec.language, ScriptLang::Python);
+
+    let result = eng
+        .execute(&spec, "def hello():\n    print('hi')")
+        .await
+        .unwrap();
+    assert!(result.success, "stderr: {}", result.stderr);
+    assert!(
+        result.stdout.contains("true") || result.stdout.contains("True"),
+        "stdout was: {}",
+        result.stdout
+    );
+}
+
+#[tokio::test]
+async fn syntax_checker_invalid_python() {
+    let mut eng = engine();
+    let params = HashMap::new();
+    let spec = eng.generate("syntax-checker", &params).unwrap();
+
+    let result = eng
+        .execute(&spec, "def hello(\n    print('hi')")
+        .await
+        .unwrap();
+    assert!(
+        result.stdout.contains("false") || result.stdout.contains("False"),
+        "stdout was: {}",
+        result.stdout
+    );
 }
