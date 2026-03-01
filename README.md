@@ -1,6 +1,6 @@
-# Aletheia-Nexus Claude Code Plugin
+# Aletheia-Nexus
 
-A local-first metacognitive plugin for Claude Code that adds verification, risk classification, safety gates, and context discipline to AI-assisted coding.
+A local-first metacognitive control plane for coding agents.
 
 ## Architecture
 
@@ -48,102 +48,50 @@ A local-first metacognitive plugin for Claude Code that adds verification, risk 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## Developer-First Features (v0.4.0)
+## What Works Today
 
-These features solve the top 3 real-world Claude Code pain points:
+These features are tested end-to-end and ship with the daemon:
 
-### Completion Verifier
-When Claude says "Done!", MetaYGN checks if the mentioned files actually exist. If they don't, it blocks the completion claim with a warning.
+- **Guard Pipeline** -- 5 guards with 28 pattern rules (destructive, high-risk, secret-path, MCP, default) that gate every tool call
+- **Test Integrity Checker** -- detects when tests are weakened (assertions removed, expected values changed) and asks for confirmation
+- **Completion Verifier** -- validates that files mentioned in "Done!" claims actually exist before allowing the claim through
+- **Fatigue Profiler** -- tracks error recovery plasticity and escalates progressively (hint, critique, auto-escalate)
+- **Budget Tracker** -- per-session token and cost tracking with 80% utilization warnings, shown on every hook response
+- **Session Replay** -- `aletheia replay` shows the full hook timeline for any past session
+- **MCP Bridge** -- 5 tools (`metacog_classify`, `metacog_verify`, `metacog_recall`, `metacog_status`, `metacog_prune`) exposed as an MCP stdio server
 
-### Test Integrity Guard
-When Claude tries to Edit a test file, MetaYGN analyzes the diff. If assertions are removed, test functions deleted, or expected values changed, it asks for confirmation with a detailed warning.
+## Experimental Features
 
-### Token Budget Dashboard
-Every hook response includes a visible budget summary: `[budget: 3000tok/$0.03 used of 100000tok/$1.00 | 3%]`. Warns at 80% utilization.
+These are implemented but not yet validated at scale. Treat claims about their effectiveness as hypotheses, not facts.
 
-## Smart Recovery (v0.5.0)
+- `[experimental]` **Entropy Calibration (EGPO)** -- calibrates confidence using entropy-guided policy optimization
+- `[experimental]` **Plasticity Detection (RL2F)** -- implicit feedback loop that adjusts recovery amplification based on whether errors recur
+- `[experimental]` **UCB Memory Retrieval** -- upper-confidence-bound scoring for graph memory recall ranking
+- `[experimental]` **Heuristic Evolution** -- Layer-0 fitness-scored heuristic mutation and selection
+- `[experimental]` **Dynamic Topology** -- TopologyPlanner selects Single/Vertical/Horizontal execution topology per task
+- `[experimental]` **Neural Embeddings** -- real embedding providers behind a feature gate (`fastembed`); hash-based fallback is the default
+- `[experimental]` **RL Trajectory Export** -- `aletheia export` writes JSONL trajectories for offline RL training
 
-### Plasticity-Aware Recovery
-When error recovery fails, MetaYGN escalates progressively:
-- **Level 1**: Standard recovery hint
-- **Level 2**: Emphatic critique with concrete alternative strategies
-- **Level 3**: Auto-escalation recommending `/metacog-escalate`
+## CLI Commands
 
-### Implicit Feedback
-MetaYGN tracks whether recovery prompts work without asking the developer. If the same error returns after recovery, plasticity score drops and amplification increases.
-
-### Latency Transparency
-Every hook response includes `[latency: Nms]` so developers know exactly how much overhead MetaYGN adds.
-
-## Deep Foundation (v0.7.0)
-
-### No More Stubs
-Every declared module is now fully implemented. The `act` stage records intentions, the `compact` stage deduplicates and summarizes, the event system is typed, and FTS search spans both events and graph memory.
-
-### Context Pruning Service
-`POST /proxy/anthropic` accepts Anthropic message payloads, detects reasoning lock-in (3+ consecutive errors), and returns pruned messages with recovery prompts injected.
-
-### Skill Crystallizer
-MetaYGN observes your tool usage patterns. When a sequence repeats 3+ times, it generates a reusable SKILL.md template automatically.
-
-## Solid Ground (v0.6.0)
-
-### Full Plugin Pipeline
-All 8 TypeScript hooks fire through the daemon with 350ms timeout and local fallback. Install and run:
-```bash
-aletheia start     # spawn daemon
-claude --plugin-dir /path/to/MetaYGN
-aletheia status    # verify
-aletheia stop      # clean shutdown
 ```
-
-### Persistent Learning
-Heuristic versions and session outcomes survive daemon restarts via SQLite persistence.
-
-## Components
-
-### Skills (8 metacognitive workflows)
-| Skill | Purpose |
-|-------|---------|
-| `metacog-preflight` | Classify risk, choose strategy before acting |
-| `metacog-proof` | Build structured evidence packet |
-| `metacog-challenge` | Pressure-test assumptions and plans |
-| `metacog-threat-model` | Security and trust boundary review |
-| `metacog-compact` | Compress session for handoff |
-| `metacog-bench` | Evaluate quality and overhead |
-| `metacog-tool-audit` | Assess tool necessity |
-| `metacog-escalate` | Structured escalation when stuck or uncertain |
-
-### Agents (6 specialized roles)
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `aletheia-main` | sonnet | Default execution with verification discipline |
-| `skeptic` | sonnet | Challenge assumptions, find counter-hypotheses |
-| `verifier` | sonnet | Independent verification of claims |
-| `researcher` | sonnet | Web research and documentation exploration |
-| `repo-cartographer` | haiku | Map repository structure |
-| `cost-auditor` | haiku | Audit token and context overhead |
-
-### Hooks (8 lifecycle events)
-- **SessionStart**: Detect tech stack, initialize profile
-- **UserPromptSubmit**: Classify prompt risk (high/medium/low)
-- **PreToolUse**: Security gates (deny destructive, ask risky, allow safe)
-- **PostToolUse**: Verification signals and change tracking
-- **PostToolUseFailure**: Error diagnosis guidance
-- **Stop**: Proof packet enforcement
-- **PreCompact**: Structured context compaction
-- **SessionEnd**: Session finalization
-
-### Security gates
-- **Auto-deny**: `rm -rf /`, fork bombs, raw disk writes
-- **Auto-ask**: `git push`, `terraform apply`, `kubectl delete`, `sudo`, `curl|bash`, secret files
-- **MCP gate**: All external MCP calls require confirmation
+aletheia start [--host H] [--port P] [--db-path PATH]   Start the daemon
+aletheia stop                                            Stop the daemon
+aletheia status                                          Show daemon health
+aletheia recall --query Q [--limit N]                    Search memory
+aletheia top                                             Real-time TUI dashboard
+aletheia init [--force]                                  Scaffold .claude/ config
+aletheia mcp                                             Launch MCP stdio server
+aletheia replay [SESSION_ID]                             Replay session hook timeline
+aletheia export [--limit N]                              Export RL trajectories to JSONL
+```
 
 ## Installation
 
 ### Local development
 ```bash
-claude --plugin-dir .
+cargo build --workspace          # build daemon + CLI + MCP bridge
+claude --plugin-dir .            # run Claude Code with the plugin
 ```
 
 ### Validation
@@ -152,19 +100,28 @@ claude plugin validate
 claude --debug --plugin-dir .
 ```
 
-### Wiring a local daemon
+### Wiring the daemon
 ```bash
 export ALETHEIA_DAEMON_URL=http://localhost:9000
+aletheia start
+aletheia status
 ```
-Without it, hooks fall back to lightweight local heuristics.
+Without the daemon, hooks fall back to lightweight local heuristics.
 
-## Design principles
-1. **Verification over speculation**: Evidence before claims
-2. **Context discipline**: Design for 200K, not 1M
-3. **Safety by default**: Deny destructive, ask risky, allow safe
-4. **Thin plugin shell**: Logic lives in runtime, not UI
-5. **Graceful degradation**: Works without daemon, MCP, or advanced features
-6. **Proof over prose**: Structured packets, not reflective narration
+## Research Foundation
+
+The experimental features draw on ideas from these papers (none are fully replicated; see `[experimental]` tags above):
+
+| Abbreviation | Paper | Relevance |
+|---|---|---|
+| EGPO | Entropy-Guided Policy Optimization | Confidence calibration via entropy |
+| RL2F | Reinforcement Learning from LLM Feedback | Implicit feedback for recovery |
+| U-Mem | Uncertainty-Aware Memory | UCB-scored retrieval ranking |
+| OpenSage | Open-Source Sage Agent | Multi-agent topology patterns |
+| DyTopo | Dynamic Topology Planning | Adaptive execution topology |
+| SideQuest | SideQuest Exploration | Heuristic evolution fitness |
+| AlphaEvolve | AlphaEvolve | Evolutionary program search |
 
 ## License
+
 MIT

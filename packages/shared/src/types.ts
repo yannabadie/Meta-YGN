@@ -23,6 +23,9 @@ export const HookInputSchema = z.object({
   prompt: z.string().optional(),
   error: z.string().optional(),
   last_assistant_message: z.string().optional(),
+  source: z.string().optional(),      // matches Rust HookInput.source
+  reason: z.string().optional(),      // matches Rust HookInput.reason
+  trigger: z.string().optional(),     // matches Rust HookInput.trigger
 });
 
 export type HookInput = z.infer<typeof HookInputSchema>;
