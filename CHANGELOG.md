@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0 "Neural Bridge"
+### Added
+- **MCP Bridge**: new `metaygn-mcp-bridge` crate with 5 metacognitive MCP tools via stdio transport (rmcp 0.17)
+  - Tools: `metacog_classify`, `metacog_verify`, `metacog_recall`, `metacog_status`, `metacog_prune`
+  - CLI command `aletheia mcp` launches the MCP stdio server
+- **Neural embeddings**: `FastEmbedProvider` implementing `EmbeddingProvider` trait (bge-small-en-v1.5, 384 dim)
+  - Feature-gated behind `cargo build --features embeddings` — zero overhead when disabled
+  - `GraphMemory.semantic_search()` for cosine-similarity vector search
+  - `POST /memory/semantic` daemon endpoint for vector-based node retrieval
+- **Session replay**: timeline recording of all hook calls for post-session debugging
+  - `replay_events` SQLite table recording request/response/latency for every hook call
+  - `GET /replay/sessions` and `GET /replay/{session_id}` daemon API endpoints
+  - `aletheia replay` CLI command: list sessions or view hook timeline
+
+### Changed
+- All 5 hook handlers (pre-tool-use, post-tool-use, post-tool-use-failure, user-prompt-submit, stop) now record replay events automatically
+- Workspace expanded to 8 crates (added `mcp-bridge`)
+
 ## 0.7.0 "Deep Foundation"
 ### Added
 - **Typed event system**: 11 `MetaEvent` variants replacing ad-hoc string logging
