@@ -14,10 +14,28 @@ use crate::proxy::pruner::ContextPruner;
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Append the session budget summary to a HookOutput's additionalContext.
+/// Append the global budget summary to a HookOutput's additionalContext.
+/// Used only for early-return paths where no session context exists yet.
 fn append_budget_to_output(output: &mut HookOutput, state: &AppState) {
     let budget = state.budget.lock().expect("budget mutex poisoned");
     let summary = budget.summary();
+    append_budget_summary(output, summary);
+}
+
+/// Append the session-local budget summary to a HookOutput's additionalContext.
+/// Preferred over `append_budget_to_output` wherever a session context is available,
+/// so that budget display reflects the current session rather than global state.
+fn append_session_budget(
+    output: &mut HookOutput,
+    session: &std::sync::Arc<std::sync::Mutex<crate::session::SessionContext>>,
+) {
+    let sess = session.lock().expect("session mutex poisoned");
+    let summary = sess.budget.summary();
+    append_budget_summary(output, summary);
+}
+
+/// Shared helper: write a budget summary string into a HookOutput.
+fn append_budget_summary(output: &mut HookOutput, summary: String) {
     match output.hook_specific_output {
         Some(ref mut hso) => {
             // Append to existing additionalContext, or create it
@@ -276,7 +294,7 @@ async fn pre_tool_use(
             risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
         ),
     );
-    append_budget_to_output(&mut output, &state);
+    append_session_budget(&mut output, &session_ctx);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(
@@ -393,7 +411,7 @@ async fn post_tool_use(
         "PostToolUse".to_string(),
         format!("{}{}", context, verification_context),
     );
-    append_budget_to_output(&mut output, &state);
+    append_session_budget(&mut output, &session_ctx);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(
@@ -529,7 +547,7 @@ async fn user_prompt_submit(
         "UserPromptSubmit".to_string(),
         format!("{} | Prompt analysed via control loop", readable),
     );
-    append_budget_to_output(&mut output, &state);
+    append_session_budget(&mut output, &session_ctx);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(
@@ -637,6 +655,18 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         ctx.lessons = sess.lessons.clone();
     }
 
+    // Load historical competence before running finalization stages
+    if let Some(task_type) = ctx.task_type {
+        let task_type_str = format!("{:?}", task_type);
+        if let Ok(Some(rate)) = state
+            .memory
+            .success_rate_for_task_type(&task_type_str, 20, 5)
+            .await
+        {
+            ctx.historical_success_rate = Some(rate);
+        }
+    }
+
     // Use the stored execution plan if available; otherwise fall back to
     // running stages 8-12 directly (backward-compatible path).
     let plan = {
@@ -674,7 +704,7 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
     }
 
     let mut output = HookOutput::context("Stop".to_string(), context_msg);
-    append_budget_to_output(&mut output, &state);
+    append_session_budget(&mut output, &session_ctx);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
     record_replay(&state, &session_id, "Stop", &payload, &resp_json, start).await;
