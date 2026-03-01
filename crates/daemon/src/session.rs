@@ -4,7 +4,11 @@ use std::time::Instant;
 
 use metaygn_core::heuristics::entropy::EntropyTracker;
 use metaygn_core::topology::ExecutionPlan;
+use metaygn_shared::budget_tracker::SessionBudget;
 use metaygn_shared::state::*;
+
+use crate::profiler::fatigue::FatigueProfiler;
+use crate::profiler::plasticity::PlasticityTracker;
 
 /// Accumulated state for a single Claude Code session, persisted across hooks.
 pub struct SessionContext {
@@ -24,6 +28,12 @@ pub struct SessionContext {
     pub errors: u32,
     pub success_count: u32,
     pub tokens_consumed: u64,
+    /// Session-local fatigue profiler (avoids cross-session bleed).
+    pub fatigue: FatigueProfiler,
+    /// Session-local plasticity tracker (avoids cross-session bleed).
+    pub plasticity: PlasticityTracker,
+    /// Session-local budget tracker (avoids cross-session bleed).
+    pub budget: SessionBudget,
 }
 
 impl SessionContext {
@@ -51,6 +61,9 @@ impl SessionContext {
             errors: 0,
             success_count: 0,
             tokens_consumed: 0,
+            fatigue: FatigueProfiler::with_defaults(),
+            plasticity: PlasticityTracker::new(),
+            budget: SessionBudget::new(100_000, 1.00),
         }
     }
 }
