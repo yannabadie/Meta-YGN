@@ -212,9 +212,7 @@ impl ContextPruner {
             if removable.contains(&i) {
                 // Insert the recovery injection once, at the position of the
                 // first removed message.
-                if !injection_placed
-                    && let Some(ref injection) = analysis.suggested_injection
-                {
+                if !injection_placed && let Some(ref injection) = analysis.suggested_injection {
                     result.push(Message {
                         role: "assistant".to_string(),
                         content: injection.clone(),

@@ -206,9 +206,8 @@ async fn pre_tool_use(
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let report = metaygn_verifiers::test_integrity::analyze_test_edit(
-            file_path, old_string, new_string,
-        );
+        let report =
+            metaygn_verifiers::test_integrity::analyze_test_edit(file_path, old_string, new_string);
 
         if report.suspicious {
             let issues_detail = report
