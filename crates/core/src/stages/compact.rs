@@ -30,18 +30,13 @@ pub fn cluster_lessons(lessons: &[String], max_clusters: usize) -> Vec<String> {
     let mut clusters: Vec<(String, u32)> = Vec::new(); // (representative, count)
 
     for lesson in lessons {
-        let lesson_words: HashSet<&str> = lesson
-            .split_whitespace()
-            .filter(|w| w.len() > 2)
-            .collect();
+        let lesson_words: HashSet<&str> =
+            lesson.split_whitespace().filter(|w| w.len() > 2).collect();
 
         // Find a matching cluster (>50% Jaccard word overlap)
         let mut merged = false;
         for (rep, count) in &mut clusters {
-            let rep_words: HashSet<&str> = rep
-                .split_whitespace()
-                .filter(|w| w.len() > 2)
-                .collect();
+            let rep_words: HashSet<&str> = rep.split_whitespace().filter(|w| w.len() > 2).collect();
 
             if rep_words.is_empty() || lesson_words.is_empty() {
                 continue;

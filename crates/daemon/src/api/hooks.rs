@@ -633,13 +633,8 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         let decision_str = format!("{:?}", decision);
         let lessons_clone = ctx.lessons.clone();
         tokio::spawn(async move {
-            crate::postprocess::after_stop(
-                state_clone,
-                session_clone,
-                decision_str,
-                lessons_clone,
-            )
-            .await;
+            crate::postprocess::after_stop(state_clone, session_clone, decision_str, lessons_clone)
+                .await;
         });
     }
 

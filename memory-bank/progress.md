@@ -143,11 +143,24 @@
 - [x] aletheia export CLI command (JSONL to ~/.claude/aletheia/trajectories/)
 - [x] Updated CHANGELOG.md, plugin.json, memory-bank
 
+## Phase 12: Full Circuit (v0.10.0) -- COMPLETE
+
+- [x] SessionContext + SessionStore for cross-hook state persistence
+- [x] All 4 hook handlers wire SessionContext (get_or_create, read, write, remove)
+- [x] Async System 2 post-processing: graph auto-population + entropy tracking
+- [x] Heuristic evolution at session end: SessionOutcome + evolver.evaluate_all()
+- [x] Topology run_plan() in stop hook instead of hardcoded run_range()
+- [x] Entropy + Plasticity checks in decide stage (overconfidence→Revise, lost→Escalate)
+- [x] Semantic CompactStage: Jaccard clustering, max 10 clusters
+- [x] Rust/TS HookInput contract aligned (source, reason, trigger fields)
+- [x] README rewritten: "What Works Today" vs "Experimental Features"
+- [x] E2E integration test harness: 7 scenarios covering full lifecycle
+- [x] Updated CHANGELOG.md, plugin.json, memory-bank
+
 ## Next
 
+- [ ] ForgeEngine integration (verification templates called from post_tool_use)
 - [ ] WASM sandbox backend (feature-gated behind wasmtime)
 - [ ] Publish to Claude Code marketplace
-- [ ] Multi-agent orchestration improvements
-- [ ] A2A protocol adapter
 - [ ] Dialectic topology (RL2F teacher-student 3-call loop)
 - [ ] LLM-driven heuristic mutation (AlphaEvolve-inspired)

@@ -1,5 +1,5 @@
 use metaygn_core::context::LoopContext;
-use metaygn_core::stages::compact::{cluster_lessons, CompactStage};
+use metaygn_core::stages::compact::{CompactStage, cluster_lessons};
 use metaygn_core::stages::{Stage, StageResult};
 use metaygn_shared::protocol::{HookEvent, HookInput};
 
@@ -29,7 +29,11 @@ fn cluster_merges_similar_lessons() {
         "always check error handling before shipping".to_string(),
     ];
     let result = cluster_lessons(&lessons, 10);
-    assert_eq!(result.len(), 1, "similar lessons should merge into one cluster");
+    assert_eq!(
+        result.len(),
+        1,
+        "similar lessons should merge into one cluster"
+    );
     assert!(
         result[0].contains("(x3)"),
         "merged cluster should have count suffix (x3), got: {}",
@@ -80,10 +84,7 @@ fn cluster_respects_max_limit() {
 fn compact_stage_produces_summary() {
     let stage = CompactStage;
     let mut ctx = make_context();
-    ctx.lessons = vec![
-        "lesson alpha".to_string(),
-        "lesson beta".to_string(),
-    ];
+    ctx.lessons = vec!["lesson alpha".to_string(), "lesson beta".to_string()];
     ctx.verification_results = vec!["check passed".to_string()];
 
     let result = stage.run(&mut ctx);

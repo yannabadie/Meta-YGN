@@ -5,7 +5,7 @@
 //! graph memory -> replay -> heuristics.
 
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::Duration;
 
 // ---------------------------------------------------------------------------
@@ -48,11 +48,7 @@ async fn post_hook(client: &Client, base: &str, path: &str, body: Value) -> Valu
 
 /// GET and return the response body as JSON.
 async fn get_json(client: &Client, base: &str, path: &str) -> Value {
-    let resp = client
-        .get(format!("{base}{path}"))
-        .send()
-        .await
-        .unwrap();
+    let resp = client.get(format!("{base}{path}")).send().await.unwrap();
     assert_eq!(
         resp.status(),
         200,
@@ -403,10 +399,7 @@ async fn health_endpoint_sanity_check() {
 
     let body = get_json(&client, &base, "/health").await;
     assert_eq!(body["status"], "ok", "health status should be 'ok'");
-    assert_eq!(
-        body["kernel"], "verified",
-        "kernel should be 'verified'"
-    );
+    assert_eq!(body["kernel"], "verified", "kernel should be 'verified'");
     assert!(
         body.get("version").is_some(),
         "health should report a version"

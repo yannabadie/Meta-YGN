@@ -48,12 +48,18 @@ fn session_store_remove_cleans_up() {
     assert_eq!(store.count(), 2);
 
     let removed = store.remove("session-x");
-    assert!(removed.is_some(), "expected Some when removing existing session");
+    assert!(
+        removed.is_some(),
+        "expected Some when removing existing session"
+    );
     assert_eq!(store.count(), 1);
 
     // Removing again should return None.
     let removed_again = store.remove("session-x");
-    assert!(removed_again.is_none(), "expected None when removing already-removed session");
+    assert!(
+        removed_again.is_none(),
+        "expected None when removing already-removed session"
+    );
     assert_eq!(store.count(), 1);
 }
 

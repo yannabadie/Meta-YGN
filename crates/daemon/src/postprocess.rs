@@ -16,10 +16,7 @@ const EVOLUTION_THRESHOLD: usize = 5;
 
 /// After `user_prompt_submit`: insert a Task node into the memory graph
 /// capturing the classified task type, risk level, and chosen strategy.
-pub async fn after_user_prompt_submit(
-    state: AppState,
-    session: Arc<Mutex<SessionContext>>,
-) {
+pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<SessionContext>>) {
     let (task_type, risk, strategy) = {
         let sess = session.lock().unwrap();
         (
