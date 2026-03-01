@@ -5,6 +5,7 @@ pub mod postprocess;
 pub mod profiler;
 pub mod proxy;
 pub mod session;
+pub mod verification;
 
 use anyhow::Result;
 use axum::Router;

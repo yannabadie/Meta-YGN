@@ -126,7 +126,7 @@ pub async fn after_stop(
     }
 
     // 3. Record session outcome for heuristic evolution
-    let (task_type, risk, strategy, errors, _success_count, duration_ms) = {
+    let (task_type, risk, strategy, errors, _success_count, duration_ms, tokens_consumed) = {
         let sess = session.lock().unwrap();
         (
             sess.task_type
@@ -137,6 +137,7 @@ pub async fn after_stop(
             sess.errors,
             sess.success_count,
             sess.created_at.elapsed().as_millis() as u64,
+            sess.tokens_consumed,
         )
     };
 
@@ -146,7 +147,7 @@ pub async fn after_stop(
         risk_level: risk.clone(),
         strategy_used: strategy.clone(),
         success: errors == 0,
-        tokens_consumed: 0, // TODO: wire from budget tracker
+        tokens_consumed,
         duration_ms,
         errors_encountered: errors,
     };

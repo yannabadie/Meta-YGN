@@ -23,6 +23,7 @@ pub struct SessionContext {
     pub tool_calls: u32,
     pub errors: u32,
     pub success_count: u32,
+    pub tokens_consumed: u64,
 }
 
 impl SessionContext {
@@ -49,6 +50,7 @@ impl SessionContext {
             tool_calls: 0,
             errors: 0,
             success_count: 0,
+            tokens_consumed: 0,
         }
     }
 }

@@ -336,6 +336,13 @@ async fn post_tool_use(
         }
     }
 
+    // Copy consumed tokens from budget into session context
+    {
+        let budget = state.budget.lock().expect("budget mutex poisoned");
+        let mut sess = session_ctx.lock().unwrap();
+        sess.tokens_consumed = budget.consumed_tokens();
+    }
+
     // Wire plasticity signals: if a recovery was injected and is pending,
     // record whether the outcome suggests success or failure.
     {
@@ -350,6 +357,33 @@ async fn post_tool_use(
         }
     }
 
+    // Tier 1 verification: validate config files in-process
+    let mut verification_context = String::new();
+    if tool_name == "Write" || tool_name == "Edit" {
+        if let Some(ref tool_input) = input.tool_input {
+            if let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str()) {
+                // For Write tool, content is in tool_input.content
+                // For Edit tool, we don't have the full file content — skip
+                if tool_name == "Write" {
+                    if let Some(content) = tool_input.get("content").and_then(|v| v.as_str()) {
+                        if let Some(error) =
+                            crate::verification::validate_file_content(file_path, content)
+                        {
+                            verification_context =
+                                format!(" SYNTAX ERROR in {}: {}", file_path, error);
+                            // Also store in session
+                            let mut sess = session_ctx.lock().unwrap();
+                            sess.verification_results.push(format!(
+                                "syntax_error: {} — {}",
+                                file_path, error
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let context = if tool_name == "Bash" && response.contains("FAIL") {
         "Test failure detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
@@ -360,7 +394,10 @@ async fn post_tool_use(
         "Tool output recorded."
     };
 
-    let mut output = HookOutput::context("PostToolUse".to_string(), context.to_string());
+    let mut output = HookOutput::context(
+        "PostToolUse".to_string(),
+        format!("{}{}", context, verification_context),
+    );
     append_budget_to_output(&mut output, &state);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
@@ -444,6 +481,13 @@ async fn user_prompt_submit(
         sess.strategy = ctx.strategy;
         sess.difficulty = ctx.difficulty;
         sess.competence = ctx.competence;
+    }
+
+    // Copy consumed tokens from budget into session context
+    {
+        let budget = state.budget.lock().expect("budget mutex poisoned");
+        let mut sess = session_ctx.lock().unwrap();
+        sess.tokens_consumed = budget.consumed_tokens();
     }
 
     let risk_label = match ctx.risk {

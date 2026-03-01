@@ -33,6 +33,8 @@ chrono.workspace = true
 sha2 = "0.10"
 hex = "0.4"
 uuid.workspace = true
+serde_yaml = "0.9"
+toml = "0.8"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
