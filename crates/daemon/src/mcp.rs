@@ -243,8 +243,7 @@ pub mod mcp_handler {
         ) -> Result<String, String> {
             use crate::proxy::pruner::{ContextPruner, Message};
 
-            let messages: Vec<Message> =
-                serde_json::from_str(&params.messages).unwrap_or_default();
+            let messages: Vec<Message> = serde_json::from_str(&params.messages).unwrap_or_default();
             let pruner = ContextPruner::with_defaults();
             let analysis = pruner.analyze(&messages);
             Ok(serde_json::to_string_pretty(&serde_json::json!({

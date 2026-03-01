@@ -642,10 +642,7 @@ async fn cmd_eval() -> Result<()> {
     let _pop: Value = resp.json().await?;
 
     // 2. Get session replay data
-    let resp = client
-        .get(format!("{base}/replay/sessions"))
-        .send()
-        .await?;
+    let resp = client.get(format!("{base}/replay/sessions")).send().await?;
     let sessions: Value = resp.json().await?;
 
     // 3. Get memory stats
@@ -705,10 +702,7 @@ async fn cmd_eval() -> Result<()> {
         println!("\u{2551}  (need at least 5 sessions)                  \u{2551}");
     } else {
         // Get best heuristic fitness
-        let resp = client
-            .get(format!("{base}/heuristics/best"))
-            .send()
-            .await?;
+        let resp = client.get(format!("{base}/heuristics/best")).send().await?;
         let best: Value = resp.json().await?;
         let fitness = best
             .get("fitness")
@@ -737,10 +731,7 @@ async fn cmd_eval() -> Result<()> {
         .send()
         .await?;
     let fatigue: Value = resp.json().await?;
-    let fatigue_score = fatigue
-        .get("score")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.0);
+    let fatigue_score = fatigue.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
     println!(
         "\u{2551}  Current fatigue:       {:.2}                \u{2551}",
         fatigue_score
@@ -766,16 +757,11 @@ async fn cmd_doctor() -> Result<()> {
         {
             Ok(resp) if resp.status().is_success() => {
                 let body: Value = resp.json().await.unwrap_or_default();
-                let version = body
-                    .get("version")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let version = body.get("version").and_then(|v| v.as_str()).unwrap_or("?");
                 println!("  Daemon:     RUNNING (port {port}, version {version})");
             }
             _ => {
-                println!(
-                    "  Daemon:     NOT RESPONDING (port file exists but daemon unreachable)"
-                );
+                println!("  Daemon:     NOT RESPONDING (port file exists but daemon unreachable)");
                 issues += 1;
             }
         }
@@ -789,10 +775,7 @@ async fn cmd_doctor() -> Result<()> {
     if plugin_path.exists() {
         if let Ok(content) = std::fs::read_to_string(plugin_path) {
             if let Ok(json) = serde_json::from_str::<Value>(&content) {
-                let version = json
-                    .get("version")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let version = json.get("version").and_then(|v| v.as_str()).unwrap_or("?");
                 println!("  Plugin:     VALID (version {version})");
             } else {
                 println!("  Plugin:     INVALID JSON");
@@ -806,13 +789,12 @@ async fn cmd_doctor() -> Result<()> {
 
     // 3. Check hooks
     let hooks_path = std::path::Path::new("hooks/hooks.json");
-    if hooks_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(hooks_path) {
-            if let Ok(json) = serde_json::from_str::<Value>(&content) {
-                let count = json.as_array().map(|a| a.len()).unwrap_or(0);
-                println!("  Hooks:      {count}/8 configured");
-            }
-        }
+    if hooks_path.exists()
+        && let Ok(content) = std::fs::read_to_string(hooks_path)
+        && let Ok(json) = serde_json::from_str::<Value>(&content)
+    {
+        let count = json.as_array().map(|a| a.len()).unwrap_or(0);
+        println!("  Hooks:      {count}/8 configured");
     } else {
         println!("  Hooks:      NOT FOUND");
         issues += 1;
@@ -823,12 +805,8 @@ async fn cmd_doctor() -> Result<()> {
     if skills_dir.exists() {
         let count = std::fs::read_dir(skills_dir)
             .map(|d| {
-                d.filter(|e| {
-                    e.as_ref()
-                        .map(|e| e.path().is_dir())
-                        .unwrap_or(false)
-                })
-                .count()
+                d.filter(|e| e.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
+                    .count()
             })
             .unwrap_or(0);
         println!("  Skills:     {count}/8 present");
@@ -843,12 +821,7 @@ async fn cmd_doctor() -> Result<()> {
             .map(|d| {
                 d.filter(|e| {
                     e.as_ref()
-                        .map(|e| {
-                            e.path()
-                                .extension()
-                                .map(|ext| ext == "md")
-                                .unwrap_or(false)
-                        })
+                        .map(|e| e.path().extension().map(|ext| ext == "md").unwrap_or(false))
                         .unwrap_or(false)
                 })
                 .count()
@@ -864,11 +837,7 @@ async fn cmd_doctor() -> Result<()> {
     let db_path = home.join(".claude").join("aletheia").join("metaygn.db");
     if db_path.exists() {
         let size = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
-        println!(
-            "  Database:   {} ({} KB)",
-            db_path.display(),
-            size / 1024
-        );
+        println!("  Database:   {} ({} KB)", db_path.display(), size / 1024);
     } else {
         println!("  Database:   NOT FOUND (start daemon first)");
     }

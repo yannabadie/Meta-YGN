@@ -2,10 +2,10 @@
 //! Feature-gated behind `otel` but uses no external metrics crate ---
 //! just formats internal counters as Prometheus text.
 
+use axum::Router;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::Router;
 
 use crate::app_state::AppState;
 

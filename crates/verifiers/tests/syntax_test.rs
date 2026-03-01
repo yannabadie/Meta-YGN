@@ -53,7 +53,10 @@ fn valid_tsx() {
 #[test]
 fn unknown_extension_returns_empty() {
     let errors = check_syntax("anything goes here!", "xyz");
-    assert!(errors.is_empty(), "unknown extension should return no errors");
+    assert!(
+        errors.is_empty(),
+        "unknown extension should return no errors"
+    );
 }
 
 #[test]

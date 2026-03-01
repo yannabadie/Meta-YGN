@@ -492,8 +492,8 @@ impl MemoryStore {
                          LIMIT ?2
                      )",
                 )?;
-                let (total, successes): (u32, u32) =
-                    stmt.query_row(rusqlite::params![task_type, limit], |row| {
+                let (total, successes): (u32, u32) = stmt
+                    .query_row(rusqlite::params![task_type, limit], |row| {
                         Ok((row.get(0)?, row.get(1)?))
                     })?;
                 Ok::<_, rusqlite::Error>((total, successes))

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.12.0 "Observable Runtime"
+### Removed
+- `crates/mcp-bridge/` — redundant since v0.11.0 MCP fusion (workspace: 8→7 crates)
+- `scripts/*.py` — legacy Python hooks replaced by TypeScript in v0.6.0
+
+### Fixed (Expert P0)
+- **Budget display**: hook responses now show session-local budget, not global aggregate
+- **MCP tool contract**: doc comments clarify field mapping, `metacog_prune` wired to ContextPruner
+
+### Added
+- **Prometheus `/metrics` endpoint**: 5 metrics (sessions, events, graph nodes, fatigue, tokens)
+- **Stage-level tracing spans**: `info_span!("metaygn.stage")` on all 12 stages — auto-becomes OTel spans
+- **Tree-sitter verification** (feature: `syntax`): multi-language syntax checking (Rust, Python, JS, TS, TSX) in <10ms
+- **Adaptive competence**: blends historical session success rate (50%) with base competence (50%)
+- **`aletheia eval`**: calibration report (sessions, events, graph, fatigue, heuristic fitness)
+- **`aletheia doctor`**: installation health check (daemon, plugin, hooks, skills, agents, database)
+- **OpenTelemetry deps** (feature: `otel`): optional, for future OTel exporter integration
+
+### Changed
+- Workspace reduced to 7 crates (removed mcp-bridge)
+- CompetenceStage queries SQLite for task-type success rate
+
 ## 0.11.0 "Hardened Core"
 ### Fixed (P0 — Expert-Identified)
 - **Token accounting**: `SessionOutcome.tokens_consumed` now carries real values (was always 0)
