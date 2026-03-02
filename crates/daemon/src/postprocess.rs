@@ -196,7 +196,7 @@ pub async fn after_stop(
     }
 
     // 3. Record session outcome for heuristic evolution
-    let (task_type, risk, strategy, errors, _success_count, duration_ms, tokens_consumed) = {
+    let (task_type, risk, strategy, errors, _success_count, duration_ms, tokens_consumed, tool_calls) = {
         let sess = session.lock().unwrap();
         (
             sess.task_type
@@ -208,6 +208,7 @@ pub async fn after_stop(
             sess.success_count,
             sess.created_at.elapsed().as_millis() as u64,
             sess.tokens_consumed,
+            sess.tool_calls,
         )
     };
 
@@ -271,6 +272,7 @@ pub async fn after_stop(
     tracing::info!(
         session_id = %session_id,
         success = errors == 0,
+        tool_calls = tool_calls,
         "session outcome recorded for heuristic evolution"
     );
 }
