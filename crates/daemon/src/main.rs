@@ -35,13 +35,26 @@ async fn main() -> Result<()> {
             .init();
     }
 
-    // Determine database path: ~/.claude/aletheia/metaygn.db
-    let db_dir = dirs::home_dir()
-        .expect("could not determine home directory")
-        .join(".claude")
-        .join("aletheia");
+    // Determine database path:
+    // 1. METAYGN_DB_PATH env var (set by CLI --db-path flag)
+    // 2. Default: ~/.claude/aletheia/metaygn.db
+    let db_path = std::env::var("METAYGN_DB_PATH")
+        .ok()
+        .filter(|p| !p.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            dirs::home_dir()
+                .expect("could not determine home directory")
+                .join(".claude")
+                .join("aletheia")
+                .join("metaygn.db")
+        });
+
+    let db_dir = db_path
+        .parent()
+        .expect("db_path has no parent directory")
+        .to_path_buf();
     std::fs::create_dir_all(&db_dir)?;
-    let db_path = db_dir.join("metaygn.db");
 
     tracing::info!("Opening database at {}", db_path.display());
     let state = AppState::new(db_path.to_str().unwrap()).await?;
