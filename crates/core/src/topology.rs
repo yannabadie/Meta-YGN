@@ -131,6 +131,15 @@ impl TopologyPlanner {
     }
 }
 
+use crate::policy::TopologyPolicy;
+
+impl TopologyPolicy for TopologyPlanner {
+    fn plan(&self, risk: RiskLevel, difficulty: f32, task_type: TaskType) -> ExecutionPlan {
+        // Delegate to the existing static method.
+        TopologyPlanner::plan(risk, difficulty, task_type)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +156,21 @@ mod tests {
         // The last two should be the double-pass of verify + calibrate.
         assert_eq!(stages[12], "verify");
         assert_eq!(stages[13], "calibrate");
+    }
+
+    #[test]
+    fn topology_planner_satisfies_policy_trait() {
+        use crate::policy::TopologyPolicy;
+        let planner = TopologyPlanner;
+        let plan = planner.plan(RiskLevel::Low, 0.5, TaskType::Bugfix);
+        assert!(!plan.stages.is_empty());
+    }
+
+    #[test]
+    fn topology_policy_is_object_safe() {
+        use crate::policy::TopologyPolicy;
+        let planner: Box<dyn TopologyPolicy> = Box::new(TopologyPlanner);
+        let plan = planner.plan(RiskLevel::High, 0.8, TaskType::Security);
+        assert_eq!(plan.topology, Topology::Horizontal);
     }
 }
