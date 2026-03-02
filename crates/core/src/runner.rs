@@ -114,7 +114,12 @@ impl ControlLoop {
     pub fn run_finalization(&self, ctx: &mut LoopContext) -> Decision {
         for stage_name in &Self::FINALIZATION_STAGES {
             if let Some(stage) = self.stages.iter().find(|s| s.name() == *stage_name) {
-                let _span = tracing::info_span!("metaygn.stage", name = stage.name(), phase = "finalization").entered();
+                let _span = tracing::info_span!(
+                    "metaygn.stage",
+                    name = stage.name(),
+                    phase = "finalization"
+                )
+                .entered();
                 match stage.run(ctx) {
                     StageResult::Continue => continue,
                     StageResult::Skip => {
@@ -138,7 +143,10 @@ impl ControlLoop {
                     }
                 }
             } else {
-                tracing::warn!(stage = *stage_name, "finalization stage not found in pipeline");
+                tracing::warn!(
+                    stage = *stage_name,
+                    "finalization stage not found in pipeline"
+                );
             }
         }
         ctx.decision

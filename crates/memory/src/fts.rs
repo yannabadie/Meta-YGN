@@ -101,11 +101,7 @@ impl UnifiedSearch {
 }
 
 /// Fallback: FTS5 on graph with position-based score (degraded mode).
-async fn fts_fallback_graph(
-    graph: &GraphMemory,
-    query: &str,
-    limit: u32,
-) -> Vec<SearchResult> {
+async fn fts_fallback_graph(graph: &GraphMemory, query: &str, limit: u32) -> Vec<SearchResult> {
     graph
         .search_content(query, limit)
         .await

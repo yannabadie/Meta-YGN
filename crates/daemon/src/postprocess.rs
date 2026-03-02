@@ -201,7 +201,16 @@ pub async fn after_stop(
     }
 
     // 3. Record session outcome for heuristic evolution
-    let (task_type, risk, strategy, errors, _success_count, duration_ms, tokens_consumed, tool_calls) = {
+    let (
+        task_type,
+        risk,
+        strategy,
+        errors,
+        _success_count,
+        duration_ms,
+        tokens_consumed,
+        tool_calls,
+    ) = {
         let sess = session.lock().unwrap();
         (
             sess.task_type

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Events that can trigger hooks in the Claude Code lifecycle.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum HookEvent {
+    #[default]
     SessionStart,
     UserPromptSubmit,
     PreToolUse,
@@ -11,12 +12,6 @@ pub enum HookEvent {
     Stop,
     PreCompact,
     SessionEnd,
-}
-
-impl Default for HookEvent {
-    fn default() -> Self {
-        Self::SessionStart
-    }
 }
 
 /// Input payload sent to a hook when it is invoked.

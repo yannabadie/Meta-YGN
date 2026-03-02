@@ -47,10 +47,8 @@ async fn get_calibration(State(state): State<AppState>) -> Json<serde_json::Valu
     for i in 0..5 {
         let lo = i as f64 * 0.2;
         let hi = lo + 0.2;
-        let bucket_pairs: Vec<&(f64, f64)> = pairs
-            .iter()
-            .filter(|(c, _)| *c >= lo && *c < hi)
-            .collect();
+        let bucket_pairs: Vec<&(f64, f64)> =
+            pairs.iter().filter(|(c, _)| *c >= lo && *c < hi).collect();
         let count = bucket_pairs.len();
         let avg_success = if count > 0 {
             bucket_pairs.iter().map(|(_, o)| o).sum::<f64>() / count as f64

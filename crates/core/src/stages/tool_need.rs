@@ -75,7 +75,10 @@ mod tests {
         input.tool_name = tool_name.map(|s| s.to_string());
         if let Some(cmd) = command {
             let mut map = serde_json::Map::new();
-            map.insert("command".to_string(), serde_json::Value::String(cmd.to_string()));
+            map.insert(
+                "command".to_string(),
+                serde_json::Value::String(cmd.to_string()),
+            );
             input.tool_input = Some(serde_json::Value::Object(map));
         }
         LoopContext::new(input)
@@ -86,7 +89,12 @@ mod tests {
         let mut ctx = make_ctx(Some("Bash"), Some("echo hello world"));
         ToolNeedStage.run(&mut ctx);
         assert!(!ctx.tool_necessary);
-        assert!(ctx.tool_necessity_reason.as_deref().unwrap().contains("echo"));
+        assert!(
+            ctx.tool_necessity_reason
+                .as_deref()
+                .unwrap()
+                .contains("echo")
+        );
     }
 
     #[test]

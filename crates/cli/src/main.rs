@@ -761,10 +761,7 @@ async fn cmd_eval() -> Result<()> {
                     .get("avg_predicted")
                     .and_then(|v| v.as_f64())
                     .unwrap_or(0.0);
-                let actual = b
-                    .get("avg_actual")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
+                let actual = b.get("avg_actual").and_then(|v| v.as_f64()).unwrap_or(0.0);
                 let n = b.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
                 if n > 0 {
                     println!(

@@ -28,10 +28,12 @@ impl FastEmbedProvider {
 
     /// Initialise with a specific model and dimension.
     pub fn with_model(model_name: EmbeddingModel, dimension: usize) -> Result<Self> {
-        let model = TextEmbedding::try_new(
-            InitOptions::new(model_name).with_show_download_progress(true),
-        )?;
-        Ok(Self { model, dim: dimension })
+        let model =
+            TextEmbedding::try_new(InitOptions::new(model_name).with_show_download_progress(true))?;
+        Ok(Self {
+            model,
+            dim: dimension,
+        })
     }
 }
 

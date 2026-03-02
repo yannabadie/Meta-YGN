@@ -97,8 +97,7 @@ impl AppState {
             }
         };
         #[cfg(not(feature = "embeddings"))]
-        let embedding: Arc<dyn EmbeddingProvider> =
-            Arc::new(HashEmbedProvider::new(128));
+        let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
         Ok(Self {
             memory: Arc::new(store),
@@ -141,8 +140,7 @@ impl AppState {
             }
         };
         #[cfg(not(feature = "embeddings"))]
-        let embedding: Arc<dyn EmbeddingProvider> =
-            Arc::new(HashEmbedProvider::new(128));
+        let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
         Ok(Self {
             memory: Arc::new(store),
