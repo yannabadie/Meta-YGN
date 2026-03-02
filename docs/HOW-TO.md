@@ -175,6 +175,34 @@ Claude Code
   └── agents/ (6 specialized agents: main, skeptic, verifier, researcher, cartographer, cost-auditor)
 ```
 
+## For AI Agents Reading This
+
+MetaYGN communicates with you through hook responses. Here's how to interpret them:
+
+### PreToolUse Response
+- `permissionDecision: "allow"` (or absent) — proceed normally
+- `permissionDecision: "deny"` — **STOP**, do not execute this tool
+- `permissionDecision: "ask"` — ask the human for confirmation first
+- `additionalContext` — contains risk level, strategy hint, budget status
+
+### PostToolUse Response
+- `additionalContext` contains verification results (syntax check, test output parsing)
+- Treat this as evidence for your reasoning chain
+
+### Stop Response
+- Contains completion verification and metacognitive vector
+- Fill in the proof packet: Goal, Changes, Evidence, Uncertainty, Next Step
+
+### UserPromptSubmit Response
+- `additionalContext` — risk classification, strategy recommendation, topology
+- Use this to calibrate your approach to the task
+
+### Key Metrics
+- `[risk:low|medium|high]` — how risky this action is
+- `[strategy:Rapid|StepByStep|TreeExplore|...]` — recommended reasoning strategy
+- `[budget: Ntok/$N used of Ntok/$N]` — token/cost budget remaining
+- `[latency: Nms]` — daemon processing time
+
 ## Troubleshooting
 
 | Problem | Solution |
