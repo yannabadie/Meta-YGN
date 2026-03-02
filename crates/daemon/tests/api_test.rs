@@ -23,7 +23,7 @@ async fn health_returns_ok() {
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["status"], "ok");
-    assert_eq!(body["version"], "0.1.0");
+    assert_eq!(body["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(body["kernel"], "verified");
 }
 

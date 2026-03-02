@@ -1,6 +1,6 @@
 # Aletheia Daemon API Reference
 
-**Version**: 0.12.0 "Observable Runtime"
+**Version**: 1.0.0 "Ship the Proof"
 **Base URL**: `http://127.0.0.1:{port}` (port read from `~/.claude/aletheia/daemon.port`)
 **Binary**: `aletheiad` (crate: `metaygn-daemon`)
 
@@ -23,7 +23,7 @@ Returns daemon liveness, version, and kernel verification status.
 ```json
 {
   "status": "ok",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "kernel": "verified"
 }
 ```
@@ -466,6 +466,33 @@ curl http://127.0.0.1:$PORT/memory/graph/stats
 
 ---
 
+### `POST /memory/semantic`
+
+Vector-similarity search over graph nodes using the configured embedding provider.
+
+**Request**:
+
+```json
+{
+  "query": "authentication token",
+  "limit": 10
+}
+```
+
+**Response**:
+
+```json
+{
+  "results": [
+    {"id": "task-001", "label": "Fix auth bug", "content": "...", "score": 0.87}
+  ],
+  "provider": "hash",
+  "dimension_warning": false
+}
+```
+
+---
+
 ## Sandbox
 
 ### `POST /sandbox/exec`
@@ -769,6 +796,56 @@ curl http://127.0.0.1:$PORT/heuristics/population
 
 ---
 
+## Replay
+
+### `GET /replay/sessions`
+
+List all recorded sessions with their hook timelines.
+
+**Request**: none
+
+**Response**:
+
+```json
+{
+  "sessions": ["session-abc-123", "session-def-456"]
+}
+```
+
+### `GET /replay/{session_id}`
+
+Get the hook timeline for a specific session.
+
+**Request**: none
+
+**Response**:
+
+```json
+{
+  "events": [
+    {
+      "hook_event": "PreToolUse",
+      "latency_ms": 5,
+      "timestamp": "2026-02-28T10:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Trajectories
+
+### `GET /trajectories/export`
+
+Export RL trajectories in JSONL format.
+
+**Request query params**: `limit` (optional, default 100)
+
+**Response**: JSONL (application/x-ndjson)
+
+---
+
 ## Forge
 
 ### `POST /forge/generate`
@@ -918,3 +995,109 @@ List all available tool templates with their metadata.
 ```bash
 curl http://127.0.0.1:$PORT/forge/templates
 ```
+
+---
+
+## Budget
+
+### `GET /budget/{session_id}`
+
+Returns the budget for a specific session.
+
+**Request**: none
+
+**Response**: Same schema as `GET /budget`, scoped to the session.
+
+**Example**:
+
+```bash
+curl http://127.0.0.1:$PORT/budget/my-session-id
+```
+
+---
+
+## Calibration
+
+### `GET /calibration`
+
+Returns Brier score and calibration buckets from session outcomes.
+
+**Request**: none
+
+**Response**:
+
+```json
+{
+  "brier_score": 0.1250,
+  "sample_count": 42,
+  "buckets": [
+    {"range": "0-20%", "count": 5, "avg_predicted": 0.1, "avg_actual": 0.2},
+    {"range": "20-40%", "count": 8, "avg_predicted": 0.3, "avg_actual": 0.25},
+    {"range": "40-60%", "count": 12, "avg_predicted": 0.5, "avg_actual": 0.5},
+    {"range": "60-80%", "count": 10, "avg_predicted": 0.7, "avg_actual": 0.8},
+    {"range": "80-100%", "count": 7, "avg_predicted": 0.9, "avg_actual": 0.86}
+  ]
+}
+```
+
+**Example**:
+
+```bash
+curl http://127.0.0.1:$PORT/calibration
+```
+
+---
+
+## Metrics
+
+### `GET /metrics`
+
+Returns Prometheus-format metrics for monitoring.
+
+**Request**: none
+
+**Response** (text/plain):
+
+```
+# HELP metaygn_active_sessions Current active sessions
+# TYPE metaygn_active_sessions gauge
+metaygn_active_sessions 2
+# HELP metaygn_events_total Total events logged
+# TYPE metaygn_events_total counter
+metaygn_events_total 42
+# HELP metaygn_graph_nodes_total Total graph nodes
+# TYPE metaygn_graph_nodes_total gauge
+metaygn_graph_nodes_total 15
+# HELP metaygn_fatigue_score Current global fatigue score
+# TYPE metaygn_fatigue_score gauge
+metaygn_fatigue_score 0.15
+# HELP metaygn_tokens_consumed_total Total tokens consumed
+# TYPE metaygn_tokens_consumed_total counter
+metaygn_tokens_consumed_total 25000
+```
+
+**Example**:
+
+```bash
+curl http://127.0.0.1:$PORT/metrics
+```
+
+---
+
+## Admin
+
+### `POST /admin/shutdown`
+
+Gracefully shuts down the daemon. Removes the port file.
+
+**Request**: none
+
+**Response**: HTTP 200 (daemon shuts down immediately after).
+
+**Example**:
+
+```bash
+curl -X POST http://127.0.0.1:$PORT/admin/shutdown
+```
+
+---
