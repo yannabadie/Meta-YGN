@@ -458,7 +458,6 @@ async fn post_tool_use(
         let state_clone = state.clone();
         let session_clone = session_ctx.clone();
         let tool_name_clone = tool_name.clone();
-        let response_clone = response.clone();
         let file_path_clone = input
             .tool_input
             .as_ref()
@@ -471,7 +470,6 @@ async fn post_tool_use(
                 session_clone,
                 tool_name_clone,
                 is_error,
-                response_clone,
                 file_path_clone,
             )
             .await;

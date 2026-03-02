@@ -60,7 +60,6 @@ pub async fn after_post_tool_use(
     session: Arc<Mutex<SessionContext>>,
     tool_name: String,
     was_error: bool,
-    tool_response: String,
     file_path: Option<String>,
 ) {
     // 1. Update entropy tracker in session
@@ -107,33 +106,39 @@ pub async fn after_post_tool_use(
     // Store for chaining
     session.lock().unwrap().last_evidence_node_id = Some(evidence_id);
 
-    // 3. Tier 2: async forge verification for Python files
+    // 3. Tier 2: async forge verification for Python files written to disk
     let is_python_file = file_path
         .as_ref()
         .map(|p| p.ends_with(".py"))
         .unwrap_or(false);
     if (tool_name == "Write" || tool_name == "Edit") && is_python_file {
-        let content = &tool_response;
-        if !content.is_empty() && content.len() < 10_000 {
-            let mut tmp_forge = crate::forge::ForgeEngine::new(state.sandbox.clone());
-            let params = std::collections::HashMap::new();
-            if let Ok(spec) = tmp_forge.generate("syntax-checker", &params) {
-                match tmp_forge.execute(&spec, content).await {
-                    Ok(result) => {
-                        if !result.success
-                            || result.stdout.contains("\"valid\": false")
-                            || result.stdout.contains("\"valid\":false")
-                        {
-                            let mut sess = session.lock().unwrap();
-                            sess.verification_results.push(
-                                "syntax_check_failed: Python syntax error detected by forge"
-                                    .to_string(),
-                            );
-                            tracing::warn!("Tier 2 forge: Python syntax error detected");
+        // Read actual file content from disk (not tool_response which is the hook message)
+        if let Some(ref path) = file_path {
+            match tokio::fs::read_to_string(path).await {
+                Ok(content) if !content.is_empty() && content.len() < 10_000 => {
+                    let mut tmp_forge = crate::forge::ForgeEngine::new(state.sandbox.clone());
+                    let params = std::collections::HashMap::new();
+                    if let Ok(spec) = tmp_forge.generate("syntax-checker", &params) {
+                        match tmp_forge.execute(&spec, &content).await {
+                            Ok(result) => {
+                                if !result.success
+                                    || result.stdout.contains("\"valid\": false")
+                                    || result.stdout.contains("\"valid\":false")
+                                {
+                                    let mut sess = session.lock().unwrap();
+                                    sess.verification_results.push(format!(
+                                        "syntax_check_failed: Python syntax error in {}",
+                                        path
+                                    ));
+                                    tracing::warn!(file = %path, "Tier 2 forge: Python syntax error");
+                                }
+                            }
+                            Err(e) => tracing::debug!("Tier 2 forge execution failed: {e}"),
                         }
                     }
-                    Err(e) => tracing::debug!("Tier 2 forge execution failed: {e}"),
                 }
+                Ok(_) => {} // empty or too large, skip
+                Err(e) => tracing::debug!(file = ?path, "Tier 2: could not read file: {e}"),
             }
         }
     }
