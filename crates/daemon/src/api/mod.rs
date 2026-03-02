@@ -11,6 +11,7 @@ pub mod profiler;
 pub mod replay;
 pub mod sandbox;
 pub mod semantic;
+pub mod session_state;
 pub mod trajectories;
 
 use axum::Router;
@@ -36,6 +37,7 @@ pub fn router(state: AppState) -> Router {
         .merge(trajectories::routes())
         .merge(admin::routes())
         .merge(calibration::routes())
+        .merge(session_state::routes())
         .merge(crate::metrics::routes())
         .route("/proxy/anthropic", post(service::prune_messages))
         .with_state(state)

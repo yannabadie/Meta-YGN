@@ -94,6 +94,13 @@ impl SessionStore {
             .clone()
     }
 
+    /// Get a session context without creating one.
+    /// Returns `None` if the session does not exist.
+    pub fn get(&self, session_id: &str) -> Option<Arc<Mutex<SessionContext>>> {
+        let map = self.sessions.lock().expect("session store mutex poisoned");
+        map.get(session_id).cloned()
+    }
+
     /// Remove a session (called at session end).
     pub fn remove(&self, session_id: &str) -> Option<Arc<Mutex<SessionContext>>> {
         let mut map = self.sessions.lock().expect("session store mutex poisoned");
