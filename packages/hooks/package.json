@@ -2,6 +2,10 @@
   "name": "@metaygn/hooks",
   "version": "0.1.0",
   "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@metaygn/shared": "workspace:*"
   },

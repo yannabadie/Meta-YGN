@@ -6,6 +6,8 @@ settings:
 
 importers:
 
+  .: {}
+
   packages/hooks:
     dependencies:
       '@metaygn/shared':
