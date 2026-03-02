@@ -13,8 +13,14 @@ pub enum HookEvent {
     SessionEnd,
 }
 
+impl Default for HookEvent {
+    fn default() -> Self {
+        Self::SessionStart
+    }
+}
+
 /// Input payload sent to a hook when it is invoked.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HookInput {
     pub hook_event_name: HookEvent,
     pub session_id: Option<String>,
