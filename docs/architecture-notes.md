@@ -350,7 +350,7 @@ SessionEnd (async)
 | PostToolUseFailure | post-tool-use-failure.ts | None (TS-only) | Error diagnosis, always emits output |
 | Stop | stop.ts | POST /hooks/stop | Completion verification + outcome recording |
 | PreCompact | pre-compact.ts | None (TS-only) | Static compaction guidance |
-| SessionEnd | session-end.ts | POST /hooks/session-end (fire-and-forget) | Cleanup, async |
+| SessionEnd | session-end.ts | POST /hooks/session-end (fire-and-forget) | Logs event, idempotent cleanup |
 
 **Design rationale:** Hooks that require daemon state (sessions, guard pipeline, control loop,
 graph memory) call the daemon. Hooks that are stateless (PostToolUseFailure, PreCompact) run

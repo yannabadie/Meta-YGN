@@ -179,6 +179,28 @@ curl -X POST http://127.0.0.1:$PORT/hooks/stop \
 
 ---
 
+### `POST /hooks/session-end`
+
+Fire-and-forget endpoint called by the SessionEnd hook. Logs the session closure
+event for replay and performs idempotent session cleanup.
+
+**Request**: `HookInput` (typically with `session_id` only).
+
+**Response**: `HookOutput` with `additionalContext: "Session ended."`
+
+**Example**:
+
+```bash
+curl -X POST http://127.0.0.1:$PORT/hooks/session-end \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hook_event_name": "SessionEnd",
+    "session_id": "sess-abc-123"
+  }'
+```
+
+---
+
 ### `POST /hooks/analyze`
 
 Debug endpoint. Runs the full 12-stage control loop and returns the complete
