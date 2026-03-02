@@ -939,3 +939,56 @@ async fn heuristic_persistence_roundtrip() {
         "Expected at least one outcome persisted"
     );
 }
+
+// ---------------------------------------------------------------------------
+// P0.11: Session-scoped /budget endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn session_budget_returns_defaults() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // First, trigger session creation via a hook call so the session exists.
+    let url = format!("http://{addr}/hooks/pre-tool-use");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "echo hello"},
+            "session_id": "test-session-budget"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // Now query the session-scoped budget endpoint
+    let url = format!("http://{addr}/budget/test-session-budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    // Should have the default budget fields from a fresh SessionBudget
+    assert!(
+        body.get("max_tokens").is_some(),
+        "Expected 'max_tokens' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("consumed_tokens").is_some(),
+        "Expected 'consumed_tokens' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("max_cost_usd").is_some(),
+        "Expected 'max_cost_usd' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("consumed_cost_usd").is_some(),
+        "Expected 'consumed_cost_usd' in session budget: {body:?}"
+    );
+    assert_eq!(
+        body["consumed_tokens"], 0,
+        "Fresh session budget should have 0 consumed tokens"
+    );
+}
