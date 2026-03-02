@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod budget;
+pub mod calibration;
 pub mod forge;
 pub mod graph;
 pub mod health;
@@ -34,6 +35,7 @@ pub fn router(state: AppState) -> Router {
         .merge(semantic::routes())
         .merge(trajectories::routes())
         .merge(admin::routes())
+        .merge(calibration::routes())
         .merge(crate::metrics::routes())
         .route("/proxy/anthropic", post(service::prune_messages))
         .with_state(state)

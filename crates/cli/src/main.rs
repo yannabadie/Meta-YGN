@@ -737,6 +737,48 @@ async fn cmd_eval() -> Result<()> {
         fatigue_score
     );
 
+    // Calibration / Brier score
+    if let Ok(resp) = client.get(format!("{base}/calibration")).send().await
+        && let Ok(cal) = resp.json::<Value>().await
+    {
+        let brier = cal
+            .get("brier_score")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let count = cal
+            .get("sample_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        println!("\u{2560}{}\u{2563}", "\u{2550}".repeat(46));
+        println!(
+            "\u{2551}  Brier score:         {:.4}  (n={:<5})      \u{2551}",
+            brier, count
+        );
+        if let Some(buckets) = cal.get("buckets").and_then(|v| v.as_array()) {
+            for b in buckets {
+                let range = b.get("range").and_then(|v| v.as_str()).unwrap_or("?");
+                let predicted = b
+                    .get("avg_predicted")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let actual = b
+                    .get("avg_actual")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let n = b.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+                if n > 0 {
+                    println!(
+                        "\u{2551}    {:>8}: pred {:.0}% actual {:.0}% (n={:<3})\u{2551}",
+                        range,
+                        predicted * 100.0,
+                        actual * 100.0,
+                        n
+                    );
+                }
+            }
+        }
+    }
+
     println!("\u{255a}{}\u{255d}", "\u{2550}".repeat(46));
 
     Ok(())

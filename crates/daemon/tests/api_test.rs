@@ -941,6 +941,45 @@ async fn heuristic_persistence_roundtrip() {
 }
 
 // ---------------------------------------------------------------------------
+// P1.7: Calibration / Brier score endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn calibration_endpoint_returns_brier_and_buckets() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/calibration");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(
+        body.get("brier_score").is_some(),
+        "Expected 'brier_score' in calibration response: {body:?}"
+    );
+    assert!(
+        body.get("sample_count").is_some(),
+        "Expected 'sample_count' in calibration response: {body:?}"
+    );
+    assert!(
+        body.get("buckets").is_some(),
+        "Expected 'buckets' in calibration response: {body:?}"
+    );
+    let buckets = body["buckets"].as_array().unwrap();
+    assert_eq!(
+        buckets.len(),
+        5,
+        "Expected 5 calibration buckets, got {}",
+        buckets.len()
+    );
+    // Each bucket should have the expected fields
+    for bucket in buckets {
+        assert!(bucket.get("range").is_some());
+        assert!(bucket.get("count").is_some());
+        assert!(bucket.get("avg_predicted").is_some());
+        assert!(bucket.get("avg_actual").is_some());
+    }
+}
+
+// ---------------------------------------------------------------------------
 // P0.11: Session-scoped /budget endpoint
 // ---------------------------------------------------------------------------
 
