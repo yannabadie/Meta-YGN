@@ -1,5 +1,7 @@
 # Aletheia-Nexus
 
+> v1.0.0 "Ship the Proof" — [Release Notes](https://github.com/yannabadie/Meta-YGN/releases/tag/v1.0.0)
+
 A local-first metacognitive control plane for coding agents.
 
 ## Architecture
@@ -57,6 +59,7 @@ These features are tested end-to-end and ship with the daemon:
 - **Completion Verifier** -- validates that files mentioned in "Done!" claims actually exist before allowing the claim through
 - **Fatigue Profiler** -- tracks error recovery plasticity and escalates progressively (hint, critique, auto-escalate)
 - **Budget Tracker** -- per-session token and cost tracking with 80% utilization warnings, shown on every hook response
+- **Calibration Report** -- `aletheia eval` computes real Brier score with calibration buckets from session outcomes
 - **Session Replay** -- `aletheia replay` shows the full hook timeline for any past session
 - **MCP Bridge** -- 5 tools (`metacog_classify`, `metacog_verify`, `metacog_recall`, `metacog_status`, `metacog_prune`) exposed as an MCP stdio server
 
@@ -79,6 +82,8 @@ aletheia start [--db-path PATH]                         Start the daemon
 aletheia stop                                            Stop the daemon
 aletheia status                                          Show daemon health
 aletheia recall --query Q [--limit N]                    Search memory
+aletheia eval                                            Show calibration report (Brier score)
+aletheia doctor                                          Check installation health
 aletheia top                                             Real-time TUI dashboard
 aletheia init [--force]                                  Scaffold .claude/ config
 aletheia mcp                                             Launch MCP stdio server
@@ -118,9 +123,10 @@ claude plugin validate .         # validate plugin structure
 
 ### Optional features
 ```bash
-cargo build --features mcp       # MCP stdio server (aletheiad --mcp)
-cargo build --features syntax    # tree-sitter multi-language verification
-cargo build --features otel      # OpenTelemetry tracing spans
+cargo build --features mcp        # MCP stdio server (aletheiad --mcp)
+cargo build --features syntax     # tree-sitter multi-language verification
+cargo build --features otel       # OpenTelemetry tracing spans
+cargo build --features embeddings # Neural embeddings (fastembed, bge-small-en-v1.5)
 ```
 
 ## Research Foundation

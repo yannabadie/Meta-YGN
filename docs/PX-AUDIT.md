@@ -31,7 +31,7 @@ Status: ✅ FIXED | ⬜ OPEN | 🔄 PARTIAL | ⏭️ DEFERRED
 | P1.5 | Graph nodes have embedding: None | ✅ FIXED v1.0.0 | Auto-embed via EmbeddingProvider in postprocess |
 | P1.6 | Benchmarks collect-only in CI | ⏭️ DEFERRED | No Python benchmarks in current stack |
 | P1.7 | aletheia eval lacks real Brier score | ✅ FIXED v1.0.0 | /calibration endpoint + Brier formula + buckets |
-| P1.8 | 8 hooks claimed but daemon routes only 4+1 | ✅ FIXED v1.0.0 | Documented in architecture-notes.md: 4 stateful + 4 local |
+| P1.8 | 8 hooks claimed but daemon routes only 4+1 | ✅ FIXED v1.0.0 | 5 daemon routes + 3 TS-only, documented in architecture-notes.md |
 | P1.9 | No How-To guide for new users | ✅ FIXED v1.0.0 | docs/HOW-TO.md created |
 
 ## P2 — Improves Product Quality
@@ -69,7 +69,7 @@ Status: ✅ FIXED | ⬜ OPEN | 🔄 PARTIAL | ⏭️ DEFERRED
 | P3 | 6 | **1** | 5 (deferred to v1.1) |
 | **Total** | **36** | **29** | **7** |
 
-**v1.0 status: All P0 resolved. All P1 resolved except E2E test automation. All P2 resolved except cosmetic naming.**
+**v1.0.0 released. All P0 resolved. All P1 resolved except E2E test automation. All P2 resolved except cosmetic naming. P3 deferred to v1.1.**
 
 ## Research: Key Resources for Future Work
 

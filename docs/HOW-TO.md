@@ -158,8 +158,8 @@ Claude Code
   │
   ├── hooks/ (8 lifecycle events, TypeScript via npx tsx)
   │     ├── Calls daemon HTTP API (350ms timeout, local fallback)
-  │     ├── 4 hooks call daemon for stateful decisions (PreToolUse, PostToolUse, UserPromptSubmit, Stop)
-  │     └── 4 hooks run locally in TS for speed (SessionStart, PostToolUseFailure, PreCompact, SessionEnd)
+  │     ├── 5 hooks call daemon (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SessionEnd)
+  │     └── 3 hooks run locally in TS for speed (SessionStart, PostToolUseFailure, PreCompact)
   │
   ├── aletheiad (Rust daemon, 127.0.0.1:dynamic-port)
   │     ├── 12-stage control loop (classify→learn)
