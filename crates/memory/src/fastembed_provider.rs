@@ -12,6 +12,7 @@ use crate::embeddings::EmbeddingProvider;
 /// Default model: BGE-Small-EN v1.5 (384 dimensions).
 pub struct FastEmbedProvider {
     model: TextEmbedding,
+    dim: usize,
 }
 
 impl FastEmbedProvider {
@@ -22,7 +23,15 @@ impl FastEmbedProvider {
         let model = TextEmbedding::try_new(
             InitOptions::new(EmbeddingModel::BGESmallENV15).with_show_download_progress(false),
         )?;
-        Ok(Self { model })
+        Ok(Self { model, dim: 384 })
+    }
+
+    /// Initialise with a specific model and dimension.
+    pub fn with_model(model_name: EmbeddingModel, dimension: usize) -> Result<Self> {
+        let model = TextEmbedding::try_new(
+            InitOptions::new(model_name).with_show_download_progress(true),
+        )?;
+        Ok(Self { model, dim: dimension })
     }
 }
 
@@ -42,7 +51,7 @@ impl EmbeddingProvider for FastEmbedProvider {
     }
 
     fn dimension(&self) -> usize {
-        384
+        self.dim
     }
 
     fn provider_name(&self) -> &str {

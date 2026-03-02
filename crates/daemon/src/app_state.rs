@@ -5,6 +5,7 @@ use anyhow::Result;
 use metaygn_core::heuristics::evolver::{HeuristicEvolver, HeuristicVersion};
 use metaygn_core::heuristics::fitness::{FitnessScore, SessionOutcome};
 use metaygn_core::runner::ControlLoop;
+use metaygn_memory::embeddings::{EmbeddingProvider, HashEmbedProvider};
 use metaygn_memory::graph::GraphMemory;
 use metaygn_memory::store::MemoryStore;
 use metaygn_sandbox::ProcessSandbox;
@@ -30,6 +31,7 @@ pub struct AppState {
     pub budget: Arc<Mutex<SessionBudget>>,
     pub plasticity: Arc<Mutex<PlasticityTracker>>,
     pub sessions: Arc<SessionStore>,
+    pub embedding: Arc<dyn EmbeddingProvider>,
 }
 
 impl AppState {
@@ -81,6 +83,23 @@ impl AppState {
         let mut evolver = HeuristicEvolver::new(20);
         Self::load_persisted_heuristics(&store, &mut evolver).await;
 
+        #[cfg(feature = "embeddings")]
+        let embedding: Arc<dyn EmbeddingProvider> = {
+            match metaygn_memory::fastembed_provider::FastEmbedProvider::new() {
+                Ok(p) => {
+                    tracing::info!("Embedding provider: fastembed ({}d)", p.dimension());
+                    Arc::new(p)
+                }
+                Err(e) => {
+                    tracing::warn!("fastembed init failed: {e}, falling back to hash");
+                    Arc::new(HashEmbedProvider::new(128))
+                }
+            }
+        };
+        #[cfg(not(feature = "embeddings"))]
+        let embedding: Arc<dyn EmbeddingProvider> =
+            Arc::new(HashEmbedProvider::new(128));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -93,6 +112,7 @@ impl AppState {
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
+            embedding,
         })
     }
 
@@ -107,6 +127,23 @@ impl AppState {
         let mut evolver = HeuristicEvolver::new(20);
         Self::load_persisted_heuristics(&store, &mut evolver).await;
 
+        #[cfg(feature = "embeddings")]
+        let embedding: Arc<dyn EmbeddingProvider> = {
+            match metaygn_memory::fastembed_provider::FastEmbedProvider::new() {
+                Ok(p) => {
+                    tracing::info!("Embedding provider: fastembed ({}d)", p.dimension());
+                    Arc::new(p)
+                }
+                Err(e) => {
+                    tracing::warn!("fastembed init failed: {e}, falling back to hash");
+                    Arc::new(HashEmbedProvider::new(128))
+                }
+            }
+        };
+        #[cfg(not(feature = "embeddings"))]
+        let embedding: Arc<dyn EmbeddingProvider> =
+            Arc::new(HashEmbedProvider::new(128));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -119,6 +156,7 @@ impl AppState {
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
+            embedding,
         })
     }
 }

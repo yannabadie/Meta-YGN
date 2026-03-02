@@ -1,8 +1,8 @@
 //! Semantic search API endpoint.
 //!
 //! Exposes a `POST /memory/semantic` route that embeds the incoming query
-//! via [`HashEmbedProvider`] and performs cosine-similarity search over all
-//! graph nodes that have stored embeddings.
+//! via the shared [`EmbeddingProvider`] from [`AppState`] and performs
+//! cosine-similarity search over all graph nodes that have stored embeddings.
 
 use axum::Router;
 use axum::extract::State;
@@ -11,8 +11,6 @@ use axum::routing::post;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::{Value, json};
-
-use metaygn_memory::embeddings::{EmbeddingProvider, HashEmbedProvider};
 
 use crate::app_state::AppState;
 
@@ -42,18 +40,17 @@ struct SemanticResult {
 
 /// POST /memory/semantic -- vector-similarity search over graph nodes.
 ///
-/// NOTE: Uses HashEmbedProvider (64 dim) by default. Nodes embedded with a
-/// different provider (e.g. FastEmbedProvider at 384 dim) will not match due
-/// to dimension mismatch. A future version should accept provider config from
-/// AppState or auto-detect from stored node dimensions.
+/// Uses the shared `EmbeddingProvider` from `AppState`, which is either
+/// `FastEmbedProvider` (384d, when the `embeddings` feature is enabled) or
+/// `HashEmbedProvider` (128d, fallback).  Nodes are embedded with the same
+/// provider at insert time, so dimensions always match.
 async fn semantic_search(
     State(state): State<AppState>,
     Json(req): Json<SemanticSearchRequest>,
 ) -> Json<Value> {
     let limit = req.limit.unwrap_or(10);
-    let provider = HashEmbedProvider::new(64);
 
-    let query_emb = match provider.embed(&req.query) {
+    let query_emb = match state.embedding.embed(&req.query) {
         Ok(emb) => emb,
         Err(e) => {
             return Json(json!({ "error": format!("embedding failed: {e}") }));
@@ -81,7 +78,7 @@ async fn semantic_search(
                 .collect();
             Json(json!({
                 "results": items,
-                "provider": provider.provider_name(),
+                "provider": state.embedding.provider_name(),
                 "dimension_warning": all_zero,
             }))
         }

@@ -29,16 +29,17 @@ pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<Sessio
     };
 
     let task_id = format!("task-{}", uuid::Uuid::new_v4());
+    let content = format!(
+        "task_type={}, risk={}, strategy={}",
+        task_type, risk, strategy
+    );
     let node = MemoryNode {
         id: task_id.clone(),
         node_type: NodeType::Task,
         scope: Scope::Session,
         label: format!("Task: {} (risk: {})", task_type, risk),
-        content: format!(
-            "task_type={}, risk={}, strategy={}",
-            task_type, risk, strategy
-        ),
-        embedding: None,
+        embedding: state.embedding.embed(&content).ok(),
+        content,
         created_at: chrono::Utc::now().to_rfc3339(),
         access_count: 0,
     };
@@ -71,6 +72,7 @@ pub async fn after_post_tool_use(
 
     // 2. Insert Evidence node into graph + edge from Task
     let evidence_id = format!("evidence-{}", uuid::Uuid::new_v4());
+    let content = format!("tool={}, error={}", tool_name, was_error);
     let node = MemoryNode {
         id: evidence_id.clone(),
         node_type: NodeType::Evidence,
@@ -80,8 +82,8 @@ pub async fn after_post_tool_use(
             tool_name,
             if was_error { "error" } else { "success" }
         ),
-        content: format!("tool={}, error={}", tool_name, was_error),
-        embedding: None,
+        embedding: state.embedding.embed(&content).ok(),
+        content,
         created_at: chrono::Utc::now().to_rfc3339(),
         access_count: 0,
     };
@@ -154,8 +156,8 @@ pub async fn after_stop(
         node_type: NodeType::Decision,
         scope: Scope::Session,
         label: format!("Decision: {}", decision),
+        embedding: state.embedding.embed(&decision).ok(),
         content: decision.clone(),
-        embedding: None,
         created_at: chrono::Utc::now().to_rfc3339(),
         access_count: 0,
     };
@@ -183,8 +185,8 @@ pub async fn after_stop(
             node_type: NodeType::Lesson,
             scope: Scope::Project,
             label: lesson.clone(),
+            embedding: state.embedding.embed(lesson).ok(),
             content: lesson.clone(),
-            embedding: None,
             created_at: chrono::Utc::now().to_rfc3339(),
             access_count: 0,
         };
