@@ -36,6 +36,9 @@ pub struct LoopContext {
     /// Whether a tool invocation is required (set by `tool_need` stage).
     pub tool_necessary: bool,
 
+    /// Why the tool was deemed necessary (or not). Advisory string for additionalContext.
+    pub tool_necessity_reason: Option<String>,
+
     /// Token / cost / latency budget (set by `budget` stage).
     pub budget: BudgetState,
 
@@ -81,6 +84,7 @@ impl LoopContext {
             difficulty: 0.5,
             competence: 0.7,
             tool_necessary: false,
+            tool_necessity_reason: None,
             budget: BudgetState {
                 max_tokens: 5000,
                 consumed_tokens: 0,

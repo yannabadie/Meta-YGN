@@ -100,6 +100,50 @@ impl ControlLoop {
         ctx.decision
     }
 
+    /// Finalization stages: always run calibrate (9), compact (10), decide (11), learn (12).
+    ///
+    /// Called by the Stop hook handler to ensure finalization happens regardless
+    /// of the topology plan selected at prompt time. This fixes the bug where
+    /// Research/Trivial topologies skipped critical finalization stages.
+    pub const FINALIZATION_STAGES: [&str; 4] = ["calibrate", "compact", "decide", "learn"];
+
+    /// Run finalization stages unconditionally.
+    ///
+    /// Unlike `run_plan()` which respects the topology, this method always
+    /// runs calibrate -> compact -> decide -> learn. Called by the Stop handler.
+    pub fn run_finalization(&self, ctx: &mut LoopContext) -> Decision {
+        for stage_name in &Self::FINALIZATION_STAGES {
+            if let Some(stage) = self.stages.iter().find(|s| s.name() == *stage_name) {
+                let _span = tracing::info_span!("metaygn.stage", name = stage.name(), phase = "finalization").entered();
+                match stage.run(ctx) {
+                    StageResult::Continue => continue,
+                    StageResult::Skip => {
+                        // In finalization, Skip means "skip this stage" not "stop pipeline"
+                        tracing::debug!(stage = stage.name(), "stage skipped (finalization)");
+                        continue;
+                    }
+                    StageResult::Escalate(reason) => {
+                        ctx.decision = Decision::Escalate;
+                        ctx.lessons.push(format!(
+                            "escalated at stage '{}': {}",
+                            stage.name(),
+                            reason
+                        ));
+                        tracing::warn!(
+                            stage = stage.name(),
+                            %reason,
+                            "pipeline escalated (finalization)"
+                        );
+                        break;
+                    }
+                }
+            } else {
+                tracing::warn!(stage = *stage_name, "finalization stage not found in pipeline");
+            }
+        }
+        ctx.decision
+    }
+
     /// Run only the stages specified in an [`ExecutionPlan`].
     ///
     /// Stages are looked up by name and executed in the order listed in
@@ -161,5 +205,55 @@ mod tests {
         deduped.sort();
         deduped.dedup();
         assert_eq!(names.len(), deduped.len(), "duplicate stage names found");
+    }
+
+    #[test]
+    fn run_finalization_always_runs_calibrate_compact_decide_learn() {
+        let cl = ControlLoop::new();
+        let input = metaygn_shared::protocol::HookInput::default();
+        let mut ctx = crate::context::LoopContext::new(input);
+        // Simulate a research session where earlier stages already ran
+        ctx.risk = metaygn_shared::state::RiskLevel::Low;
+        ctx.difficulty = 0.3;
+
+        let decision = cl.run_finalization(&mut ctx);
+        // Should not panic and should return a decision
+        assert_ne!(decision, metaygn_shared::state::Decision::Escalate);
+    }
+
+    #[test]
+    fn run_finalization_independent_of_topology_plan() {
+        use crate::topology::TopologyPlanner;
+        use metaygn_shared::state::{RiskLevel, TaskType};
+
+        let cl = ControlLoop::new();
+
+        // Research plan intentionally omits calibrate/compact/decide
+        let plan = TopologyPlanner::plan(RiskLevel::Low, 0.3, TaskType::Research);
+        assert!(!plan.stages.contains(&"calibrate"));
+        assert!(!plan.stages.contains(&"decide"));
+
+        // But finalization should still work
+        let input = metaygn_shared::protocol::HookInput::default();
+        let mut ctx = crate::context::LoopContext::new(input);
+        let decision = cl.run_finalization(&mut ctx);
+        assert_ne!(decision, metaygn_shared::state::Decision::Escalate);
+    }
+
+    #[test]
+    fn trivial_plan_also_gets_full_finalization() {
+        use crate::topology::TopologyPlanner;
+
+        let plan = TopologyPlanner::trivial_pipeline();
+        // Trivial plan only has classify, assess, act, decide — no calibrate/learn
+        assert!(!plan.stages.contains(&"calibrate"));
+        assert!(!plan.stages.contains(&"learn"));
+
+        // Finalization is independent
+        let cl = ControlLoop::new();
+        let input = metaygn_shared::protocol::HookInput::default();
+        let mut ctx = crate::context::LoopContext::new(input);
+        let decision = cl.run_finalization(&mut ctx);
+        assert_ne!(decision, metaygn_shared::state::Decision::Escalate);
     }
 }

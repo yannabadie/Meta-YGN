@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use metaygn_memory::embeddings::HashEmbedProvider;
 use metaygn_memory::fts::{SearchSource, UnifiedSearch};
 use metaygn_memory::graph::{GraphMemory, MemoryNode, NodeType, Scope};
 use metaygn_memory::store::MemoryStore;
@@ -18,7 +19,9 @@ async fn search_finds_events() {
         .await
         .unwrap();
 
-    let search = UnifiedSearch::new(store, graph);
+    let embedding: Arc<dyn metaygn_memory::embeddings::EmbeddingProvider> =
+        Arc::new(HashEmbedProvider::new(64));
+    let search = UnifiedSearch::new(store, graph, embedding);
     let results = search.search("bash", 10).await.unwrap();
 
     assert!(!results.is_empty(), "should find the event");
@@ -43,7 +46,9 @@ async fn search_finds_graph_nodes() {
     };
     graph.insert_node(&node).await.unwrap();
 
-    let search = UnifiedSearch::new(store, graph);
+    let embedding: Arc<dyn metaygn_memory::embeddings::EmbeddingProvider> =
+        Arc::new(HashEmbedProvider::new(64));
+    let search = UnifiedSearch::new(store, graph, embedding);
     let results = search.search("login", 10).await.unwrap();
 
     assert!(!results.is_empty(), "should find the graph node");
@@ -75,7 +80,9 @@ async fn results_merged() {
     };
     graph.insert_node(&node).await.unwrap();
 
-    let search = UnifiedSearch::new(store, graph);
+    let embedding: Arc<dyn metaygn_memory::embeddings::EmbeddingProvider> =
+        Arc::new(HashEmbedProvider::new(64));
+    let search = UnifiedSearch::new(store, graph, embedding);
     let results = search.search("deploy", 10).await.unwrap();
 
     assert!(

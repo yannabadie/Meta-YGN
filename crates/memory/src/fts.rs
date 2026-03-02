@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use crate::embeddings::EmbeddingProvider;
 use crate::graph::GraphMemory;
 use crate::store::MemoryStore;
 
@@ -21,55 +22,101 @@ pub struct SearchResult {
 pub struct UnifiedSearch {
     store: Arc<MemoryStore>,
     graph: Arc<GraphMemory>,
+    embedding: Arc<dyn EmbeddingProvider>,
 }
 
 impl UnifiedSearch {
-    pub fn new(store: Arc<MemoryStore>, graph: Arc<GraphMemory>) -> Self {
-        Self { store, graph }
+    pub fn new(
+        store: Arc<MemoryStore>,
+        graph: Arc<GraphMemory>,
+        embedding: Arc<dyn EmbeddingProvider>,
+    ) -> Self {
+        Self {
+            store,
+            graph,
+            embedding,
+        }
     }
 
     pub async fn search(&self, query: &str, limit: u32) -> anyhow::Result<Vec<SearchResult>> {
-        // 1. Search events via store.search_events()
-        let event_rows = self.store.search_events(query, limit).await?;
+        // 1. Search events with real BM25 scores from FTS5
+        let event_rows = self.store.search_events_ranked(query, limit).await?;
+        // FTS5 rank is negative (closer to 0 = better). Normalize to [0.5, 1.0]
+        // so even a single result gets a competitive score (not 0.0).
+        let max_abs_rank = event_rows
+            .iter()
+            .map(|(_, r)| r.abs())
+            .fold(0.0_f64, f64::max)
+            .max(1.0);
         let mut results: Vec<SearchResult> = event_rows
             .into_iter()
-            .enumerate()
-            .map(|(i, row)| SearchResult {
+            .map(|(row, rank)| SearchResult {
                 source: SearchSource::Event,
                 id: row.id,
                 content: row.payload,
-                // Events have FTS5 rank scores; approximate with position-based score
-                score: 1.0 - (i as f64 * 0.01),
+                score: 0.5 + 0.5 * (1.0 - rank.abs() / max_abs_rank),
             })
             .collect();
 
-        // 2. Search graph via graph.search_content()
-        let graph_nodes = self.graph.search_content(query, limit).await?;
-        let graph_results: Vec<SearchResult> = graph_nodes
-            .into_iter()
-            .enumerate()
-            .map(|(i, node)| SearchResult {
-                source: SearchSource::GraphNode,
-                id: node.id,
-                content: node.content,
-                // Graph nodes scored after events
-                score: 0.5 - (i as f64 * 0.01),
-            })
-            .collect();
-
-        // 3. Merge results into a single Vec<SearchResult>
+        // 2. Try UCB-scored adaptive recall if embedding is available
+        let graph_results = match self.embedding.embed(query) {
+            Ok(query_emb) if !query_emb.is_empty() => {
+                let adaptive = self
+                    .graph
+                    .adaptive_recall(&query_emb, limit)
+                    .await
+                    .unwrap_or_default();
+                if adaptive.is_empty() {
+                    // No nodes had embeddings stored; fall back to FTS5
+                    fts_fallback_graph(&self.graph, query, limit).await
+                } else {
+                    adaptive
+                        .into_iter()
+                        .map(|(node, score)| SearchResult {
+                            source: SearchSource::GraphNode,
+                            id: node.id,
+                            content: node.content,
+                            score: score as f64,
+                        })
+                        .collect::<Vec<_>>()
+                }
+            }
+            _ => {
+                // Embedding provider returned error or empty; FTS5 fallback
+                fts_fallback_graph(&self.graph, query, limit).await
+            }
+        };
         results.extend(graph_results);
 
-        // 4. Sort by relevance (descending score; events first since higher scores)
+        // 3. Sort by score descending, truncate
         results.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-
-        // 5. Truncate to limit
         results.truncate(limit as usize);
 
         Ok(results)
     }
+}
+
+/// Fallback: FTS5 on graph with position-based score (degraded mode).
+async fn fts_fallback_graph(
+    graph: &GraphMemory,
+    query: &str,
+    limit: u32,
+) -> Vec<SearchResult> {
+    graph
+        .search_content(query, limit)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .enumerate()
+        .map(|(i, node)| SearchResult {
+            source: SearchSource::GraphNode,
+            id: node.id,
+            content: node.content,
+            score: 0.5 - (i as f64 * 0.01), // degraded fallback
+        })
+        .collect()
 }

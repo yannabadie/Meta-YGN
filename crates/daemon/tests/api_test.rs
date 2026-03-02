@@ -1031,3 +1031,126 @@ async fn session_budget_returns_defaults() {
         "Fresh session budget should have 0 consumed tokens"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 5 (v1.1): GET /session/{id}/state — structured session state endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn session_state_returns_json_after_prompt() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // 1. POST /hooks/user-prompt-submit to create session state
+    let url = format!("http://{addr}/hooks/user-prompt-submit");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "fix the login bug",
+            "session_id": "test-sess-state"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // 2. GET /session/test-sess-state/state
+    let url = format!("http://{addr}/session/test-sess-state/state");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    // 3. Assert response contains key SessionContext fields
+    assert_eq!(
+        body["session_id"], "test-sess-state",
+        "Expected session_id to match, got: {body:?}"
+    );
+    assert!(
+        body.get("task_type").is_some(),
+        "Expected 'task_type' field: {body:?}"
+    );
+    assert!(
+        body.get("risk").is_some(),
+        "Expected 'risk' field: {body:?}"
+    );
+    assert!(
+        body.get("strategy").is_some(),
+        "Expected 'strategy' field: {body:?}"
+    );
+    assert!(
+        body.get("difficulty").is_some(),
+        "Expected 'difficulty' field: {body:?}"
+    );
+    assert!(
+        body.get("competence").is_some(),
+        "Expected 'competence' field: {body:?}"
+    );
+    assert!(
+        body.get("tool_calls").is_some(),
+        "Expected 'tool_calls' field: {body:?}"
+    );
+    assert!(
+        body.get("errors").is_some(),
+        "Expected 'errors' field: {body:?}"
+    );
+    assert!(
+        body.get("success_count").is_some(),
+        "Expected 'success_count' field: {body:?}"
+    );
+    assert!(
+        body.get("tokens_consumed").is_some(),
+        "Expected 'tokens_consumed' field: {body:?}"
+    );
+    assert!(
+        body.get("fatigue_score").is_some(),
+        "Expected 'fatigue_score' field: {body:?}"
+    );
+    assert!(
+        body.get("lessons").is_some(),
+        "Expected 'lessons' field: {body:?}"
+    );
+    assert!(
+        body.get("verification_results").is_some(),
+        "Expected 'verification_results' field: {body:?}"
+    );
+    assert!(
+        body.get("has_execution_plan").is_some(),
+        "Expected 'has_execution_plan' field: {body:?}"
+    );
+
+    // After a user-prompt-submit, task_type should be populated
+    assert!(
+        body["task_type"].is_string(),
+        "Expected task_type to be a string after classification, got: {:?}",
+        body["task_type"]
+    );
+
+    // Difficulty and competence should be reasonable floats
+    let difficulty = body["difficulty"].as_f64().unwrap();
+    assert!(
+        difficulty >= 0.0 && difficulty <= 1.0,
+        "difficulty out of range: {difficulty}"
+    );
+    let competence = body["competence"].as_f64().unwrap();
+    assert!(
+        competence >= 0.0 && competence <= 1.0,
+        "competence out of range: {competence}"
+    );
+}
+
+#[tokio::test]
+async fn session_state_returns_error_for_unknown() {
+    let addr = start_test_server().await;
+
+    // GET /session/nonexistent/state — should return error JSON
+    let url = format!("http://{addr}/session/nonexistent/state");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 404);
+    let body: Value = resp.json().await.unwrap();
+
+    assert_eq!(
+        body["error"], "session not found",
+        "Expected 'session not found' error for unknown session, got: {body:?}"
+    );
+}

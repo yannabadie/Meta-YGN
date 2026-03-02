@@ -458,7 +458,6 @@ async fn post_tool_use(
         let state_clone = state.clone();
         let session_clone = session_ctx.clone();
         let tool_name_clone = tool_name.clone();
-        let response_clone = response.clone();
         let file_path_clone = input
             .tool_input
             .as_ref()
@@ -471,7 +470,6 @@ async fn post_tool_use(
                 session_clone,
                 tool_name_clone,
                 is_error,
-                response_clone,
                 file_path_clone,
             )
             .await;
@@ -703,17 +701,10 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
         }
     }
 
-    // Use the stored execution plan if available; otherwise fall back to
-    // running stages 8-12 directly (backward-compatible path).
-    let plan = {
-        let sess = session_ctx.lock().unwrap();
-        sess.execution_plan.clone()
-    };
-    let decision = if let Some(ref plan) = plan {
-        state.control_loop.run_plan(&mut ctx, plan)
-    } else {
-        state.control_loop.run_range(&mut ctx, 8, 12)
-    };
+    // Always run finalization stages regardless of topology.
+    // This fixes the bug where Research/Trivial topologies skipped
+    // calibrate/compact/decide/learn.
+    let decision = state.control_loop.run_finalization(&mut ctx);
 
     let metacog = ctx.metacog_vector.compact_encode();
     let lessons_summary = if ctx.lessons.is_empty() {

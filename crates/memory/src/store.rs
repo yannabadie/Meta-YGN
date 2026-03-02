@@ -220,6 +220,45 @@ impl MemoryStore {
         Ok(rows)
     }
 
+    /// Search events using FTS5 with BM25 rank scores.
+    /// Returns (EventRow, score) pairs sorted by relevance.
+    pub async fn search_events_ranked(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<(EventRow, f64)>> {
+        let query = query.to_owned();
+        let rows = self
+            .conn
+            .call(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT e.id, e.session_id, e.event_type, e.payload, e.timestamp,
+                            rank
+                     FROM events_fts f
+                     JOIN events e ON e.rowid = f.rowid
+                     WHERE events_fts MATCH ?1
+                     ORDER BY rank
+                     LIMIT ?2",
+                )?;
+                let rows = stmt
+                    .query_map(params![query, limit], |row| {
+                        let event = EventRow {
+                            id: row.get(0)?,
+                            session_id: row.get(1)?,
+                            event_type: row.get(2)?,
+                            payload: row.get(3)?,
+                            timestamp: row.get(4)?,
+                        };
+                        let rank: f64 = row.get(5)?;
+                        Ok((event, rank))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok::<_, rusqlite::Error>(rows)
+            })
+            .await?;
+        Ok(rows)
+    }
+
     /// Persist a heuristic version snapshot.
     #[allow(clippy::too_many_arguments)]
     pub async fn save_heuristic(
