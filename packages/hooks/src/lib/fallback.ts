@@ -120,7 +120,8 @@ export function fallbackUserPromptSubmit(input: HookInput): HookOutput | null {
  * Returns a HookOutput if a test keyword is found, or null to exit silently.
  */
 export function fallbackPostToolUse(input: HookInput): HookOutput | null {
-  const cmd = ((input.tool_input as Record<string, unknown>)?.command as string || "").toLowerCase();
+  const rawInput = (input.tool_input ?? {}) as Record<string, unknown>;
+  const cmd = (typeof rawInput.command === "string" ? rawInput.command : "").toLowerCase();
   const testKw = ["test", "pytest", "cargo test", "cargo check", "lint", "tsc", "mypy"];
   if (testKw.some(k => cmd.includes(k))) {
     return {

@@ -23,7 +23,7 @@ async fn health_returns_ok() {
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["status"], "ok");
-    assert_eq!(body["version"], "0.1.0");
+    assert_eq!(body["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(body["kernel"], "verified");
 }
 
@@ -937,5 +937,97 @@ async fn heuristic_persistence_roundtrip() {
     assert!(
         !outcomes.is_empty(),
         "Expected at least one outcome persisted"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// P1.7: Calibration / Brier score endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn calibration_endpoint_returns_brier_and_buckets() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/calibration");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(
+        body.get("brier_score").is_some(),
+        "Expected 'brier_score' in calibration response: {body:?}"
+    );
+    assert!(
+        body.get("sample_count").is_some(),
+        "Expected 'sample_count' in calibration response: {body:?}"
+    );
+    assert!(
+        body.get("buckets").is_some(),
+        "Expected 'buckets' in calibration response: {body:?}"
+    );
+    let buckets = body["buckets"].as_array().unwrap();
+    assert_eq!(
+        buckets.len(),
+        5,
+        "Expected 5 calibration buckets, got {}",
+        buckets.len()
+    );
+    // Each bucket should have the expected fields
+    for bucket in buckets {
+        assert!(bucket.get("range").is_some());
+        assert!(bucket.get("count").is_some());
+        assert!(bucket.get("avg_predicted").is_some());
+        assert!(bucket.get("avg_actual").is_some());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// P0.11: Session-scoped /budget endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn session_budget_returns_defaults() {
+    let addr = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    // First, trigger session creation via a hook call so the session exists.
+    let url = format!("http://{addr}/hooks/pre-tool-use");
+    let resp = client
+        .post(&url)
+        .json(&json!({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "echo hello"},
+            "session_id": "test-session-budget"
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // Now query the session-scoped budget endpoint
+    let url = format!("http://{addr}/budget/test-session-budget");
+    let resp = reqwest::get(&url).await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+
+    // Should have the default budget fields from a fresh SessionBudget
+    assert!(
+        body.get("max_tokens").is_some(),
+        "Expected 'max_tokens' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("consumed_tokens").is_some(),
+        "Expected 'consumed_tokens' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("max_cost_usd").is_some(),
+        "Expected 'max_cost_usd' in session budget: {body:?}"
+    );
+    assert!(
+        body.get("consumed_cost_usd").is_some(),
+        "Expected 'consumed_cost_usd' in session budget: {body:?}"
+    );
+    assert_eq!(
+        body["consumed_tokens"], 0,
+        "Fresh session budget should have 0 consumed tokens"
     );
 }

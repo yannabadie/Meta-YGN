@@ -339,6 +339,23 @@ SessionEnd (async)
   -> event log + daemon notification
 ```
 
+### Hook Execution Model
+
+| Hook Event | TS Handler | Daemon Endpoint | Notes |
+|------------|-----------|-----------------|-------|
+| SessionStart | session-start.ts | GET /health (ping only) | Announces profile, no state mutation |
+| UserPromptSubmit | user-prompt-submit.ts | POST /hooks/user-prompt-submit | Risk classification + strategy |
+| PreToolUse | pre-tool-use.ts | POST /hooks/pre-tool-use | Guard pipeline + control loop stages 1-6 |
+| PostToolUse | post-tool-use.ts | POST /hooks/post-tool-use | Verification + graph memory (async) |
+| PostToolUseFailure | post-tool-use-failure.ts | None (TS-only) | Error diagnosis, always emits output |
+| Stop | stop.ts | POST /hooks/stop | Completion verification + outcome recording |
+| PreCompact | pre-compact.ts | None (TS-only) | Static compaction guidance |
+| SessionEnd | session-end.ts | POST /hooks/session-end (fire-and-forget) | Logs event, idempotent cleanup |
+
+**Design rationale:** Hooks that require daemon state (sessions, guard pipeline, control loop,
+graph memory) call the daemon. Hooks that are stateless (PostToolUseFailure, PreCompact) run
+entirely in the TS shell for minimal latency.
+
 ---
 
 ## Agent Coordination

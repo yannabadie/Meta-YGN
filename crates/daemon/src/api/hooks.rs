@@ -763,6 +763,32 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
     Json(output)
 }
 
+/// POST /hooks/session-end
+///
+/// Fire-and-forget endpoint called by the SessionEnd hook.
+/// Logs the session closure event for replay and returns immediately.
+/// Note: session cleanup is already performed by the Stop handler;
+/// this endpoint ensures the daemon has a record of session termination.
+async fn session_end(
+    State(state): State<AppState>,
+    Json(input): Json<HookInput>,
+) -> Json<HookOutput> {
+    let session_id = input
+        .session_id
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+    let payload = serde_json::to_string(&input).unwrap_or_default();
+    let _ = state
+        .memory
+        .log_event(&session_id, "session_end", &payload)
+        .await;
+
+    // Ensure session context is cleaned up (idempotent if Stop already ran)
+    state.sessions.remove(&session_id);
+
+    HookOutput::context("SessionEnd".to_string(), "Session ended.".to_string()).into()
+}
+
 /// POST /hooks/analyze
 ///
 /// Debug endpoint: runs the full 12-stage loop on an input and returns the
@@ -788,5 +814,6 @@ pub fn routes() -> Router<AppState> {
         .route("/hooks/post-tool-use", post(post_tool_use))
         .route("/hooks/user-prompt-submit", post(user_prompt_submit))
         .route("/hooks/stop", post(stop))
+        .route("/hooks/session-end", post(session_end))
         .route("/hooks/analyze", post(analyze))
 }

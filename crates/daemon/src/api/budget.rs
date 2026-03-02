@@ -1,4 +1,4 @@
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::response::Json;
 use axum::{Router, routing::get};
 use serde::Deserialize;
@@ -16,6 +16,17 @@ pub struct ConsumeRequest {
 async fn get_budget(State(state): State<AppState>) -> Json<serde_json::Value> {
     let budget = state.budget.lock().expect("budget mutex poisoned");
     let value = serde_json::to_value(&*budget).unwrap_or_default();
+    Json(value)
+}
+
+/// GET /budget/:session_id — returns session-local budget.
+async fn get_session_budget(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+) -> Json<serde_json::Value> {
+    let sess_arc = state.sessions.get_or_create(&session_id);
+    let sess = sess_arc.lock().expect("session mutex poisoned");
+    let value = serde_json::to_value(&sess.budget).unwrap_or_default();
     Json(value)
 }
 
@@ -41,5 +52,6 @@ async fn consume_budget(
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/budget", get(get_budget))
+        .route("/budget/{session_id}", get(get_session_budget))
         .route("/budget/consume", axum::routing::post(consume_budget))
 }
