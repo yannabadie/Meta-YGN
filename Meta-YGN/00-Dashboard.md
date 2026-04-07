@@ -7,7 +7,7 @@ updated: 2026-04-07
 # Aletheia-Nexus — Runtime Metacognitif
 
 Control plane local-first pour coding agents. Daemon Rust + plugin Claude Code.
-v2.2.0 "Sequence Sentinel" — Avril 2026.
+v2.3.0 "Full Cascade" — Avril 2026.
 
 ## These produit
 
@@ -43,6 +43,8 @@ Le produit gagne s'il :
 | RL Trajectory Export | `[experimental]` | JSONL signe, pas utilise pour training reel |
 | Sequence Monitor | `[experimental]` | 3 regles, fenetre glissante, Pro2Guard-inspired |
 | Semantic Router | `[experimental]` | kNN risk classification, context-aware override |
+| Haiku Judge | `[experimental]` | Tier 3 LLM judge via Anthropic API, LRU cache, budget-limited |
+| WASM Sandbox | `[experimental]` | Tier 4 Wasmtime isolation, fuel-limited, deny-by-default |
 
 ## Navigation
 

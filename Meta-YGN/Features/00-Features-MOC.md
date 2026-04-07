@@ -41,3 +41,5 @@ Code reel, non validees a l'echelle.
 | [[RL-Trajectory-Export]] | Trajectoires signees JSONL pour offline RL | memory/trajectory.rs | RL2F |
 | [[Sequence-Monitor]] | DTMC multi-action pattern detector, 3 rules, sliding window | core/sequence_monitor.rs | Pro2Guard |
 | [[Semantic-Router]] | kNN risk classification, context-aware override | daemon/semantic_router.rs | RouteLLM |
+| [[Haiku-Judge]] | Tier 3 LLM judge via Anthropic API, LRU cache, 20-call budget | daemon/judge.rs | LLM-as-judge |
+| [[WASM-Sandbox]] | Tier 4 Wasmtime capability-based isolation, fuel-limited | sandbox/wasm.rs | — |

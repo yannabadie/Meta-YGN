@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0 "Full Cascade"
+
+### Added
+- **HaikuJudge (Tier 3)**: opt-in LLM judge via Anthropic API, LRU cache (100 entries), 20-call budget, 500ms timeout, feature-gated behind `judge`
+- **WasmSandbox (Tier 4)**: Wasmtime v43 capability-based isolation, fuel-limited execution, deny-by-default, feature-gated behind `wasm`
+- `/sandbox/wasm` daemon endpoint for WASM module execution
+
+### Architecture
+- All 5 tiers of ADR-004 cascade verification now implemented (AST guard, semantic router, sequence monitor, Haiku judge, WASM sandbox)
+
 ## 2.2.0 "Sequence Sentinel"
 
 ### Added

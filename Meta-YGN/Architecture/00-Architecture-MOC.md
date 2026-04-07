@@ -30,6 +30,8 @@ Claude Code
                                     ├── MASC Anomaly Detector
                                     ├── Sequence Monitor
                                     ├── Tool Forge
+                                    ├── Haiku Judge (Tier 3)
+                                    ├── WASM Sandbox (Tier 4)
                                     └── SQLite (MemoryStore + GraphMemory)
 ```
 
