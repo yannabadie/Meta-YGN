@@ -1,6 +1,6 @@
 use super::{Stage, StageResult};
 use crate::context::LoopContext;
-use metaygn_shared::state::RiskLevel;
+use metaygn_shared::state::{RiskLevel, RoutingHint};
 
 /// Stage 2: Assess difficulty and risk from the prompt and tool context.
 pub struct AssessStage;
@@ -18,6 +18,31 @@ impl Stage for AssessStage {
 
         // Risk: based on tool name and keywords.
         ctx.risk = estimate_risk(ctx);
+
+        // Routing hint override: if semantic router classified as Safe with
+        // high confidence (>= 0.8), downgrade non-injection risk to Low.
+        // Fixes false positives like "rm target/*.o" flagged as High when
+        // the router knows it's a safe build cleanup.
+        if let Some(RoutingHint::SemanticMatch { confidence }) = ctx.routing_hint {
+            if confidence >= 0.8 && ctx.risk != RiskLevel::Low {
+                let check_text = format!(
+                    "{} {}",
+                    ctx.input.tool_name.as_deref().unwrap_or(""),
+                    ctx.input.prompt.as_deref().unwrap_or("")
+                )
+                .to_lowercase();
+                // Never override prompt injection detection
+                if !contains_prompt_injection_markers(&check_text) {
+                    tracing::info!(
+                        stage = "assess",
+                        original_risk = ?ctx.risk,
+                        confidence = confidence,
+                        "routing hint override: downgrading risk to Low"
+                    );
+                    ctx.risk = RiskLevel::Low;
+                }
+            }
+        }
 
         tracing::debug!(
             stage = self.name(),
