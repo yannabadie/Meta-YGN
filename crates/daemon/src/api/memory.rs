@@ -33,7 +33,9 @@ async fn recall(State(state): State<AppState>, Json(req): Json<RecallRequest>) -
                     })
                 })
                 .collect();
-            Json(json!({ "events": events }))
+            // Keep backward compatibility with older clients that expect
+            // `results` while standardizing on `events`.
+            Json(json!({ "events": events, "results": events }))
         }
         Err(e) => Json(json!({ "error": e.to_string() })),
     }

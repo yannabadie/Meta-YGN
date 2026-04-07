@@ -137,12 +137,38 @@ async fn record_replay(
 
 /// Determine whether a tool response indicates an error.
 fn response_looks_like_error(tool_name: &str, response: &str) -> bool {
-    if tool_name == "Bash" && (response.contains("FAIL") || response.contains("error")) {
+    let trimmed = response.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+
+    if lower.starts_with("error")
+        || lower.starts_with("panic")
+        || lower.starts_with("fatal")
+        || lower.contains("traceback")
+    {
         return true;
     }
-    if response.starts_with("Error") || response.starts_with("error:") {
-        return true;
+
+    if tool_name == "Bash" {
+        let explicit_failure = lower.contains("fail")
+            || lower.contains("failed")
+            || lower.contains("error:")
+            || lower.contains("command not found")
+            || lower.contains("permission denied")
+            || lower.contains("exit code");
+
+        // Avoid false positives for common success summaries that mention "failed".
+        let known_success = lower.contains("0 failed")
+            || lower.contains("no failures")
+            || lower.contains("all tests passed")
+            || lower.contains("test result: ok");
+
+        return explicit_failure && !known_success;
     }
+
     false
 }
 
@@ -453,7 +479,7 @@ async fn post_tool_use(
         }
     }
 
-    let context = if tool_name == "Bash" && response.contains("FAIL") {
+    let context = if tool_name == "Bash" && is_error {
         "Test failure detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
         "File modification recorded. Verify changes align with intent."
@@ -867,4 +893,38 @@ pub fn routes() -> Router<AppState> {
         .route("/hooks/stop", post(stop))
         .route("/hooks/session-end", post(session_end))
         .route("/hooks/analyze", post(analyze))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::response_looks_like_error;
+
+    #[test]
+    fn bash_failures_are_detected_case_insensitively() {
+        assert!(response_looks_like_error("Bash", "FAIL: 2 tests"));
+        assert!(response_looks_like_error("Bash", "error: command failed"));
+        assert!(response_looks_like_error("Bash", "Command not found: foo"));
+    }
+
+    #[test]
+    fn bash_success_summaries_are_not_false_positives() {
+        assert!(!response_looks_like_error(
+            "Bash",
+            "test result: ok. 12 passed; 0 failed"
+        ));
+        assert!(!response_looks_like_error(
+            "Bash",
+            "All tests passed. No failures."
+        ));
+    }
+
+    #[test]
+    fn generic_error_prefixes_are_detected() {
+        assert!(response_looks_like_error("Write", "Error: invalid JSON"));
+        assert!(response_looks_like_error("Write", "panic: unreachable"));
+        assert!(!response_looks_like_error(
+            "Write",
+            "Completed successfully"
+        ));
+    }
 }

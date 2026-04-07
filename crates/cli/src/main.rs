@@ -832,8 +832,15 @@ async fn cmd_doctor() -> Result<()> {
         && let Ok(content) = std::fs::read_to_string(hooks_path)
         && let Ok(json) = serde_json::from_str::<Value>(&content)
     {
-        let count = json.as_array().map(|a| a.len()).unwrap_or(0);
+        let count = json
+            .get("hooks")
+            .and_then(|v| v.as_object())
+            .map(|obj| obj.len())
+            .unwrap_or(0);
         println!("  Hooks:      {count}/8 configured");
+        if count == 0 {
+            issues += 1;
+        }
     } else {
         println!("  Hooks:      NOT FOUND");
         issues += 1;

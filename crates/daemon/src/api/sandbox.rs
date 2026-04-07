@@ -2,8 +2,9 @@ use axum::extract::State;
 use axum::response::Json;
 use axum::{Router, routing::post};
 use serde::Deserialize;
+use std::time::Duration;
 
-use metaygn_sandbox::{Hypothesis, SandboxResult};
+use metaygn_sandbox::{Hypothesis, ProcessSandbox, SandboxConfig, SandboxResult};
 
 use crate::app_state::AppState;
 
@@ -16,7 +17,7 @@ use crate::app_state::AppState;
 pub struct ExecRequest {
     pub language: String,
     pub code: String,
-    /// Optional timeout override (not yet used -- reserved for future use).
+    /// Optional timeout override for this request.
     #[serde(default)]
     pub timeout_ms: Option<u64>,
 }
@@ -41,7 +42,17 @@ fn default_expected_success() -> bool {
 
 /// POST /sandbox/exec -- execute code in the process sandbox.
 async fn exec(State(state): State<AppState>, Json(req): Json<ExecRequest>) -> Json<SandboxResult> {
-    let result = match state.sandbox.execute(&req.language, &req.code).await {
+    let result = if let Some(timeout_ms) = req.timeout_ms {
+        let timeout_sandbox = ProcessSandbox::new(SandboxConfig {
+            timeout: Duration::from_millis(timeout_ms.max(1)),
+            ..SandboxConfig::default()
+        });
+        timeout_sandbox.execute(&req.language, &req.code).await
+    } else {
+        state.sandbox.execute(&req.language, &req.code).await
+    };
+
+    let result = match result {
         Ok(r) => r,
         Err(e) => SandboxResult {
             success: false,

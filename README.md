@@ -111,8 +111,43 @@ aletheia start                   # start the daemon (background, auto port)
 claude --plugin-dir .            # run Claude Code with the plugin
 ```
 
+If `aletheia` is not on your PATH yet, use:
+`cargo run -p metaygn-cli -- start`
+
 The daemon listens on a dynamic port (written to `~/.claude/aletheia/daemon.port`).
 Without the daemon, hooks fall back to lightweight local heuristics.
+
+### Running with Codex CLI (MCP)
+```bash
+# Windows PowerShell (one-shot installer)
+powershell -ExecutionPolicy Bypass -File .\scripts\install-codex.ps1
+
+# macOS/Linux (one-shot installer)
+bash ./scripts/install-codex.sh
+
+# Manual setup (if preferred):
+# cargo build -p metaygn-daemon --features mcp
+# codex mcp add aletheia -- "$PWD\\target\\debug\\aletheia.exe" mcp
+```
+
+For a guided Codex session with MetaYGN protocol preloaded:
+
+```bash
+# Windows
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
+
+# macOS/Linux
+bash ./scripts/start-codex-metaygn.sh
+
+# Print the bootstrap prompt without launching Codex
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1 -NoLaunch
+```
+
+This launcher enables a strict verification gate before final answers.
+
+Then launch Codex in this repo normally (`codex`).
+MetaYGN tools (`metacog_classify`, `metacog_verify`, `metacog_recall`, `metacog_status`, `metacog_prune`) are available through MCP.
+Note: Codex currently integrates through MCP tools (explicit calls), not Claude-style automatic lifecycle hooks.
 
 ### Validation
 ```bash
