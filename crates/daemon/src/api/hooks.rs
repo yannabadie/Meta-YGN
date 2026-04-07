@@ -318,6 +318,11 @@ async fn pre_tool_use(
             None
         };
         let hint = state.router.routing_hint(&cmd, task_context.as_deref());
+        tracing::info!(
+            command = %cmd,
+            routing_hint = ?hint,
+            "semantic router classification"
+        );
         ctx.routing_hint = Some(hint);
     }
 
