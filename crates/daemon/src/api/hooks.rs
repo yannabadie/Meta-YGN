@@ -359,6 +359,60 @@ async fn pre_tool_use(
         None
     };
 
+    // Tier 3: LLM Judge — call Haiku when routing hint says LlmJudge
+    #[cfg(feature = "judge")]
+    if matches!(ctx.routing_hint, Some(metaygn_shared::state::RoutingHint::LlmJudge)) {
+        let has_budget = if let Ok(sess) = session_ctx.lock() {
+            sess.judge_calls_remaining > 0
+        } else {
+            false
+        };
+
+        if has_budget {
+            let task_ctx = if let Ok(sess) = session_ctx.lock() {
+                sess.task_type.map(|t| format!("{:?}", t))
+            } else {
+                None
+            };
+
+            let verdict = state.judge.evaluate(&cmd, task_ctx.as_deref()).await;
+
+            if let Ok(mut sess) = session_ctx.lock() {
+                if sess.judge_calls_remaining > 0 {
+                    sess.judge_calls_remaining -= 1;
+                }
+            }
+
+            match verdict {
+                crate::judge::JudgeVerdict::Dangerous => {
+                    let mut output = HookOutput::permission(
+                        PermissionDecision::Deny,
+                        "[judge:dangerous] Haiku judge classified command as dangerous".to_string(),
+                    );
+                    append_session_budget(&mut output, &session_ctx);
+                    append_latency(&mut output, start);
+                    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+                    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
+                    return Json(output);
+                }
+                crate::judge::JudgeVerdict::Risky => {
+                    let mut output = HookOutput::permission(
+                        PermissionDecision::Ask,
+                        "[judge:risky] Haiku judge flagged command as risky".to_string(),
+                    );
+                    append_session_budget(&mut output, &session_ctx);
+                    append_latency(&mut output, start);
+                    let resp_json = serde_json::to_string(&output).unwrap_or_default();
+                    record_replay(&state, &session_id, "PreToolUse", &payload, &resp_json, start).await;
+                    return Json(output);
+                }
+                _ => {
+                    tracing::debug!(verdict = ?verdict, "judge: command cleared");
+                }
+            }
+        }
+    }
+
     let risk_label = match ctx.risk {
         RiskLevel::Low => "low",
         RiskLevel::Medium => "medium",
