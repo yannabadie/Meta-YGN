@@ -1,5 +1,8 @@
 # Aletheia-Nexus - Repo Operating Contract
 
+**Version**: v2.0.0 "Production Hardened"
+**Detailed docs**: `Meta-YGN/` (Obsidian vault — architecture, features, ADRs, evidence tiers)
+
 ## Mission
 Build a local-first, AI-agnostic metacognitive runtime for coding agents.
 
@@ -16,30 +19,6 @@ The product wins if it:
 - stops or escalates when uncertainty stays high,
 - keeps context compact,
 - protects the human from over-trusting the system.
-
-## Current delivery target
-Ship the smallest slice that proves the thesis.
-
-### MVP
-- local runtime or daemon interface
-- local CLI hot path
-- Claude Code plugin shell
-- deterministic hooks (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Stop, PreCompact, SessionEnd)
-- factored verification workflow
-- tool-necessity gate
-- compact metacognitive state
-- minimal bench / ROI traces
-- human-readable proof packet
-- escalation protocol
-
-### Not required for MVP
-- large MCP surface
-- A2A
-- swarm orchestration
-- self-rewriting skills
-- learned anomaly detectors
-- custom training
-- benchmark-only claims
 
 ## Evidence ladder
 Every architecture note, ADR, and benchmark claim must be tagged as one of:
@@ -58,26 +37,8 @@ Never present experimental or original ideas as settled facts.
 6. Keep the main context clean; compact dead ends and repeated failures.
 7. Finish with: changes, evidence, residual risk, next step.
 
-## Skills (invoke with `/skill-name`)
-| Skill | When to use |
-|-------|-------------|
-| `/metacog-preflight` | Before non-trivial work: classify risk, choose strategy |
-| `/metacog-proof` | Before finalizing: build evidence packet |
-| `/metacog-challenge` | When confidence is high but evidence is thin |
-| `/metacog-threat-model` | Before security, auth, production, or MCP work |
-| `/metacog-compact` | Before handoffs, context limits, or long sessions |
-| `/metacog-bench` | To evaluate quality, calibration, and overhead |
-| `/metacog-tool-audit` | Before reaching for MCP or repetitive tools |
-| `/metacog-escalate` | When stuck, risk is too high, or human judgment is needed |
-
-## Agents (delegated via subagent calls)
-| Agent | When to delegate |
-|-------|-----------------|
-| `skeptic` | Challenge assumptions, find counter-hypotheses |
-| `verifier` | Independent verification of claims and code |
-| `researcher` | Web research, doc exploration, unfamiliar domains |
-| `repo-cartographer` | Map structure at session start or before major changes |
-| `cost-auditor` | Audit context/token overhead, find cheaper paths |
+## Skills & agents
+9 skills (`/metacog-*` + `/update-vault`) and 6 agents — see `Meta-YGN/Skills-Agents/00-Skills-Agents-MOC.md` for full list and usage guidance.
 
 ## Context discipline
 This file must stay short.
@@ -125,11 +86,12 @@ Escalate (use `/metacog-escalate`) when:
 - confidence is below 60% on a critical claim
 
 ## Directory ownership
-- `core/` - runtime, daemon, CLI, memory, verifiers, observability
-- `adapters/claude-plugin/` - plugin shell (this repo)
-- `eval/` - benchmark, replay, ROI, dashboards
-- `experimental/` - gated research features
-- `docs/` - vision, architecture, threat model, evidence tiers, benchmark integrity
+- `crates/` - 7 Rust crates (shared, core, memory, verifiers, sandbox, daemon, cli)
+- `packages/` - TypeScript hooks and shared types
+- `skills/`, `agents/`, `hooks/` - Claude Code plugin surface
+- `eval/` - benchmarks (Python pytest)
+- `docs/` - plans, architecture notes, papers
+- `Meta-YGN/` - Obsidian vault (living architecture docs)
 
 ## Definition of done
 A change is not done until it is:
