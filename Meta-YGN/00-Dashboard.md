@@ -80,6 +80,7 @@ Le produit gagne s'il :
 ## Honnetete
 
 > [!warning] Limitations
+> - **Detection par regex contournable** : ADR-004 propose une architecture 5 tiers pour resoudre ce probleme
 > - **Pas d'ADRs formels** : decisions dans les commentaires de code et daemon-contract.md
 > - **Features experimentales non validees a l'echelle** : toutes marquees honnetement
 > - **Pas de tests d'integration MCP** : feature-gated, pas teste en CI
