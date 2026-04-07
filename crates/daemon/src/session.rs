@@ -41,6 +41,8 @@ pub struct SessionContext {
     pub budget: SessionBudget,
     /// Session-local sequence monitor for multi-action pattern detection.
     pub sequence_monitor: SequenceMonitor,
+    /// Remaining LLM judge calls for this session (Tier 3 budget).
+    pub judge_calls_remaining: u32,
 }
 
 impl SessionContext {
@@ -74,6 +76,7 @@ impl SessionContext {
             plasticity: PlasticityTracker::new(),
             budget: SessionBudget::new(100_000, 1.00),
             sequence_monitor: SequenceMonitor::new(),
+            judge_calls_remaining: 20,
         }
     }
 }
