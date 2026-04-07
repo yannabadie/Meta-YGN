@@ -82,15 +82,25 @@ impl SemanticRouter {
 
     /// Classify a command into a [`RiskTier`] using weighted kNN voting.
     pub fn classify(&self, command: &str, context: Option<&str>) -> RiskTier {
+        self.classify_with_confidence(command, context).0
+    }
+
+    /// Classify a command and return both the [`RiskTier`] and the winning
+    /// tier's weight ratio as a confidence value in `[0.0, 1.0]`.
+    pub fn classify_with_confidence(
+        &self,
+        command: &str,
+        context: Option<&str>,
+    ) -> (RiskTier, f32) {
         let text = example_text(command, context);
         let query_vec = match self.embedding.embed(&text) {
             Ok(v) => v,
-            Err(_) => return RiskTier::Ambiguous, // fail-safe
+            Err(_) => return (RiskTier::Ambiguous, 0.0), // fail-safe
         };
 
         let examples = self.examples.read().expect("lock poisoned");
         if examples.is_empty() {
-            return RiskTier::Ambiguous;
+            return (RiskTier::Ambiguous, 0.0);
         }
 
         // Compute cosine similarity against every example.
@@ -123,25 +133,27 @@ impl SemanticRouter {
 
         let total = safe_weight + ambiguous_weight + dangerous_weight;
         if total == 0.0 {
-            return RiskTier::Ambiguous;
+            return (RiskTier::Ambiguous, 0.0);
         }
 
         let dangerous_ratio = dangerous_weight / total;
         let safe_ratio = safe_weight / total;
+        let ambiguous_ratio = ambiguous_weight / total;
 
         if dangerous_ratio > 0.5 {
-            RiskTier::Dangerous
+            (RiskTier::Dangerous, dangerous_ratio)
         } else if safe_ratio > 0.8 {
-            RiskTier::Safe
+            (RiskTier::Safe, safe_ratio)
         } else {
-            RiskTier::Ambiguous
+            (RiskTier::Ambiguous, ambiguous_ratio)
         }
     }
 
     /// Return a [`RoutingHint`] for the given command.
     pub fn routing_hint(&self, command: &str, context: Option<&str>) -> RoutingHint {
-        match self.classify(command, context) {
-            RiskTier::Safe => RoutingHint::Deterministic,
+        let (tier, confidence) = self.classify_with_confidence(command, context);
+        match tier {
+            RiskTier::Safe => RoutingHint::SemanticMatch { confidence },
             RiskTier::Dangerous => RoutingHint::Deterministic,
             RiskTier::Ambiguous => RoutingHint::LlmJudge,
         }
@@ -342,5 +354,12 @@ mod tests {
             let _ = router.classify(input, None);
             let _ = router.routing_hint(input, None);
         }
+    }
+
+    #[test]
+    fn classify_with_confidence_returns_valid_range() {
+        let router = make_router();
+        let (_tier, confidence) = router.classify_with_confidence("ls -la", None);
+        assert!(confidence >= 0.0 && confidence <= 1.0);
     }
 }
