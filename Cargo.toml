@@ -13,7 +13,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-version = "2.3.0"
+version = "2.3.1"
 license = "MIT"
 authors = ["Yann Abadie"]
 

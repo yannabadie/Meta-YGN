@@ -43,7 +43,7 @@ Le produit gagne s'il :
 | RL Trajectory Export | `[experimental]` | JSONL signe, pas utilise pour training reel |
 | Sequence Monitor | `[experimental]` | 3 regles, fenetre glissante, Pro2Guard-inspired |
 | Semantic Router | `[experimental]` | kNN risk classification, context-aware override |
-| Haiku Judge | `[experimental]` | Tier 3 LLM judge via Anthropic API, LRU cache, budget-limited |
+| Haiku Judge | `[experimental]` | Tier 3 LLM judge via native Claude Code prompt hook (hooks.json), no Rust code, runs in parallel with daemon hook |
 | WASM Sandbox | `[experimental]` | Tier 4 Wasmtime isolation, fuel-limited, deny-by-default |
 
 ## Navigation

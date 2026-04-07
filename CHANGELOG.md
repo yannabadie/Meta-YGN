@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.1 "Prompt Judge"
+### Changed
+- **Tier 3 refactored**: Replaced Rust HaikuJudge module (reqwest + LRU + API key) with native Claude Code `"type": "prompt"` hook
+  - Zero code, zero dependencies, zero API key management
+  - Few-shot safety classification prompt with 5 examples
+  - Runs in parallel with daemon command hook — strictest verdict wins
+  - Removed: `judge.rs`, `lru` crate, `reqwest` optional dep, `judge` feature flag
+
+### Removed
+- `crates/daemon/src/judge.rs` — replaced by hooks/hooks.json prompt hook
+- `judge` feature flag and associated wiring (AppState, SessionContext, hooks)
+
 ## 2.3.0 "Full Cascade"
 
 ### Added
