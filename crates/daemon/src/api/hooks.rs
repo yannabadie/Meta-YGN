@@ -17,9 +17,12 @@ use crate::proxy::pruner::ContextPruner;
 /// Append the global budget summary to a HookOutput's additionalContext.
 /// Used only for early-return paths where no session context exists yet.
 fn append_budget_to_output(output: &mut HookOutput, state: &AppState) {
-    let budget = state.budget.lock().expect("budget mutex poisoned");
-    let summary = budget.summary();
-    append_budget_summary(output, summary);
+    if let Ok(budget) = state.budget.lock() {
+        let summary = budget.summary();
+        append_budget_summary(output, summary);
+    } else {
+        tracing::warn!("budget mutex poisoned — skipping budget display");
+    }
 }
 
 /// Append the session-local budget summary to a HookOutput's additionalContext.
@@ -29,9 +32,12 @@ fn append_session_budget(
     output: &mut HookOutput,
     session: &std::sync::Arc<std::sync::Mutex<crate::session::SessionContext>>,
 ) {
-    let sess = session.lock().expect("session mutex poisoned");
-    let summary = sess.budget.summary();
-    append_budget_summary(output, summary);
+    if let Ok(sess) = session.lock() {
+        let summary = sess.budget.summary();
+        append_budget_summary(output, summary);
+    } else {
+        tracing::warn!("session mutex poisoned — skipping session budget display");
+    }
 }
 
 /// Shared helper: write a budget summary string into a HookOutput.
@@ -276,8 +282,11 @@ async fn pre_tool_use(
 
     // Persist tool call count into session context
     {
-        let mut sess = session_ctx.lock().unwrap();
-        sess.tool_calls += 1;
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.tool_calls += 1;
+        } else {
+            tracing::warn!("session mutex poisoned — skipping tool_calls increment");
+        }
     }
 
     let risk_label = match ctx.risk {
@@ -337,23 +346,29 @@ async fn post_tool_use(
     // Session-local prevents cross-session bleed; global feeds /profiler/fatigue.
     let is_error = response_looks_like_error(&tool_name, &response);
     {
-        let mut sess = session_ctx.lock().unwrap();
-        if is_error {
-            sess.fatigue.on_error();
-            sess.errors += 1;
+        if let Ok(mut sess) = session_ctx.lock() {
+            if is_error {
+                sess.fatigue.on_error();
+                sess.errors += 1;
+            } else {
+                sess.fatigue.on_success();
+                sess.success_count += 1;
+            }
+            // Sync session budget tokens
+            sess.tokens_consumed = sess.budget.consumed_tokens();
         } else {
-            sess.fatigue.on_success();
-            sess.success_count += 1;
+            tracing::warn!("session mutex poisoned — skipping fatigue/budget sync in post_tool_use");
         }
-        // Sync session budget tokens
-        sess.tokens_consumed = sess.budget.consumed_tokens();
     }
     {
-        let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        if is_error {
-            profiler.on_error();
+        if let Ok(mut profiler) = state.fatigue.lock() {
+            if is_error {
+                profiler.on_error();
+            } else {
+                profiler.on_success();
+            }
         } else {
-            profiler.on_success();
+            tracing::warn!("fatigue mutex poisoned — skipping global fatigue update");
         }
     }
 
@@ -361,24 +376,30 @@ async fn post_tool_use(
     // Session-local prevents cross-session bleed; global feeds /profiler endpoints.
     {
         use crate::profiler::plasticity::RecoveryOutcome;
-        let mut sess = session_ctx.lock().unwrap();
-        if sess.plasticity.has_pending_recovery() {
-            if is_error {
-                sess.plasticity.record_outcome(RecoveryOutcome::Failure);
-            } else {
-                sess.plasticity.record_outcome(RecoveryOutcome::Success);
+        if let Ok(mut sess) = session_ctx.lock() {
+            if sess.plasticity.has_pending_recovery() {
+                if is_error {
+                    sess.plasticity.record_outcome(RecoveryOutcome::Failure);
+                } else {
+                    sess.plasticity.record_outcome(RecoveryOutcome::Success);
+                }
             }
+        } else {
+            tracing::warn!("session mutex poisoned — skipping session plasticity update");
         }
     }
     {
         use crate::profiler::plasticity::RecoveryOutcome;
-        let mut tracker = state.plasticity.lock().expect("plasticity mutex poisoned");
-        if tracker.has_pending_recovery() {
-            if is_error {
-                tracker.record_outcome(RecoveryOutcome::Failure);
-            } else {
-                tracker.record_outcome(RecoveryOutcome::Success);
+        if let Ok(mut tracker) = state.plasticity.lock() {
+            if tracker.has_pending_recovery() {
+                if is_error {
+                    tracker.record_outcome(RecoveryOutcome::Failure);
+                } else {
+                    tracker.record_outcome(RecoveryOutcome::Success);
+                }
             }
+        } else {
+            tracing::warn!("plasticity mutex poisoned — skipping global plasticity update");
         }
     }
 
@@ -392,9 +413,12 @@ async fn post_tool_use(
         && let Some(error) = crate::verification::validate_file_content(file_path, content)
     {
         verification_context = format!(" SYNTAX ERROR in {}: {}", file_path, error);
-        let mut sess = session_ctx.lock().unwrap();
-        sess.verification_results
-            .push(format!("syntax_error: {} — {}", file_path, error));
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.verification_results
+                .push(format!("syntax_error: {} — {}", file_path, error));
+        } else {
+            tracing::warn!("session mutex poisoned — skipping verification_results push");
+        }
     }
 
     // Tier 1.5 verification: tree-sitter syntax check for code files
@@ -417,9 +441,12 @@ async fn post_tool_use(
                             file_path,
                             detail
                         ));
-                        let mut sess = session_ctx.lock().unwrap();
-                        sess.verification_results
-                            .push(format!("syntax_error: {} — {}", file_path, detail));
+                        if let Ok(mut sess) = session_ctx.lock() {
+                            sess.verification_results
+                                .push(format!("syntax_error: {} — {}", file_path, detail));
+                        } else {
+                            tracing::warn!("session mutex poisoned — skipping syntax verification_results push");
+                        }
                     }
                 }
             }
@@ -507,22 +534,34 @@ async fn user_prompt_submit(
     let prompt_text = input.prompt.clone().unwrap_or_default();
     let now_utc = chrono::Utc::now();
     {
-        let mut sess = session_ctx.lock().unwrap();
-        sess.fatigue.on_prompt(&prompt_text, now_utc);
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.fatigue.on_prompt(&prompt_text, now_utc);
+        } else {
+            tracing::warn!("session mutex poisoned — skipping session fatigue on_prompt");
+        }
     }
     {
-        let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
-        profiler.on_prompt(&prompt_text, now_utc);
+        if let Ok(mut profiler) = state.fatigue.lock() {
+            profiler.on_prompt(&prompt_text, now_utc);
+        } else {
+            tracing::warn!("fatigue mutex poisoned — skipping global fatigue on_prompt");
+        }
     }
 
     // Estimate and consume tokens: both session-local and global budget.
     {
         let estimated_tokens = (prompt_text.len() / 4) as u64;
         let estimated_cost = estimated_tokens as f64 * 0.000003;
-        let mut sess = session_ctx.lock().unwrap();
-        sess.budget.consume(estimated_tokens, estimated_cost);
-        let mut budget = state.budget.lock().expect("budget mutex poisoned");
-        budget.consume(estimated_tokens, estimated_cost);
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.budget.consume(estimated_tokens, estimated_cost);
+        } else {
+            tracing::warn!("session mutex poisoned — skipping session budget consume");
+        }
+        if let Ok(mut budget) = state.budget.lock() {
+            budget.consume(estimated_tokens, estimated_cost);
+        } else {
+            tracing::warn!("budget mutex poisoned — skipping global budget consume");
+        }
     }
 
     // Run ControlLoop stages 1-6 for analysis
@@ -531,18 +570,24 @@ async fn user_prompt_submit(
 
     // Persist control loop results into session context
     {
-        let mut sess = session_ctx.lock().unwrap();
-        sess.task_type = ctx.task_type;
-        sess.risk = ctx.risk;
-        sess.strategy = ctx.strategy;
-        sess.difficulty = ctx.difficulty;
-        sess.competence = ctx.competence;
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.task_type = ctx.task_type;
+            sess.risk = ctx.risk;
+            sess.strategy = ctx.strategy;
+            sess.difficulty = ctx.difficulty;
+            sess.competence = ctx.competence;
+        } else {
+            tracing::warn!("session mutex poisoned — skipping control loop results persist");
+        }
     }
 
     // Sync tokens_consumed from session-local budget
     {
-        let mut sess = session_ctx.lock().unwrap();
-        sess.tokens_consumed = sess.budget.consumed_tokens();
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.tokens_consumed = sess.budget.consumed_tokens();
+        } else {
+            tracing::warn!("session mutex poisoned — skipping tokens_consumed sync");
+        }
     }
 
     let risk_label = match ctx.risk {
@@ -557,8 +602,11 @@ async fn user_prompt_submit(
 
     // Store execution plan in session for use by the stop handler
     {
-        let mut sess = session_ctx.lock().unwrap();
-        sess.execution_plan = Some(plan.clone());
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.execution_plan = Some(plan.clone());
+        } else {
+            tracing::warn!("session mutex poisoned — skipping execution plan persist");
+        }
     }
 
     let strategy_label = format!("{:?}", ctx.strategy).to_lowercase();
@@ -660,14 +708,23 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
             .suggested_injection
             .as_deref()
             .unwrap_or("repeated errors detected");
-        let level = session_ctx.lock().unwrap().plasticity.amplification_level();
+        let level = if let Ok(sess) = session_ctx.lock() {
+            sess.plasticity.amplification_level()
+        } else {
+            tracing::warn!("session mutex poisoned — using default amplification level");
+            0
+        };
         let recovery_msg = pruner.amplified_recovery(reason, level);
-        session_ctx
-            .lock()
-            .unwrap()
-            .plasticity
-            .record_recovery_injected();
-        state.plasticity.lock().unwrap().record_recovery_injected();
+        if let Ok(mut sess) = session_ctx.lock() {
+            sess.plasticity.record_recovery_injected();
+        } else {
+            tracing::warn!("session mutex poisoned — skipping session plasticity record_recovery_injected");
+        }
+        if let Ok(mut tracker) = state.plasticity.lock() {
+            tracker.record_recovery_injected();
+        } else {
+            tracing::warn!("plasticity mutex poisoned — skipping global plasticity record_recovery_injected");
+        }
         Some(recovery_msg)
     } else {
         None
@@ -679,14 +736,17 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
     // stages (calibrate, compact, decide, learn) operate on the full session
     // picture rather than starting from scratch.
     {
-        let sess = session_ctx.lock().unwrap();
-        ctx.task_type = sess.task_type;
-        ctx.risk = sess.risk;
-        ctx.strategy = sess.strategy;
-        ctx.difficulty = sess.difficulty;
-        ctx.competence = sess.competence;
-        ctx.verification_results = sess.verification_results.clone();
-        ctx.lessons = sess.lessons.clone();
+        if let Ok(sess) = session_ctx.lock() {
+            ctx.task_type = sess.task_type;
+            ctx.risk = sess.risk;
+            ctx.strategy = sess.strategy;
+            ctx.difficulty = sess.difficulty;
+            ctx.competence = sess.competence;
+            ctx.verification_results = sess.verification_results.clone();
+            ctx.lessons = sess.lessons.clone();
+        } else {
+            tracing::warn!("session mutex poisoned — skipping session data feed into LoopContext");
+        }
     }
 
     // Load historical competence before running finalization stages
