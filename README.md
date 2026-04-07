@@ -1,6 +1,6 @@
 # Aletheia-Nexus
 
-> v1.0.0 "Ship the Proof" — [Release Notes](https://github.com/yannabadie/Meta-YGN/releases/tag/v1.0.0)
+> v2.0.0 "Production Hardened" — [Release Notes](https://github.com/yannabadie/Meta-YGN/releases/tag/v2.0.0)
 
 A local-first metacognitive control plane for coding agents.
 
@@ -62,15 +62,16 @@ These features are tested end-to-end and ship with the daemon:
 - **Calibration Report** -- `aletheia eval` computes real Brier score with calibration buckets from session outcomes
 - **Session Replay** -- `aletheia replay` shows the full hook timeline for any past session
 - **MCP Bridge** -- 5 tools (`metacog_classify`, `metacog_verify`, `metacog_recall`, `metacog_status`, `metacog_prune`) exposed as an MCP stdio server
+- **Entropy Calibration (EGPO)** -- calibrates confidence using entropy-guided policy optimization (tested: `entropy_test.rs`)
+- **Plasticity Detection (RL2F)** -- implicit feedback loop that adjusts recovery amplification based on whether errors recur (tested: `plasticity_test.rs`)
+- **UCB Memory Retrieval** -- upper-confidence-bound scoring for graph memory recall ranking (tested: `ucb_test.rs`)
+- **Heuristic Evolution** -- Layer-0 fitness-scored heuristic mutation and selection (tested: `heuristics_test.rs`)
+- **OpenTelemetry** -- stage-level tracing spans wired to any OTLP collector via `--features otel`
 
 ## Experimental Features
 
 These are implemented but not yet validated at scale. Treat claims about their effectiveness as hypotheses, not facts.
 
-- `[experimental]` **Entropy Calibration (EGPO)** -- calibrates confidence using entropy-guided policy optimization
-- `[experimental]` **Plasticity Detection (RL2F)** -- implicit feedback loop that adjusts recovery amplification based on whether errors recur
-- `[experimental]` **UCB Memory Retrieval** -- upper-confidence-bound scoring for graph memory recall ranking
-- `[experimental]` **Heuristic Evolution** -- Layer-0 fitness-scored heuristic mutation and selection
 - `[experimental]` **Dynamic Topology** -- TopologyPlanner selects Single/Vertical/Horizontal execution topology per task
 - `[experimental]` **Neural Embeddings** -- real embedding providers behind a feature gate (`fastembed`); hash-based fallback is the default
 - `[experimental]` **RL Trajectory Export** -- `aletheia export` writes JSONL trajectories for offline RL training

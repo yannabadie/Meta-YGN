@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.0.0 "Production Hardened"
+
+### Fixed (P0)
+- **Mutex panic prevention**: all 20+ mutex `.expect()`/`.unwrap()` calls in daemon hooks and services replaced with graceful error handling (`if let Ok(guard)`) — daemon no longer crashes on mutex poisoning
+- **Hot-path unwrap audit**: 35 unwrap/expect calls across 11 daemon source files replaced with error propagation or safe fallbacks
+
+### Added
+- **Prompt injection detection**: `assess` stage now detects common injection patterns ("ignore previous instructions", "###(system_message)", TODO-based jailbreaks) and classifies them as HIGH risk
+- **Improved error classification**: `response_looks_like_error()` prevents false positives on success summaries ("test result: ok. 0 failed")
+- **OpenTelemetry OTLP exporter**: `--features otel` wires stage-level tracing spans to any OTLP collector (reads `OTEL_EXPORTER_OTLP_ENDPOINT`)
+- **Sandbox timeout override**: `POST /sandbox/exec` now respects `timeout_ms` field for per-request timeout configuration
+- **Codex workflow integration**: install/launch scripts, workflow documentation, bootstrap prompt
+
+### Test Coverage Expansion
+- **classify stage**: 61 tests (all keywords, priority ordering, edge cases)
+- **assess stage**: 92 tests (risk classification, difficulty, injection markers)
+- **decide stage**: 40 tests (decision matrix, priority ordering, boundary conditions)
+- **strategy stage**: 39 tests (risk/difficulty matrix, task-type overrides)
+- **tool_need stage**: 30 tests (tool necessity, echo detection, edge cases)
+- **budget stage**: 35 tests (token allocation, latency limits, cost caps)
+- **API endpoints**: 15 integration tests for previously untested endpoints
+
+### Changed
+- Codex branch hardening merged into master
+- Memory recall endpoint returns both `events` and `results` keys for backward compatibility
+- CLI `doctor` command correctly parses hooks.json object structure
+
 ## 0.12.0 "Observable Runtime"
 ### Removed
 - `crates/mcp-bridge/` — redundant since v0.11.0 MCP fusion (workspace: 8→7 crates)
