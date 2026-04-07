@@ -18,6 +18,7 @@ mcp = ["rmcp"]
 syntax = ["metaygn-verifiers/syntax"]
 otel = ["opentelemetry", "opentelemetry_sdk", "opentelemetry-otlp", "tracing-opentelemetry"]
 embeddings = ["metaygn-memory/embeddings"]
+semantic = []
 
 [dependencies]
 metaygn-shared = { path = "../shared" }
