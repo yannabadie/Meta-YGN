@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::sync::LazyLock;
 
 /// Result from a single guard check.
 #[derive(Debug, Clone)]
@@ -33,20 +34,23 @@ pub trait Guard: Send + Sync {
 pub struct DestructiveGuard;
 
 impl DestructiveGuard {
-    fn patterns() -> Vec<Regex> {
-        [
-            r"rm\s+-rf\s+/",
-            r"sudo\s+rm\s+-rf",
-            r"\bmkfs\b",
-            r"\bdd\s+if=",
-            r"\bshutdown\b",
-            r"\breboot\b",
-            r":\(\)\{.*\|.*\}", // fork bomb
-            r"chmod\s+777\s+/",
-        ]
-        .iter()
-        .map(|p| Regex::new(p).expect("invalid destructive pattern"))
-        .collect()
+    fn patterns() -> &'static [Regex] {
+        static PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+            [
+                r"rm\s+-rf\s+/",
+                r"sudo\s+rm\s+-rf",
+                r"\bmkfs\b",
+                r"\bdd\s+if=",
+                r"\bshutdown\b",
+                r"\breboot\b",
+                r":\(\)\{.*\|.*\}", // fork bomb
+                r"chmod\s+777\s+/",
+            ]
+            .iter()
+            .map(|p| Regex::new(p).expect("invalid destructive pattern"))
+            .collect()
+        });
+        &PATTERNS
     }
 }
 
@@ -57,7 +61,7 @@ impl Guard for DestructiveGuard {
 
     fn check(&self, _tool_name: &str, input: &str) -> GuardResult {
         let patterns = Self::patterns();
-        for pat in &patterns {
+        for pat in patterns {
             if pat.is_match(input) {
                 return GuardResult {
                     guard_name: self.name().to_string(),
@@ -85,22 +89,25 @@ impl Guard for DestructiveGuard {
 pub struct HighRiskGuard;
 
 impl HighRiskGuard {
-    fn patterns() -> Vec<Regex> {
-        [
-            r"\bgit\s+push\b",
-            r"\bgit\s+reset\s+--hard\b",
-            r"\bterraform\s+apply\b",
-            r"\bterraform\s+destroy\b",
-            r"\bkubectl\s+apply\b",
-            r"\bkubectl\s+delete\b",
-            r"\bcurl\b.*\|\s*bash",
-            r"\bsudo\b",
-            r"\bdocker\s+push\b",
-            r"\bdocker\s+prune\b",
-        ]
-        .iter()
-        .map(|p| Regex::new(p).expect("invalid high-risk pattern"))
-        .collect()
+    fn patterns() -> &'static [Regex] {
+        static PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+            [
+                r"\bgit\s+push\b",
+                r"\bgit\s+reset\s+--hard\b",
+                r"\bterraform\s+apply\b",
+                r"\bterraform\s+destroy\b",
+                r"\bkubectl\s+apply\b",
+                r"\bkubectl\s+delete\b",
+                r"\bcurl\b.*\|\s*bash",
+                r"\bsudo\b",
+                r"\bdocker\s+push\b",
+                r"\bdocker\s+prune\b",
+            ]
+            .iter()
+            .map(|p| Regex::new(p).expect("invalid high-risk pattern"))
+            .collect()
+        });
+        &PATTERNS
     }
 }
 
@@ -111,7 +118,7 @@ impl Guard for HighRiskGuard {
 
     fn check(&self, _tool_name: &str, input: &str) -> GuardResult {
         let patterns = Self::patterns();
-        for pat in &patterns {
+        for pat in patterns {
             if pat.is_match(input) {
                 return GuardResult {
                     guard_name: self.name().to_string(),
@@ -139,21 +146,24 @@ impl Guard for HighRiskGuard {
 pub struct SecretPathGuard;
 
 impl SecretPathGuard {
-    fn patterns() -> Vec<Regex> {
-        [
-            r"\.env\b",
-            r"\bsecrets/",
-            r"\.pem\b",
-            r"\.key\b",
-            r"\bid_rsa\b",
-            r"\bcredentials\.json\b",
-            r"\.npmrc\b",
-            r"\.pypirc\b",
-            r"\bkubeconfig\b",
-        ]
-        .iter()
-        .map(|p| Regex::new(p).expect("invalid secret-path pattern"))
-        .collect()
+    fn patterns() -> &'static [Regex] {
+        static PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+            [
+                r"\.env\b",
+                r"\bsecrets/",
+                r"\.pem\b",
+                r"\.key\b",
+                r"\bid_rsa\b",
+                r"\bcredentials\.json\b",
+                r"\.npmrc\b",
+                r"\.pypirc\b",
+                r"\bkubeconfig\b",
+            ]
+            .iter()
+            .map(|p| Regex::new(p).expect("invalid secret-path pattern"))
+            .collect()
+        });
+        &PATTERNS
     }
 }
 
@@ -164,7 +174,7 @@ impl Guard for SecretPathGuard {
 
     fn check(&self, _tool_name: &str, input: &str) -> GuardResult {
         let patterns = Self::patterns();
-        for pat in &patterns {
+        for pat in patterns {
             if pat.is_match(input) {
                 return GuardResult {
                     guard_name: self.name().to_string(),

@@ -4,7 +4,7 @@ AI coding agents are confident even when wrong. They execute destructive command
 
 Aletheia-Nexus is a local daemon that watches every agent action and intervenes -- a cognitive immune system for AI-assisted development.
 
-![version](https://img.shields.io/badge/version-2.0.0-blue)
+![version](https://img.shields.io/badge/version-2.3.1-blue)
 
 ## What It Does
 

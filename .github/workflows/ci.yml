@@ -27,6 +27,8 @@ jobs:
         run: cargo check --workspace
       - name: Test
         run: cargo test --workspace
+      - name: Test with features
+        run: cargo test --workspace --features syntax,semantic
       - name: Clippy
         run: cargo clippy --workspace -- -D warnings
         if: matrix.os == 'ubuntu-latest'

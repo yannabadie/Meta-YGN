@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 /// What Claude claims to have done (extracted from last_assistant_message)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,9 +32,10 @@ pub fn extract_claims(text: &str) -> CompletionClaim {
 
     // Extract file paths (patterns like `path/to/file.rs`, src/main.py, etc.)
     // Must handle: backtick-quoted, space-delimited, end-of-line, after punctuation
-    let file_pattern =
-        regex::Regex::new(r"(?:^|[\s`(])((?:[\w.\-]+/)+[\w.\-]+\.\w{1,10})").unwrap();
-    let mut files_mentioned: Vec<String> = file_pattern
+    static FILE_PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"(?:^|[\s`(])((?:[\w.\-]+/)+[\w.\-]+\.\w{1,10})").unwrap()
+    });
+    let mut files_mentioned: Vec<String> = FILE_PATTERN
         .captures_iter(text)
         .map(|c| c[1].to_string())
         .filter(|f| {
@@ -45,11 +47,13 @@ pub fn extract_claims(text: &str) -> CompletionClaim {
         .collect();
     // Also catch standalone filenames with extension (no directory prefix)
     // e.g., "updated Cargo.toml" or "modified main.rs"
-    let standalone_pattern = regex::Regex::new(
-        r"(?:^|[\s`(])([A-Z][\w.\-]*\.\w{1,10}|[\w.\-]+\.(?:rs|py|ts|js|toml|json|yaml|yml|md|sh|sql|html|css))\b",
-    )
-    .unwrap();
-    for cap in standalone_pattern.captures_iter(text) {
+    static STANDALONE_PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(
+            r"(?:^|[\s`(])([A-Z][\w.\-]*\.\w{1,10}|[\w.\-]+\.(?:rs|py|ts|js|toml|json|yaml|yml|md|sh|sql|html|css))\b",
+        )
+        .unwrap()
+    });
+    for cap in STANDALONE_PATTERN.captures_iter(text) {
         let f = cap[1].to_string();
         if !files_mentioned.contains(&f) && !f.starts_with("http") && !f.contains("...") {
             files_mentioned.push(f);
