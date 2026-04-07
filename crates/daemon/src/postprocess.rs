@@ -18,7 +18,10 @@ const EVOLUTION_THRESHOLD: usize = 5;
 /// capturing the classified task type, risk level, and chosen strategy.
 pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<SessionContext>>) {
     let (task_type, risk, strategy) = {
-        let sess = session.lock().unwrap();
+        let Ok(sess) = session.lock() else {
+            tracing::warn!("session mutex poisoned — skipping after_user_prompt_submit");
+            return;
+        };
         (
             sess.task_type
                 .map(|t| format!("{:?}", t))
@@ -49,7 +52,11 @@ pub async fn after_user_prompt_submit(state: AppState, session: Arc<Mutex<Sessio
     }
 
     // Store task node ID in session for edge creation in subsequent hooks
-    session.lock().unwrap().task_node_id = Some(task_id);
+    if let Ok(mut sess) = session.lock() {
+        sess.task_node_id = Some(task_id);
+    } else {
+        tracing::warn!("session mutex poisoned — could not store task_node_id");
+    }
 }
 
 /// After `post_tool_use`: update the entropy tracker with the latest
@@ -64,7 +71,10 @@ pub async fn after_post_tool_use(
 ) {
     // 1. Update entropy tracker in session
     {
-        let mut sess = session.lock().unwrap();
+        let Ok(mut sess) = session.lock() else {
+            tracing::warn!("session mutex poisoned — skipping after_post_tool_use");
+            return;
+        };
         let confidence = sess.metacog_vector.confidence;
         sess.entropy_tracker.record(confidence, !was_error);
     }
@@ -92,7 +102,10 @@ pub async fn after_post_tool_use(
     }
 
     // Create edge: Task → Evidence (DependsOn)
-    let task_node_id = session.lock().unwrap().task_node_id.clone();
+    let task_node_id = session
+        .lock()
+        .ok()
+        .and_then(|s| s.task_node_id.clone());
     if let Some(task_id) = task_node_id {
         let edge = MemoryEdge {
             source_id: task_id,
@@ -104,7 +117,11 @@ pub async fn after_post_tool_use(
         let _ = state.graph.insert_edge(&edge).await;
     }
     // Store for chaining
-    session.lock().unwrap().last_evidence_node_id = Some(evidence_id);
+    if let Ok(mut sess) = session.lock() {
+        sess.last_evidence_node_id = Some(evidence_id);
+    } else {
+        tracing::warn!("session mutex poisoned — could not store last_evidence_node_id");
+    }
 
     // 3. Tier 2: async forge verification for Python files written to disk
     let is_python_file = file_path
@@ -125,7 +142,10 @@ pub async fn after_post_tool_use(
                                     || result.stdout.contains("\"valid\": false")
                                     || result.stdout.contains("\"valid\":false")
                                 {
-                                    let mut sess = session.lock().unwrap();
+                                    let Ok(mut sess) = session.lock() else {
+                                        tracing::warn!("session mutex poisoned — skipping verification result");
+                                        return;
+                                    };
                                     sess.verification_results.push(format!(
                                         "syntax_check_failed: Python syntax error in {}",
                                         path
@@ -152,7 +172,10 @@ pub async fn after_stop(
     decision: String,
     lessons: Vec<String>,
 ) {
-    let session_id = session.lock().unwrap().session_id.clone();
+    let Ok(session_id) = session.lock().map(|s| s.session_id.clone()) else {
+        tracing::warn!("session mutex poisoned — skipping after_stop");
+        return;
+    };
 
     // 1. Insert Decision node + edge from last Evidence
     let decision_id = format!("decision-{}", uuid::Uuid::new_v4());
@@ -171,7 +194,10 @@ pub async fn after_stop(
     }
 
     // Create edge: last Evidence → Decision (Verifies)
-    let last_evidence_id = session.lock().unwrap().last_evidence_node_id.clone();
+    let last_evidence_id = session
+        .lock()
+        .ok()
+        .and_then(|s| s.last_evidence_node_id.clone());
     if let Some(evidence_id) = last_evidence_id {
         let edge = MemoryEdge {
             source_id: evidence_id,
@@ -211,7 +237,10 @@ pub async fn after_stop(
         tokens_consumed,
         tool_calls,
     ) = {
-        let sess = session.lock().unwrap();
+        let Ok(sess) = session.lock() else {
+            tracing::warn!("session mutex poisoned — cannot read outcome data");
+            return;
+        };
         (
             sess.task_type
                 .map(|t| format!("{:?}", t))
@@ -239,7 +268,10 @@ pub async fn after_stop(
 
     // Record outcome and evolve if enough data
     let evolved_best = {
-        let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
+        let Ok(mut evolver) = state.evolver.lock() else {
+            tracing::warn!("evolver mutex poisoned — cannot record outcome");
+            return;
+        };
         evolver.record_outcome(outcome.clone());
         // Evolve after accumulating enough outcomes
         if evolver.outcomes().len() >= EVOLUTION_THRESHOLD {

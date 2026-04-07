@@ -17,7 +17,13 @@ async fn get_session_state(
 ) -> impl IntoResponse {
     match state.sessions.get(&session_id) {
         Some(ctx) => {
-            let sess = ctx.lock().unwrap();
+            let Ok(sess) = ctx.lock() else {
+                tracing::warn!("session mutex poisoned");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "session mutex poisoned"})),
+                );
+            };
             (
                 StatusCode::OK,
                 Json(serde_json::json!({

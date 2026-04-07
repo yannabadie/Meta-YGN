@@ -41,7 +41,11 @@ pub async fn prune_messages(
         let pruned = pruner.prune(&req.messages);
         let tokens_removed =
             estimate_tokens(&req.messages).saturating_sub(estimate_tokens(&pruned));
-        let level = state.plasticity.lock().unwrap().amplification_level();
+        let level = state
+            .plasticity
+            .lock()
+            .map(|p| p.amplification_level())
+            .unwrap_or(0);
         let reason = pruner.amplified_recovery(
             &format!(
                 "{} consecutive errors detected",
@@ -51,7 +55,11 @@ pub async fn prune_messages(
         );
 
         // Record the recovery injection.
-        state.plasticity.lock().unwrap().record_recovery_injected();
+        if let Ok(mut p) = state.plasticity.lock() {
+            p.record_recovery_injected();
+        } else {
+            tracing::warn!("plasticity mutex poisoned — skipping recovery recording");
+        }
 
         Json(PruneResponse {
             messages: pruned,

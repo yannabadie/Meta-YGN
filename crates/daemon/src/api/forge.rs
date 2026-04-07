@@ -43,7 +43,10 @@ pub struct ExecuteRequest {
 
 /// POST /forge/generate -- Generate a tool from a named template.
 async fn generate(State(state): State<AppState>, Json(req): Json<GenerateRequest>) -> Json<Value> {
-    let mut forge = state.forge.lock().expect("forge mutex poisoned");
+    let Ok(mut forge) = state.forge.lock() else {
+        tracing::warn!("forge mutex poisoned");
+        return Json(json!({ "ok": false, "error": "forge mutex poisoned" }));
+    };
     match forge.generate(&req.template, &req.params) {
         Ok(spec) => {
             let spec_json = serde_json::to_value(&spec).unwrap_or_default();
@@ -60,11 +63,10 @@ async fn generate(State(state): State<AppState>, Json(req): Json<GenerateRequest
 async fn execute(State(state): State<AppState>, Json(req): Json<ExecuteRequest>) -> Json<Value> {
     // We cannot hold the Mutex across an await, so use the sandbox directly
     // via the AppState (which also holds an Arc<ProcessSandbox>).
-    let forge = state.forge.lock().expect("forge mutex poisoned");
-    // ForgeEngine::execute only needs &self (no mutation), but we hold the
-    // lock for the entire call.  To avoid holding across await, build a
-    // temporary engine with the same sandbox.
-    drop(forge);
+    if state.forge.lock().is_err() {
+        tracing::warn!("forge mutex poisoned");
+        return Json(json!({ "ok": false, "error": "forge mutex poisoned" }));
+    }
 
     // Build a temporary ForgeEngine that shares the same sandbox.
     let tmp_forge = crate::forge::ForgeEngine::new(state.sandbox.clone());
@@ -82,14 +84,14 @@ async fn templates() -> Json<Value> {
     let names = list_templates();
     let items: Vec<Value> = names
         .into_iter()
-        .map(|name| {
-            let tmpl = crate::forge::get_template(name).unwrap();
-            json!({
+        .filter_map(|name| {
+            let tmpl = crate::forge::get_template(name)?;
+            Some(json!({
                 "name": tmpl.name,
                 "description": tmpl.description,
                 "language": format!("{:?}", tmpl.language),
                 "params": tmpl.params,
-            })
+            }))
         })
         .collect();
     Json(json!({ "templates": items }))

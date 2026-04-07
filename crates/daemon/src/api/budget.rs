@@ -14,7 +14,10 @@ pub struct ConsumeRequest {
 
 /// GET /budget — returns the full budget status as JSON.
 async fn get_budget(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let budget = state.budget.lock().expect("budget mutex poisoned");
+    let Ok(budget) = state.budget.lock() else {
+        tracing::warn!("budget mutex poisoned");
+        return Json(serde_json::json!({"error": "budget mutex poisoned"}));
+    };
     let value = serde_json::to_value(&*budget).unwrap_or_default();
     Json(value)
 }
@@ -25,7 +28,10 @@ async fn get_session_budget(
     Path(session_id): Path<String>,
 ) -> Json<serde_json::Value> {
     let sess_arc = state.sessions.get_or_create(&session_id);
-    let sess = sess_arc.lock().expect("session mutex poisoned");
+    let Ok(sess) = sess_arc.lock() else {
+        tracing::warn!("session mutex poisoned");
+        return Json(serde_json::json!({"error": "session mutex poisoned"}));
+    };
     let value = serde_json::to_value(&sess.budget).unwrap_or_default();
     Json(value)
 }
@@ -35,7 +41,10 @@ async fn consume_budget(
     State(state): State<AppState>,
     Json(req): Json<ConsumeRequest>,
 ) -> Json<serde_json::Value> {
-    let mut budget = state.budget.lock().expect("budget mutex poisoned");
+    let Ok(mut budget) = state.budget.lock() else {
+        tracing::warn!("budget mutex poisoned");
+        return Json(serde_json::json!({"error": "budget mutex poisoned"}));
+    };
     budget.consume(req.tokens, req.cost_usd);
     let summary = budget.summary();
     let over = budget.is_over_budget();

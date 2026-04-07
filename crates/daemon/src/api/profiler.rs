@@ -29,7 +29,15 @@ pub struct SignalRequest {
 
 /// GET /profiler/fatigue -- return current fatigue assessment.
 async fn fatigue_report(State(state): State<AppState>) -> Json<FatigueReport> {
-    let profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
+    let Ok(profiler) = state.fatigue.lock() else {
+        tracing::warn!("fatigue mutex poisoned");
+        return Json(FatigueReport {
+            score: 0.0,
+            high_friction: false,
+            signals: vec!["fatigue mutex poisoned".to_string()],
+            recommendation: "Unable to assess fatigue".to_string(),
+        });
+    };
     Json(profiler.assess())
 }
 
@@ -39,7 +47,15 @@ async fn record_signal(
     State(state): State<AppState>,
     Json(req): Json<SignalRequest>,
 ) -> Json<FatigueReport> {
-    let mut profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
+    let Ok(mut profiler) = state.fatigue.lock() else {
+        tracing::warn!("fatigue mutex poisoned");
+        return Json(FatigueReport {
+            score: 0.0,
+            high_friction: false,
+            signals: vec!["fatigue mutex poisoned".to_string()],
+            recommendation: "Unable to assess fatigue".to_string(),
+        });
+    };
 
     match req.signal_type.as_str() {
         "prompt" => {

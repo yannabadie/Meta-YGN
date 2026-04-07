@@ -88,7 +88,10 @@ impl SessionStore {
 
     /// Get or create a session context for the given session ID.
     pub fn get_or_create(&self, session_id: &str) -> Arc<Mutex<SessionContext>> {
-        let mut map = self.sessions.lock().expect("session store mutex poisoned");
+        let mut map = self.sessions.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("session store mutex poisoned — recovering");
+            poisoned.into_inner()
+        });
         map.entry(session_id.to_string())
             .or_insert_with(|| Arc::new(Mutex::new(SessionContext::new(session_id.to_string()))))
             .clone()
@@ -97,19 +100,28 @@ impl SessionStore {
     /// Get a session context without creating one.
     /// Returns `None` if the session does not exist.
     pub fn get(&self, session_id: &str) -> Option<Arc<Mutex<SessionContext>>> {
-        let map = self.sessions.lock().expect("session store mutex poisoned");
+        let map = self.sessions.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("session store mutex poisoned — recovering");
+            poisoned.into_inner()
+        });
         map.get(session_id).cloned()
     }
 
     /// Remove a session (called at session end).
     pub fn remove(&self, session_id: &str) -> Option<Arc<Mutex<SessionContext>>> {
-        let mut map = self.sessions.lock().expect("session store mutex poisoned");
+        let mut map = self.sessions.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("session store mutex poisoned — recovering");
+            poisoned.into_inner()
+        });
         map.remove(session_id)
     }
 
     /// Number of active sessions.
     pub fn count(&self) -> usize {
-        let map = self.sessions.lock().expect("session store mutex poisoned");
+        let map = self.sessions.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("session store mutex poisoned — recovering");
+            poisoned.into_inner()
+        });
         map.len()
     }
 }

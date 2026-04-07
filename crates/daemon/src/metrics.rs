@@ -46,8 +46,7 @@ async fn prometheus_metrics(State(state): State<AppState>) -> impl IntoResponse 
     }
 
     // Fatigue
-    {
-        let profiler = state.fatigue.lock().expect("fatigue mutex poisoned");
+    if let Ok(profiler) = state.fatigue.lock() {
         let report = profiler.assess();
         output.push_str(&format!(
             "# HELP metaygn_fatigue_score Current fatigue score\n\
@@ -55,17 +54,20 @@ async fn prometheus_metrics(State(state): State<AppState>) -> impl IntoResponse 
              metaygn_fatigue_score {:.4}\n\n",
             report.score
         ));
+    } else {
+        tracing::warn!("fatigue mutex poisoned — skipping fatigue metric");
     }
 
     // Budget
-    {
-        let budget = state.budget.lock().expect("budget mutex poisoned");
+    if let Ok(budget) = state.budget.lock() {
         output.push_str(&format!(
             "# HELP metaygn_tokens_consumed_total Total tokens consumed globally\n\
              # TYPE metaygn_tokens_consumed_total counter\n\
              metaygn_tokens_consumed_total {}\n\n",
             budget.consumed_tokens()
         ));
+    } else {
+        tracing::warn!("budget mutex poisoned — skipping budget metric");
     }
 
     (

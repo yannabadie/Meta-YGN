@@ -195,21 +195,35 @@ pub mod mcp_handler {
             let event_count = self.state.memory.event_count().await.unwrap_or(0);
             let node_count = self.state.graph.node_count().await.unwrap_or(0);
 
-            let fatigue_report = {
-                let profiler = self.state.fatigue.lock().expect("fatigue mutex poisoned");
-                profiler.assess()
+            let fatigue_report = match self.state.fatigue.lock() {
+                Ok(profiler) => profiler.assess(),
+                Err(_) => {
+                    tracing::warn!("fatigue mutex poisoned — returning defaults");
+                    crate::profiler::fatigue::FatigueReport {
+                        score: 0.0,
+                        high_friction: false,
+                        signals: vec!["fatigue mutex poisoned".to_string()],
+                        recommendation: "Unable to assess fatigue".to_string(),
+                    }
+                }
             };
 
-            let budget_json = {
-                let budget = self.state.budget.lock().expect("budget mutex poisoned");
-                serde_json::to_value(&*budget).unwrap_or_default()
+            let budget_json = match self.state.budget.lock() {
+                Ok(budget) => serde_json::to_value(&*budget).unwrap_or_default(),
+                Err(_) => {
+                    tracing::warn!("budget mutex poisoned — returning null");
+                    serde_json::json!(null)
+                }
             };
 
-            let heuristics_json = {
-                let evolver = self.state.evolver.lock().expect("evolver mutex poisoned");
-                match evolver.best() {
+            let heuristics_json = match self.state.evolver.lock() {
+                Ok(evolver) => match evolver.best() {
                     Some(best) => serde_json::to_value(best).unwrap_or_default(),
                     None => serde_json::json!(null),
+                },
+                Err(_) => {
+                    tracing::warn!("evolver mutex poisoned — returning null");
+                    serde_json::json!(null)
                 }
             };
 

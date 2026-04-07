@@ -57,7 +57,12 @@ async fn main() -> Result<()> {
     std::fs::create_dir_all(&db_dir)?;
 
     tracing::info!("Opening database at {}", db_path.display());
-    let state = AppState::new(db_path.to_str().unwrap()).await?;
+    let state = AppState::new(
+        db_path
+            .to_str()
+            .expect("database path contains invalid UTF-8"),
+    )
+    .await?;
 
     if args.mcp {
         run_mcp_server(state).await

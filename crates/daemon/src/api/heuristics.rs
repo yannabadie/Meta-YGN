@@ -41,7 +41,10 @@ async fn record_outcome(
         )
         .await;
 
-    let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
+    let Ok(mut evolver) = state.evolver.lock() else {
+        tracing::warn!("evolver mutex poisoned");
+        return Json(json!({ "ok": false, "error": "evolver mutex poisoned" }));
+    };
     evolver.record_outcome(outcome);
     Json(json!({ "ok": true }))
 }
@@ -49,7 +52,10 @@ async fn record_outcome(
 /// POST /heuristics/evolve -- Trigger one evolution generation, return best.
 async fn evolve(State(state): State<AppState>) -> Json<Value> {
     let (best_json, best_clone) = {
-        let mut evolver = state.evolver.lock().expect("evolver mutex poisoned");
+        let Ok(mut evolver) = state.evolver.lock() else {
+            tracing::warn!("evolver mutex poisoned");
+            return Json(json!({ "ok": false, "error": "evolver mutex poisoned" }));
+        };
         match evolver.evolve_generation() {
             Some(best) => {
                 let best_json = serde_json::to_value(best).unwrap_or_default();
@@ -85,7 +91,10 @@ async fn evolve(State(state): State<AppState>) -> Json<Value> {
 
 /// GET /heuristics/best -- Return the current best heuristic version.
 async fn best(State(state): State<AppState>) -> Json<Value> {
-    let evolver = state.evolver.lock().expect("evolver mutex poisoned");
+    let Ok(evolver) = state.evolver.lock() else {
+        tracing::warn!("evolver mutex poisoned");
+        return Json(json!({ "error": "evolver mutex poisoned" }));
+    };
     match evolver.best() {
         Some(best) => {
             let best_json = serde_json::to_value(best).unwrap_or_default();
@@ -97,7 +106,10 @@ async fn best(State(state): State<AppState>) -> Json<Value> {
 
 /// GET /heuristics/population -- Return population stats.
 async fn population_stats(State(state): State<AppState>) -> Json<Value> {
-    let evolver = state.evolver.lock().expect("evolver mutex poisoned");
+    let Ok(evolver) = state.evolver.lock() else {
+        tracing::warn!("evolver mutex poisoned");
+        return Json(json!({ "error": "evolver mutex poisoned" }));
+    };
     let best_fitness = evolver.best().map(|b| b.fitness.composite).unwrap_or(0.0);
     Json(json!({
         "size": evolver.population_size(),
