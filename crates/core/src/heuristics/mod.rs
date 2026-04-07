@@ -11,3 +11,4 @@
 pub mod entropy;
 pub mod evolver;
 pub mod fitness;
+pub mod mop;
