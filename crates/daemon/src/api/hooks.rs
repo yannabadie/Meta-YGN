@@ -211,6 +211,13 @@ async fn pre_tool_use(
     let pipeline_decision = state.guard_pipeline.check(&tool_name, &command);
 
     if !pipeline_decision.allowed {
+        // Record guard hit in adaptive guard memory
+        if let Some(ref guard_name) = pipeline_decision.blocking_guard {
+            if let Ok(mut mem) = state.guard_memory.lock() {
+                mem.record_hit(guard_name);
+            }
+        }
+
         // Score 0 = destructive -> deny; score > 0 = high-risk -> ask
         let decision = if pipeline_decision.aggregate_score == 0 {
             PermissionDecision::Deny
@@ -359,6 +366,16 @@ async fn pre_tool_use(
         None
     };
 
+    // MOP check: if meltdown detected, escalate
+    let meltdown_warning = if let Ok(sess) = session_ctx.lock() {
+        if sess.mop_detector.is_melting_down() {
+            Some(" [MELTDOWN] Agent behavioral collapse detected — consider escalating".to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     let risk_label = match ctx.risk {
         RiskLevel::Low => "low",
@@ -372,6 +389,9 @@ async fn pre_tool_use(
         risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
     );
     if let Some(ref warning) = sequence_warning {
+        context_msg.push_str(warning);
+    }
+    if let Some(ref warning) = meltdown_warning {
         context_msg.push_str(warning);
     }
     let mut output = HookOutput::context("PreToolUse".to_string(), context_msg);
@@ -589,6 +609,21 @@ async fn post_tool_use(
                     rule = %latest.rule,
                     description = %latest.description,
                     "SEQUENCE ALERT: dangerous multi-action pattern detected"
+                );
+            }
+        }
+    }
+
+    // MOP detection: check for behavioral meltdown
+    {
+        if let Ok(mut sess) = session_ctx.lock() {
+            let report = sess.mop_detector.record(&tool_name);
+            if report.meltdown_detected {
+                tracing::warn!(
+                    entropy = report.entropy,
+                    step = report.meltdown_step,
+                    repetition_ratio = report.repetition_ratio,
+                    "MELTDOWN DETECTED: agent behavioral collapse onset"
                 );
             }
         }

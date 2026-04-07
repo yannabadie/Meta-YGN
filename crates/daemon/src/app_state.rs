@@ -10,6 +10,7 @@ use metaygn_memory::graph::GraphMemory;
 use metaygn_memory::store::MemoryStore;
 use metaygn_sandbox::ProcessSandbox;
 use metaygn_shared::budget_tracker::SessionBudget;
+use metaygn_verifiers::adaptive::AdaptiveGuardMemory;
 use metaygn_verifiers::guard_pipeline::GuardPipeline;
 
 use crate::forge::ForgeEngine;
@@ -31,6 +32,7 @@ pub struct AppState {
     pub budget: Arc<Mutex<SessionBudget>>,
     pub plasticity: Arc<Mutex<PlasticityTracker>>,
     pub sessions: Arc<SessionStore>,
+    pub guard_memory: Arc<Mutex<AdaptiveGuardMemory>>,
     pub embedding: Arc<dyn EmbeddingProvider>,
     #[cfg(feature = "semantic")]
     pub router: std::sync::Arc<crate::semantic_router::SemanticRouter>,
@@ -104,6 +106,8 @@ impl AppState {
         #[cfg(feature = "semantic")]
         let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
 
+        let guard_memory = Arc::new(Mutex::new(AdaptiveGuardMemory::new()));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -116,6 +120,7 @@ impl AppState {
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
+            guard_memory,
             embedding,
             #[cfg(feature = "semantic")]
             router,
@@ -152,6 +157,8 @@ impl AppState {
         #[cfg(feature = "semantic")]
         let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
 
+        let guard_memory = Arc::new(Mutex::new(AdaptiveGuardMemory::new()));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -164,6 +171,7 @@ impl AppState {
             budget: Arc::new(Mutex::new(SessionBudget::new(100_000, 1.00))),
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
+            guard_memory,
             embedding,
             #[cfg(feature = "semantic")]
             router,

@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use metaygn_core::heuristics::entropy::EntropyTracker;
+use metaygn_core::heuristics::mop::MopDetector;
 use metaygn_core::sequence_monitor::SequenceMonitor;
 use metaygn_core::topology::ExecutionPlan;
 use metaygn_shared::budget_tracker::SessionBudget;
@@ -41,6 +42,8 @@ pub struct SessionContext {
     pub budget: SessionBudget,
     /// Session-local sequence monitor for multi-action pattern detection.
     pub sequence_monitor: SequenceMonitor,
+    /// Session-local MOP detector for behavioral meltdown detection.
+    pub mop_detector: MopDetector,
 }
 
 impl SessionContext {
@@ -74,6 +77,7 @@ impl SessionContext {
             plasticity: PlasticityTracker::new(),
             budget: SessionBudget::new(100_000, 1.00),
             sequence_monitor: SequenceMonitor::new(),
+            mop_detector: MopDetector::new(),
         }
     }
 }
