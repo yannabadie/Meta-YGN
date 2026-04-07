@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.2.0 "Sequence Sentinel"
+
+### Added
+- **SequenceMonitor**: DTMC-inspired multi-action pattern detector (3 rules, sliding window)
+- **classify_with_confidence()** on SemanticRouter
+
+### Architecture
+- SessionContext includes SequenceMonitor, hooks feed + check alerts
+
+## 2.1.1 "Context-Aware"
+
+### Fixed
+- False positive on safe `rm` — semantic router overrides assess risk with confidence >= 0.8
+
+### Changed
+- `routing_hint()` returns `SemanticMatch{confidence}` for safe matches
+
 ## 2.0.0 "Production Hardened"
 
 ### Fixed (P0)

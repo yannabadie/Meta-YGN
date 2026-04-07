@@ -28,6 +28,7 @@ Claude Code
                                     ├── Heuristic Evolver
                                     ├── Fatigue Profiler
                                     ├── MASC Anomaly Detector
+                                    ├── Sequence Monitor
                                     ├── Tool Forge
                                     └── SQLite (MemoryStore + GraphMemory)
 ```

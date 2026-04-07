@@ -39,3 +39,5 @@ Code reel, non validees a l'echelle.
 | [[Dynamic-Topology]] | Selection Single/Vertical/Horizontal/Research | core/topology.rs | DyTopo |
 | [[Neural-Embeddings]] | fastembed bge-small-en-v1.5, fallback hash | memory/embeddings.rs | — |
 | [[RL-Trajectory-Export]] | Trajectoires signees JSONL pour offline RL | memory/trajectory.rs | RL2F |
+| [[Sequence-Monitor]] | DTMC multi-action pattern detector, 3 rules, sliding window | core/sequence_monitor.rs | Pro2Guard |
+| [[Semantic-Router]] | kNN risk classification, context-aware override | daemon/semantic_router.rs | RouteLLM |

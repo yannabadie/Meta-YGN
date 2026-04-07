@@ -2172,7 +2172,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-cli"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2190,7 +2190,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-core"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2206,7 +2206,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-daemon"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "axum 0.8.8",
@@ -2241,7 +2241,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-memory"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2260,7 +2260,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-sandbox"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "metaygn-shared",
@@ -2273,7 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-shared"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "chrono",
  "serde",
@@ -2285,7 +2285,7 @@ dependencies = [
 
 [[package]]
 name = "metaygn-verifiers"
-version = "2.0.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "chrono",
