@@ -19,6 +19,7 @@ syntax = ["metaygn-verifiers/syntax"]
 otel = ["opentelemetry", "opentelemetry_sdk", "opentelemetry-otlp", "tracing-opentelemetry"]
 embeddings = ["metaygn-memory/embeddings"]
 semantic = []
+judge = ["lru", "dep:reqwest"]
 
 [dependencies]
 metaygn-shared = { path = "../shared" }
@@ -37,6 +38,8 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 clap = { version = "4.5", features = ["derive"] }
 rmcp = { version = "0.17", features = ["server", "transport-io"], optional = true }
+lru = { version = "0.12", optional = true }
+reqwest = { version = "0.12", features = ["json"], optional = true }
 regex = "1"
 dirs = "6"
 chrono.workspace = true
