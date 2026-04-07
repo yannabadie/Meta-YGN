@@ -45,6 +45,8 @@ Claude Code
 - [[Plugin-Structure|Structure plugin Claude Code]]
 - [[MCP-Bridge|Bridge MCP — 5 outils]]
 - [[Topology-Planner|Topology Planner — Single/Vertical/Horizontal/Research]]
+- [[Tiered-Verification|Verification en cascade 5 tiers]]
+- [[Competitive-Landscape|Paysage concurrentiel]]
 
 ## 7 Crates Rust
 

@@ -15,6 +15,7 @@ updated: 2026-04-07
 | [[ADR-002-Hook-Fallback]] | Fallback local si daemon down | accepte |
 | [[ADR-003-Evidence-Tiers]] | 3 tiers (confirmed/experimental/original-proposal) | accepte |
 | [[ADR-004-Tiered-Verification-Architecture]] | Architecture de verification en cascade 5 tiers | proposed |
+| [[ADR-005-HTTP-Hooks-Migration]] | Migration hooks npx tsx vers alternatives rapides | proposed |
 
 > Ces ADRs restent valides pour v2.0.
 

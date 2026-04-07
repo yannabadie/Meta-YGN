@@ -7,7 +7,7 @@ updated: 2026-04-07
 # Aletheia-Nexus — Runtime Metacognitif
 
 Control plane local-first pour coding agents. Daemon Rust + plugin Claude Code.
-v2.3.0 "Full Cascade" — Avril 2026.
+v2.3.1 "Full Cascade" — Avril 2026.
 
 ## These produit
 
@@ -63,6 +63,9 @@ Le produit gagne s'il :
 
 ### Decisions
 - [[00-Decisions-MOC|Decisions]] — Choix architecturaux
+
+### Research
+- [[00-Research-MOC|Research]] — Papers et references scientifiques
 
 ## Chiffres cles
 
