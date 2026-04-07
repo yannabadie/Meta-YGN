@@ -2,7 +2,10 @@
 //!
 //! This crate provides the "shadow sandboxing" feature -- the AI tests hypotheses
 //! before presenting results to the user.  The initial backend is process-based;
-//! a WASM/wasmtime backend can be added later behind a feature gate.
+//! a WASM/wasmtime backend is available behind the `wasm` feature gate.
+
+#[cfg(feature = "wasm")]
+pub mod wasm_sandbox;
 
 use std::time::{Duration, Instant};
 
