@@ -301,7 +301,11 @@ async fn pre_tool_use(
     let mut input_for_loop = input.clone();
     let cmd = extract_command(&input_for_loop);
     if !cmd.is_empty() {
-        input_for_loop.prompt = Some(cmd);
+        // Combine the original prompt AND the command so that injection
+        // markers in the prompt are not lost when we inject the command
+        // text for risk assessment.
+        let original_prompt = input_for_loop.prompt.clone().unwrap_or_default();
+        input_for_loop.prompt = Some(format!("{} {}", original_prompt, cmd));
     }
     let mut ctx = LoopContext::new(input_for_loop);
     state.control_loop.run_range(&mut ctx, 0, 6);
@@ -480,7 +484,7 @@ async fn post_tool_use(
     }
 
     let context = if tool_name == "Bash" && is_error {
-        "Test failure detected in Bash output. Review results before proceeding."
+        "Error detected in Bash output. Review results before proceeding."
     } else if tool_name == "Write" || tool_name == "Edit" {
         "File modification recorded. Verify changes align with intent."
     } else if tool_name.starts_with("mcp__") {
