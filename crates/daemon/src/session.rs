@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use metaygn_core::heuristics::entropy::EntropyTracker;
+use metaygn_core::sequence_monitor::SequenceMonitor;
 use metaygn_core::topology::ExecutionPlan;
 use metaygn_shared::budget_tracker::SessionBudget;
 use metaygn_shared::state::*;
@@ -38,6 +39,8 @@ pub struct SessionContext {
     pub plasticity: PlasticityTracker,
     /// Session-local budget tracker (avoids cross-session bleed).
     pub budget: SessionBudget,
+    /// Session-local sequence monitor for multi-action pattern detection.
+    pub sequence_monitor: SequenceMonitor,
 }
 
 impl SessionContext {
@@ -70,6 +73,7 @@ impl SessionContext {
             fatigue: FatigueProfiler::with_defaults(),
             plasticity: PlasticityTracker::new(),
             budget: SessionBudget::new(100_000, 1.00),
+            sequence_monitor: SequenceMonitor::new(),
         }
     }
 }

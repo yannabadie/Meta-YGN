@@ -135,6 +135,12 @@ async fn record_replay(
         .await;
 }
 
+/// Check whether a command string looks like `git push`.
+fn command_looks_like_git_push(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    lower.contains("git push") || lower.contains("git push --force")
+}
+
 /// Determine whether a tool response indicates an error.
 fn response_looks_like_error(tool_name: &str, response: &str) -> bool {
     let trimmed = response.trim();
@@ -337,6 +343,22 @@ async fn pre_tool_use(
         }
     }
 
+    // Check sequence monitor for alerts from previous actions
+    let sequence_warning = if let Ok(sess) = session_ctx.lock() {
+        let alerts = sess.sequence_monitor.alerts();
+        if !alerts.is_empty() {
+            let latest = &alerts[alerts.len() - 1];
+            Some(format!(
+                " [sequence_alert:{}] {}",
+                latest.rule, latest.description
+            ))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let risk_label = match ctx.risk {
         RiskLevel::Low => "low",
         RiskLevel::Medium => "medium",
@@ -344,13 +366,14 @@ async fn pre_tool_use(
     };
 
     // Return enriched context with risk + strategy
-    let mut output = HookOutput::context(
-        "PreToolUse".to_string(),
-        format!(
-            "[risk:{}] [strategy:{:?}] [difficulty:{:.2}] Tool '{}' allowed by guard pipeline (score:{})",
-            risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
-        ),
+    let mut context_msg = format!(
+        "[risk:{}] [strategy:{:?}] [difficulty:{:.2}] Tool '{}' allowed by guard pipeline (score:{})",
+        risk_label, ctx.strategy, ctx.difficulty, tool_name, pipeline_decision.aggregate_score,
     );
+    if let Some(ref warning) = sequence_warning {
+        context_msg.push_str(warning);
+    }
+    let mut output = HookOutput::context("PreToolUse".to_string(), context_msg);
     append_session_budget(&mut output, &session_ctx);
     append_latency(&mut output, start);
     let resp_json = serde_json::to_string(&output).unwrap_or_default();
@@ -497,6 +520,75 @@ async fn post_tool_use(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Sequence monitor: record action for multi-step pattern detection
+    {
+        use metaygn_core::sequence_monitor::{ActionState, ActionType, TargetType};
+
+        let action_type = if is_error {
+            ActionType::Error
+        } else {
+            match tool_name.as_str() {
+                "Write" | "Edit" | "MultiEdit" => ActionType::Write,
+                "Read" | "Glob" | "Grep" => ActionType::Read,
+                "Bash" => {
+                    let resp_lower = response.to_lowercase();
+                    if resp_lower.contains("git push") || command_looks_like_git_push(&response) {
+                        ActionType::GitPush
+                    } else {
+                        ActionType::Execute
+                    }
+                }
+                name if name.starts_with("mcp__") => ActionType::NetworkRead,
+                _ => ActionType::Unknown,
+            }
+        };
+
+        let file_path = input
+            .tool_input
+            .as_ref()
+            .and_then(|ti| ti.get("file_path"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        let target_type = if file_path.contains("test")
+            || file_path.contains("_test")
+            || file_path.contains("spec")
+        {
+            TargetType::TestFile
+        } else if file_path.contains(".env")
+            || file_path.contains("secret")
+            || file_path.contains("credential")
+            || file_path.contains(".pem")
+            || file_path.contains(".key")
+        {
+            TargetType::SensitivePath
+        } else if tool_name.starts_with("mcp__") {
+            TargetType::Url
+        } else {
+            TargetType::File
+        };
+
+        if let Ok(mut sess) = session_ctx.lock() {
+            let alert_count_before = sess.sequence_monitor.alerts().len();
+            sess.sequence_monitor.record(ActionState {
+                action_type,
+                target_type,
+                tool_name: tool_name.clone(),
+                detail: file_path.to_string(),
+            });
+            // Log new alerts
+            let alerts = sess.sequence_monitor.alerts();
+            if alerts.len() > alert_count_before {
+                let latest = &alerts[alerts.len() - 1];
+                tracing::warn!(
+                    rule = %latest.rule,
+                    description = %latest.description,
+                    "SEQUENCE ALERT: dangerous multi-action pattern detected"
+                );
             }
         }
     }
