@@ -128,6 +128,19 @@ pub enum EvidenceTier {
     Unverified,
 }
 
+/// Hint from the semantic router about which verification tier to use.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum RoutingHint {
+    /// Tier 0 — regex/AST sufficient, clearly safe or clearly dangerous
+    Deterministic,
+    /// Tier 1 — embedding matched with high confidence
+    SemanticMatch { confidence: f32 },
+    /// Tier 2 — needs sequence-level analysis (future: DTMC)
+    SequenceCheck,
+    /// Tier 3 — needs LLM judge (ambiguous)
+    LlmJudge,
+}
+
 /// Execution topology for the control loop pipeline.
 ///
 /// Controls how many stages are executed and in what arrangement.

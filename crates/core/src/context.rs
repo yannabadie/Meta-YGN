@@ -69,6 +69,9 @@ pub struct LoopContext {
     /// Historical success rate for this task type (from past sessions). Set by hook handler.
     pub historical_success_rate: Option<f32>,
 
+    /// Hint from the semantic router about which verification tier to apply.
+    pub routing_hint: Option<metaygn_shared::state::RoutingHint>,
+
     /// Entropy tracker for overconfidence detection (EGPO).
     #[serde(skip)]
     pub entropy_tracker: EntropyTracker,
@@ -107,6 +110,7 @@ impl LoopContext {
             overconfidence_score: 0.0,
             plasticity_lost: false,
             historical_success_rate: None,
+            routing_hint: None,
             entropy_tracker: EntropyTracker::new(20),
         }
     }
