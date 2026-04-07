@@ -3,9 +3,10 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
 use tokio::sync::watch;
-use tracing_subscriber::EnvFilter;
 
 use metaygn_daemon::app_state::AppState;
+
+mod telemetry;
 
 #[derive(Parser)]
 #[command(name = "aletheiad", about = "Aletheia metacognitive daemon")]
@@ -19,21 +20,8 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    // In MCP mode, tracing must go to stderr (stdout is reserved for MCP stdio transport).
-    if args.mcp {
-        tracing_subscriber::fmt()
-            .with_env_filter(
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-            )
-            .with_writer(std::io::stderr)
-            .init();
-    } else {
-        tracing_subscriber::fmt()
-            .with_env_filter(
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-            )
-            .init();
-    }
+    telemetry::init_tracing(args.mcp)
+        .expect("failed to initialise tracing");
 
     // Determine database path:
     // 1. METAYGN_DB_PATH env var (set by CLI --db-path flag)
