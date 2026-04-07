@@ -308,6 +308,19 @@ async fn pre_tool_use(
         input_for_loop.prompt = Some(format!("{} {}", original_prompt, cmd));
     }
     let mut ctx = LoopContext::new(input_for_loop);
+
+    // Semantic routing: classify the command for tiered verification
+    #[cfg(feature = "semantic")]
+    {
+        let task_context = if let Ok(sess) = session_ctx.lock() {
+            sess.task_type.map(|t| format!("{:?}", t))
+        } else {
+            None
+        };
+        let hint = state.router.routing_hint(&cmd, task_context.as_deref());
+        ctx.routing_hint = Some(hint);
+    }
+
     state.control_loop.run_range(&mut ctx, 0, 6);
 
     // Persist tool call count into session context

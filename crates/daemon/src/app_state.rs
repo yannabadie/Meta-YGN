@@ -32,6 +32,8 @@ pub struct AppState {
     pub plasticity: Arc<Mutex<PlasticityTracker>>,
     pub sessions: Arc<SessionStore>,
     pub embedding: Arc<dyn EmbeddingProvider>,
+    #[cfg(feature = "semantic")]
+    pub router: std::sync::Arc<crate::semantic_router::SemanticRouter>,
 }
 
 impl AppState {
@@ -99,6 +101,9 @@ impl AppState {
         #[cfg(not(feature = "embeddings"))]
         let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
+        #[cfg(feature = "semantic")]
+        let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -112,6 +117,8 @@ impl AppState {
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
             embedding,
+            #[cfg(feature = "semantic")]
+            router,
         })
     }
 
@@ -142,6 +149,9 @@ impl AppState {
         #[cfg(not(feature = "embeddings"))]
         let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
+        #[cfg(feature = "semantic")]
+        let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
+
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -155,6 +165,8 @@ impl AppState {
             plasticity: Arc::new(Mutex::new(PlasticityTracker::new())),
             sessions: Arc::new(SessionStore::new()),
             embedding,
+            #[cfg(feature = "semantic")]
+            router,
         })
     }
 }

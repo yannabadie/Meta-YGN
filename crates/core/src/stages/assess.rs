@@ -26,6 +26,10 @@ impl Stage for AssessStage {
             "assessed task"
         );
 
+        if let Some(ref hint) = ctx.routing_hint {
+            tracing::debug!("routing_hint: {:?}", hint);
+        }
+
         StageResult::Continue
     }
 }
