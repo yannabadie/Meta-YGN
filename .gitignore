@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.egg-info/
 dist/
+!packages/hooks/dist/
 build/
 
 # Environment

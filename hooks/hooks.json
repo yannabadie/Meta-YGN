@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/session-start.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/session-start.mjs\"",
             "timeout": 10,
             "statusMessage": "Initializing Aletheia..."
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/user-prompt-submit.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/user-prompt-submit.mjs\"",
             "timeout": 5,
             "statusMessage": "Classifying risk..."
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           },
           {
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -66,7 +66,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -86,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -108,7 +108,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -118,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -128,7 +128,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -138,7 +138,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -148,7 +148,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]
@@ -160,7 +160,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use-failure.mjs\"",
             "timeout": 5
           }
         ]
@@ -170,7 +170,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use-failure.mjs\"",
             "timeout": 5
           }
         ]
@@ -180,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/post-tool-use-failure.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/post-tool-use-failure.mjs\"",
             "timeout": 5
           }
         ]
@@ -191,7 +191,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/stop.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/stop.mjs\"",
             "timeout": 5
           }
         ]
@@ -202,7 +202,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/pre-compact.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/pre-compact.mjs\"",
             "timeout": 5
           }
         ]
@@ -213,7 +213,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/src/session-end.ts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/packages/hooks/dist/session-end.mjs\"",
             "timeout": 10,
             "async": true
           }

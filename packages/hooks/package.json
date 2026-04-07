@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/bundle.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@metaygn/shared": "workspace:*"
   },
   "devDependencies": {
+    "esbuild": "^0.28",
     "typescript": "^5.7",
     "zod": "^3.24",
     "@types/node": "^22"
