@@ -58,6 +58,10 @@ fn pipeline_blocks_on_first_match() {
     let decision = pipeline.check("bash", "rm -rf /");
     assert!(!decision.allowed);
     assert_eq!(decision.aggregate_score, 0);
+    // When the `syntax` feature is active, AstGuard runs first and blocks.
+    #[cfg(feature = "syntax")]
+    assert_eq!(decision.blocking_guard.as_deref(), Some("ast"));
+    #[cfg(not(feature = "syntax"))]
     assert_eq!(decision.blocking_guard.as_deref(), Some("destructive"));
 }
 

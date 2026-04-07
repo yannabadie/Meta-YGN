@@ -2,6 +2,8 @@ pub mod completion;
 pub mod evidence;
 pub mod guard_pipeline;
 #[cfg(feature = "syntax")]
+pub mod ast_guard;
+#[cfg(feature = "syntax")]
 pub mod effect_classifier;
 #[cfg(feature = "syntax")]
 pub mod syntax;

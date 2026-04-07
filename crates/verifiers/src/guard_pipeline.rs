@@ -249,16 +249,17 @@ pub struct GuardPipeline {
 
 impl GuardPipeline {
     /// Creates a pipeline with the default guard ordering.
+    #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Self {
-        Self {
-            guards: vec![
-                Box::new(DestructiveGuard),
-                Box::new(HighRiskGuard),
-                Box::new(SecretPathGuard),
-                Box::new(McpGuard),
-                Box::new(DefaultGuard),
-            ],
-        }
+        let mut guards: Vec<Box<dyn Guard>> = Vec::new();
+        #[cfg(feature = "syntax")]
+        guards.push(Box::new(crate::ast_guard::AstGuard));
+        guards.push(Box::new(DestructiveGuard));
+        guards.push(Box::new(HighRiskGuard));
+        guards.push(Box::new(SecretPathGuard));
+        guards.push(Box::new(McpGuard));
+        guards.push(Box::new(DefaultGuard));
+        Self { guards }
     }
 
     /// Creates a pipeline with a custom set of guards.
