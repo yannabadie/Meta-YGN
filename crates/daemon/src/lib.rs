@@ -7,8 +7,6 @@ pub mod metrics;
 pub mod postprocess;
 pub mod profiler;
 pub mod proxy;
-#[cfg(feature = "judge")]
-pub mod judge;
 #[cfg(feature = "semantic")]
 pub mod semantic_router;
 pub mod session;

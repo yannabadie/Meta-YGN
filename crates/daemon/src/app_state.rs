@@ -34,8 +34,6 @@ pub struct AppState {
     pub embedding: Arc<dyn EmbeddingProvider>,
     #[cfg(feature = "semantic")]
     pub router: std::sync::Arc<crate::semantic_router::SemanticRouter>,
-    #[cfg(feature = "judge")]
-    pub judge: std::sync::Arc<crate::judge::HaikuJudge>,
 }
 
 impl AppState {
@@ -106,9 +104,6 @@ impl AppState {
         #[cfg(feature = "semantic")]
         let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
 
-        #[cfg(feature = "judge")]
-        let judge = std::sync::Arc::new(crate::judge::HaikuJudge::new(crate::judge::JudgeConfig::default()));
-
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -124,8 +119,6 @@ impl AppState {
             embedding,
             #[cfg(feature = "semantic")]
             router,
-            #[cfg(feature = "judge")]
-            judge,
         })
     }
 
@@ -159,9 +152,6 @@ impl AppState {
         #[cfg(feature = "semantic")]
         let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
 
-        #[cfg(feature = "judge")]
-        let judge = std::sync::Arc::new(crate::judge::HaikuJudge::new(crate::judge::JudgeConfig::default()));
-
         Ok(Self {
             memory: Arc::new(store),
             control_loop: Arc::new(ControlLoop::new()),
@@ -177,8 +167,6 @@ impl AppState {
             embedding,
             #[cfg(feature = "semantic")]
             router,
-            #[cfg(feature = "judge")]
-            judge,
         })
     }
 }
