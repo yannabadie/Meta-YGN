@@ -9,6 +9,44 @@ use metaygn_sandbox::{Hypothesis, ProcessSandbox, SandboxConfig, SandboxResult};
 use crate::app_state::AppState;
 
 // ---------------------------------------------------------------------------
+// WASM endpoint (feature-gated)
+// ---------------------------------------------------------------------------
+
+/// Body for POST /sandbox/wasm.
+#[cfg(feature = "wasm")]
+#[derive(serde::Deserialize)]
+pub struct WasmExecRequest {
+    pub wat: String,
+    pub timeout_ms: Option<u64>,
+}
+
+#[cfg(feature = "wasm")]
+async fn exec_wasm(Json(req): Json<WasmExecRequest>) -> Json<SandboxResult> {
+    use metaygn_sandbox::wasm_sandbox::{WasmSandbox, WasmSandboxConfig};
+
+    let config = WasmSandboxConfig {
+        timeout_ms: req.timeout_ms.unwrap_or(5000),
+        ..Default::default()
+    };
+
+    let sandbox = match WasmSandbox::new(config) {
+        Ok(s) => s,
+        Err(e) => {
+            return Json(SandboxResult {
+                success: false,
+                exit_code: None,
+                stdout: String::new(),
+                stderr: format!("Failed to create WASM sandbox: {e}"),
+                duration_ms: 0,
+                timed_out: false,
+            })
+        }
+    };
+
+    Json(sandbox.execute_wat(&req.wat))
+}
+
+// ---------------------------------------------------------------------------
 // Request types
 // ---------------------------------------------------------------------------
 
@@ -86,7 +124,12 @@ async fn hypothesis(
 // ---------------------------------------------------------------------------
 
 pub fn routes() -> Router<AppState> {
-    Router::new()
+    let router = Router::new()
         .route("/sandbox/exec", post(exec))
-        .route("/sandbox/hypothesis", post(hypothesis))
+        .route("/sandbox/hypothesis", post(hypothesis));
+
+    #[cfg(feature = "wasm")]
+    let router = router.route("/sandbox/wasm", post(exec_wasm));
+
+    router
 }

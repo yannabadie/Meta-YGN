@@ -20,6 +20,7 @@ otel = ["opentelemetry", "opentelemetry_sdk", "opentelemetry-otlp", "tracing-ope
 embeddings = ["metaygn-memory/embeddings"]
 semantic = []
 judge = ["lru", "dep:reqwest"]
+wasm = ["metaygn-sandbox/wasm"]
 
 [dependencies]
 metaygn-shared = { path = "../shared" }
