@@ -60,15 +60,25 @@ echo ""
 echo "[1/8] Building workspace..."
 cargo build --workspace --manifest-path "$PROJECT_ROOT/Cargo.toml" 2>&1 | tail -1
 
+# Find the binary, checking multiple possible locations
+find_binary() {
+    local name=$1
+    for dir in "$PROJECT_ROOT/target/debug" "$PROJECT_ROOT/target/release" "$PROJECT_ROOT"/target/*/debug "$PROJECT_ROOT"/target/*/release; do
+        if [ -f "$dir/$name" ]; then
+            echo "$dir/$name"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Locate built binaries
-if [ -f "$PROJECT_ROOT/target/debug/aletheiad.exe" ]; then
-    DAEMON_BIN="$PROJECT_ROOT/target/debug/aletheiad.exe"
-    CLI_BIN="$PROJECT_ROOT/target/debug/aletheia.exe"
-elif [ -f "$PROJECT_ROOT/target/debug/aletheiad" ]; then
-    DAEMON_BIN="$PROJECT_ROOT/target/debug/aletheiad"
-    CLI_BIN="$PROJECT_ROOT/target/debug/aletheia"
+if DAEMON_BIN=$(find_binary "aletheiad.exe"); then
+    CLI_BIN=$(find_binary "aletheia.exe") || fail "Found aletheiad.exe but not aletheia.exe"
+elif DAEMON_BIN=$(find_binary "aletheiad"); then
+    CLI_BIN=$(find_binary "aletheia") || fail "Found aletheiad but not aletheia"
 else
-    fail "Could not find aletheiad binary in target/debug/"
+    fail "Could not find aletheiad binary in any target directory"
 fi
 echo "   Daemon binary: $DAEMON_BIN"
 echo "   CLI binary:    $CLI_BIN"

@@ -4,7 +4,7 @@ AI coding agents are confident even when wrong. They execute destructive command
 
 Aletheia-Nexus is a local daemon that watches every agent action and intervenes -- a cognitive immune system for AI-assisted development.
 
-![version](https://img.shields.io/badge/version-2.3.1-blue)
+![version](https://img.shields.io/badge/version-2.5.0-blue)
 
 ## What It Does
 
@@ -34,9 +34,11 @@ Claude: "Done! I created auth.rs and tests.rs"
 ```bash
 git clone https://github.com/yannabadie/Meta-YGN && cd Meta-YGN
 cargo build --workspace && pnpm install
-aletheia start                    # or: cargo run -p metaygn-cli -- start
-claude --plugin-dir .             # Claude Code with Aletheia protection
+cargo run -p metaygn-cli -- start    # start the daemon
+claude --plugin-dir .                 # Claude Code with Aletheia protection
 ```
+
+To install `aletheia` on PATH: `cargo install --path crates/cli`
 
 Then run `aletheia doctor` to verify everything works.
 
@@ -103,7 +105,7 @@ aletheia export [--limit N]           Export RL trajectories to JSONL
 ### Prerequisites
 
 - **Rust** 1.85+ (`rustup update`)
-- **Node.js** 22+ with npm (`node --version`) -- hooks run via `npx tsx`
+- **Node.js** 22+ (`node --version`) — hooks are pre-compiled, no tsx needed
 - **pnpm** 9+ (`npm install -g pnpm`) -- for TypeScript workspace dependencies
 
 ### Setup
@@ -179,7 +181,7 @@ The daemon exposes an HTTP API and MCP tools. Any agent that supports hooks or M
 It does not modify your code. It does not send data anywhere. It is a local watchdog, not a cloud service.
 
 **Is it production-ready?**
-v2.0 has ~580 tests and zero mutex panics. Experimental features are clearly tagged.
+v2.5 has 750+ tests and zero mutex panics. Experimental features are clearly tagged.
 
 ## Research Foundation
 

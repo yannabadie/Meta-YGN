@@ -855,7 +855,7 @@ async fn cmd_doctor() -> Result<()> {
                     .count()
             })
             .unwrap_or(0);
-        println!("  Skills:     {count}/8 present");
+        println!("  Skills:     {count}/9 present");
     } else {
         println!("  Skills:     NOT FOUND");
     }

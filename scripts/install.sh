@@ -9,11 +9,25 @@ command -v cargo >/dev/null 2>&1 || { echo "Error: Rust/Cargo required. Install 
 echo "Building daemon and CLI..."
 cargo build --workspace --release
 
+# Find the binary, checking multiple possible locations
+find_binary() {
+    local name=$1
+    for dir in target/release target/debug target/*/release target/*/debug; do
+        if [ -f "$dir/$name" ]; then
+            echo "$dir/$name"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Create symlinks or copy to PATH
 INSTALL_DIR="${HOME}/.local/bin"
 mkdir -p "$INSTALL_DIR"
-cp target/release/aletheiad "$INSTALL_DIR/" 2>/dev/null || cp target/release/aletheiad.exe "$INSTALL_DIR/" 2>/dev/null
-cp target/release/aletheia "$INSTALL_DIR/" 2>/dev/null || cp target/release/aletheia.exe "$INSTALL_DIR/" 2>/dev/null
+
+for bin in aletheiad aletheiad.exe aletheia aletheia.exe; do
+    BIN_PATH=$(find_binary "$bin") && cp "$BIN_PATH" "$INSTALL_DIR/" 2>/dev/null || true
+done
 
 echo "Binaries installed to $INSTALL_DIR"
 echo ""
