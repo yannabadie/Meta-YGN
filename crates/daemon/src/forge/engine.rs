@@ -91,6 +91,24 @@ impl ForgeEngine {
         let tmpl = get_template(template_name)
             .with_context(|| format!("unknown template: {template_name}"))?;
 
+        // Reject params containing shell/code metacharacters to prevent injection
+        for (key, value) in params {
+            if value.contains('"')
+                || value.contains('\'')
+                || value.contains('\\')
+                || value.contains(';')
+                || value.contains('`')
+                || value.contains('$')
+                || value.contains('|')
+                || value.contains('&')
+            {
+                return Err(anyhow::anyhow!(
+                    "Forge param '{}' contains unsafe characters: template injection blocked",
+                    key
+                ));
+            }
+        }
+
         // Substitute {{param}} placeholders.
         let mut source = tmpl.source.to_string();
         for (key, value) in params {
@@ -190,9 +208,24 @@ impl ForgeEngine {
             }
             ScriptLang::Bash => {
                 // Use a heredoc to feed stdin into the script via a pipe.
-                // The delimiter _FORGE_EOF_ is unlikely to appear in user data.
+                // Randomise the delimiter so crafted input cannot escape the heredoc.
+                let delimiter = format!(
+                    "_FORGE_EOF_{}_",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos()
+                );
+
+                // Safety check: input must not contain the delimiter
+                if input.contains(&delimiter) {
+                    return "echo 'FORGE ERROR: input contains heredoc delimiter' >&2; exit 1"
+                        .to_string();
+                }
+
                 format!(
-                    "cat <<'_FORGE_EOF_' | bash -c {source_quoted}\n{input}\n_FORGE_EOF_",
+                    "cat <<'{delimiter}' | bash -c {source_quoted}\n{input}\n{delimiter}",
+                    delimiter = delimiter,
                     source_quoted = shell_quote(source),
                     input = input,
                 )

@@ -25,7 +25,7 @@ async fn exec_wasm(Json(req): Json<WasmExecRequest>) -> Json<SandboxResult> {
     use metaygn_sandbox::wasm_sandbox::{WasmSandbox, WasmSandboxConfig};
 
     let config = WasmSandboxConfig {
-        timeout_ms: req.timeout_ms.unwrap_or(5000),
+        timeout_ms: req.timeout_ms.unwrap_or(5000).clamp(1, 30_000), // max 30 s
         ..Default::default()
     };
 
@@ -80,9 +80,12 @@ fn default_expected_success() -> bool {
 
 /// POST /sandbox/exec -- execute code in the process sandbox.
 async fn exec(State(state): State<AppState>, Json(req): Json<ExecRequest>) -> Json<SandboxResult> {
+    // TODO(security): Add bearer-token authentication. The daemon binds to
+    // 127.0.0.1 only, but any local process can execute arbitrary code via
+    // this endpoint. See security audit finding S5.
     let result = if let Some(timeout_ms) = req.timeout_ms {
         let timeout_sandbox = ProcessSandbox::new(SandboxConfig {
-            timeout: Duration::from_millis(timeout_ms.max(1)),
+            timeout: Duration::from_millis(timeout_ms.clamp(1, 30_000)), // max 30 s
             ..SandboxConfig::default()
         });
         timeout_sandbox.execute(&req.language, &req.code).await
