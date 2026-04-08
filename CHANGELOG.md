@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.4.0 "Sentinel Mind"
+
+### Added
+- **MopDetector**: Shannon entropy meltdown detection (theta=1.711, window=5) — detects agent behavioral collapse onset (arxiv 2603.29231)
+- **AdaptiveGuardMemory**: AGrail-inspired rule effectiveness tracking — TP/FP per rule, auto-disable low-value rules
+- **Datalog policy engine**: declarative safety rules via `crepe` crate — 3 rules migrated from hand-coded Rust to composable Datalog
+- **Guard decision logging**: schema for tracking guard outcomes + user overrides for over-refusal calibration
+
+### Performance
+- **Regex guards**: `LazyLock` compilation (was recompiling 28+ regex per hook call)
+- **Hook startup**: 15x faster via esbuild pre-compilation (500ms → ~50ms)
+- **CI**: `syntax` + `semantic` features now tested
+
+### Research
+- 23 new papers catalogued (NLAH, AIR, PCAS, AUQ, LIMA, ShieldNet, VibeGuard, etc.)
+- Competitive landscape analysis (Guardrails AI, NeMo, LlamaFirewall, Galileo Agent Control)
+- Obsidian vault: architecture, research, competitive landscape pages added
+
 ## 2.3.1 "Prompt Judge"
 ### Changed
 - **Tier 3 refactored**: Replaced Rust HaikuJudge module (reqwest + LRU + API key) with native Claude Code `"type": "prompt"` hook
