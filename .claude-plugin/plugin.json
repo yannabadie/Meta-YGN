@@ -1,22 +1,21 @@
 {
   "name": "aletheia-nexus",
-  "description": "Local-first metacognitive control plane for coding agents. End-to-end session lifecycle with auto-populated graph memory, heuristic evolution, entropy calibration, and dynamic topology routing.",
+  "description": "Safety runtime for AI coding agents. Blocks destructive commands via AST analysis, auto-checkpoints before risky operations, and detects agent meltdown patterns. Works with or without daemon.",
   "version": "2.6.0",
   "author": {
     "name": "Yann Abadie"
   },
   "license": "MIT",
   "keywords": [
-    "metacognition",
-    "verification",
     "safety",
-    "proof",
-    "calibration",
-    "context-discipline",
-    "risk-classification",
-    "threat-model",
-    "topology",
-    "graph-memory",
-    "heuristic-evolution"
+    "security",
+    "guardrails",
+    "hooks",
+    "destructive-commands",
+    "checkpoint",
+    "verification",
+    "metacognition",
+    "ast-analysis",
+    "meltdown-detection"
   ]
 }
