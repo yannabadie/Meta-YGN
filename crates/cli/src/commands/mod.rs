@@ -1,0 +1,23 @@
+mod doctor;
+mod eval;
+mod export;
+mod init;
+mod mcp;
+mod recall;
+mod replay;
+mod start;
+mod status;
+mod stop;
+mod top;
+
+pub use doctor::cmd_doctor;
+pub use eval::cmd_eval;
+pub use export::cmd_export;
+pub use init::cmd_init;
+pub use mcp::cmd_mcp;
+pub use recall::cmd_recall;
+pub use replay::cmd_replay;
+pub use start::cmd_start;
+pub use status::cmd_status;
+pub use stop::cmd_stop;
+pub use top::cmd_top;
