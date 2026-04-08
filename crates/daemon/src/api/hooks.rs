@@ -4,6 +4,7 @@ use axum::{Router, routing::post};
 
 use metaygn_core::context::LoopContext;
 use metaygn_core::topology::TopologyPlanner;
+use metaygn_shared::budget_tracker::COST_PER_TOKEN_USD;
 use metaygn_shared::protocol::{HookInput, HookOutput, PermissionDecision};
 use metaygn_shared::state::{RiskLevel, TaskType};
 
@@ -251,46 +252,67 @@ async fn pre_tool_use(
         let mut output = HookOutput::permission(decision, reason);
 
         // Auto-checkpoint: save recovery point before destructive operation
+        // NOTE: checkpoint functions use blocking I/O (std::process::Command,
+        // std::fs::copy), so they are offloaded to spawn_blocking to avoid
+        // starving the tokio runtime.
         let mut checkpoint_message: Option<String> = None;
-        {
-            let cwd = input.cwd.as_deref().unwrap_or(".");
 
-            // Git checkpoint for git-destructive operations
-            if command.contains("git")
-                && (command.contains("reset")
-                    || command.contains("checkout")
-                    || command.contains("push")
-                    || command.contains("rebase"))
-            {
-                let cp = metaygn_verifiers::checkpoint::git_checkpoint(cwd);
+        // Git checkpoint for git-destructive operations
+        if command.contains("git")
+            && (command.contains("reset")
+                || command.contains("checkout")
+                || command.contains("push")
+                || command.contains("rebase"))
+        {
+            let cwd_owned = input.cwd.clone().unwrap_or_else(|| ".".to_string());
+            checkpoint_message = tokio::task::spawn_blocking(move || {
+                let cp = metaygn_verifiers::checkpoint::git_checkpoint(&cwd_owned);
                 if cp.created {
                     tracing::info!(
                         checkpoint_type = ?cp.checkpoint_type,
                         location = %cp.location,
                         "auto-checkpoint created before git operation"
                     );
-                    checkpoint_message = Some(cp.message);
+                    Some(cp.message)
+                } else {
+                    None
                 }
-            }
+            })
+            .await
+            .unwrap_or(None);
+        }
 
-            // File checkpoint for file-destructive operations
-            if command.contains("rm") || command.contains("unlink") || command.contains("delete") {
+        // File checkpoint for file-destructive operations
+        if checkpoint_message.is_none()
+            && (command.contains("rm")
+                || command.contains("unlink")
+                || command.contains("delete"))
+        {
+            let cwd_owned = input.cwd.clone().unwrap_or_else(|| ".".to_string());
+            let command_owned = command.clone();
+            checkpoint_message = tokio::task::spawn_blocking(move || {
                 let target_files =
-                    metaygn_verifiers::checkpoint::extract_target_files(&command);
-                if !target_files.is_empty() {
-                    let file_refs: Vec<&str> =
-                        target_files.iter().map(|s| s.as_str()).collect();
-                    let cp = metaygn_verifiers::checkpoint::file_checkpoint(cwd, &file_refs);
-                    if cp.created {
-                        tracing::info!(
-                            files_saved = cp.files_saved,
-                            location = %cp.location,
-                            "auto-checkpoint created before file deletion"
-                        );
-                        checkpoint_message = Some(cp.message);
-                    }
+                    metaygn_verifiers::checkpoint::extract_target_files(&command_owned);
+                if target_files.is_empty() {
+                    return None;
                 }
-            }
+                let file_refs: Vec<&str> =
+                    target_files.iter().map(|s| s.as_str()).collect();
+                let cp =
+                    metaygn_verifiers::checkpoint::file_checkpoint(&cwd_owned, &file_refs);
+                if cp.created {
+                    tracing::info!(
+                        files_saved = cp.files_saved,
+                        location = %cp.location,
+                        "auto-checkpoint created before file deletion"
+                    );
+                    Some(cp.message)
+                } else {
+                    None
+                }
+            })
+            .await
+            .unwrap_or(None);
         }
 
         // Include recovery instructions in the response
@@ -456,40 +478,33 @@ async fn pre_tool_use(
         }
     }
 
-    // Persist tool call count into session context
-    {
-        if let Ok(mut sess) = session_ctx.lock() {
-            sess.tool_calls += 1;
-        } else {
-            tracing::warn!("session mutex poisoned — skipping tool_calls increment");
-        }
-    }
+    // Persist tool call count, check sequence alerts, and MOP meltdown in one lock
+    let (sequence_warning, meltdown_warning) = if let Ok(mut sess) = session_ctx.lock() {
+        sess.tool_calls += 1;
 
-    // Check sequence monitor for alerts from previous actions
-    let sequence_warning = if let Ok(sess) = session_ctx.lock() {
-        let alerts = sess.sequence_monitor.alerts();
-        if !alerts.is_empty() {
-            let latest = &alerts[alerts.len() - 1];
-            Some(format!(
-                " [sequence_alert:{}] {}",
-                latest.rule, latest.description
-            ))
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+        let seq_warn = {
+            let alerts = sess.sequence_monitor.alerts();
+            if !alerts.is_empty() {
+                let latest = &alerts[alerts.len() - 1];
+                Some(format!(
+                    " [sequence_alert:{}] {}",
+                    latest.rule, latest.description
+                ))
+            } else {
+                None
+            }
+        };
 
-    // MOP check: if meltdown detected, escalate
-    let meltdown_warning = if let Ok(sess) = session_ctx.lock() {
-        if sess.mop_detector.is_melting_down() {
+        let melt_warn = if sess.mop_detector.is_melting_down() {
             Some(" [MELTDOWN] Agent behavioral collapse detected — consider escalating".to_string())
         } else {
             None
-        }
+        };
+
+        (seq_warn, melt_warn)
     } else {
-        None
+        tracing::warn!("session mutex poisoned — skipping tool_calls/sequence/meltdown check");
+        (None, None)
     };
 
     let risk_label = match ctx.risk {
@@ -549,10 +564,11 @@ async fn post_tool_use(
     // Get or create session context for cross-hook state persistence
     let session_ctx = state.sessions.get_or_create(&session_id);
 
-    // Wire fatigue signals: record in both session-local and global profilers.
-    // Session-local prevents cross-session bleed; global feeds /profiler/fatigue.
+    // Wire fatigue and plasticity signals in a single session lock.
+    // Session-local prevents cross-session bleed; global feeds /profiler endpoints.
     let is_error = response_looks_like_error(&tool_name, &response);
     {
+        use crate::profiler::plasticity::RecoveryOutcome;
         if let Ok(mut sess) = session_ctx.lock() {
             if is_error {
                 sess.fatigue.on_error();
@@ -563,11 +579,21 @@ async fn post_tool_use(
             }
             // Sync session budget tokens
             sess.tokens_consumed = sess.budget.consumed_tokens();
+            // Plasticity
+            if sess.plasticity.has_pending_recovery() {
+                if is_error {
+                    sess.plasticity.record_outcome(RecoveryOutcome::Failure);
+                } else {
+                    sess.plasticity.record_outcome(RecoveryOutcome::Success);
+                }
+            }
         } else {
-            tracing::warn!("session mutex poisoned — skipping fatigue/budget sync in post_tool_use");
+            tracing::warn!("session mutex poisoned — skipping fatigue/plasticity in post_tool_use");
         }
     }
+    // Global fatigue and plasticity (separate mutexes, not session_ctx)
     {
+        use crate::profiler::plasticity::RecoveryOutcome;
         if let Ok(mut profiler) = state.fatigue.lock() {
             if is_error {
                 profiler.on_error();
@@ -577,26 +603,6 @@ async fn post_tool_use(
         } else {
             tracing::warn!("fatigue mutex poisoned — skipping global fatigue update");
         }
-    }
-
-    // Wire plasticity signals: record in both session-local and global trackers.
-    // Session-local prevents cross-session bleed; global feeds /profiler endpoints.
-    {
-        use crate::profiler::plasticity::RecoveryOutcome;
-        if let Ok(mut sess) = session_ctx.lock() {
-            if sess.plasticity.has_pending_recovery() {
-                if is_error {
-                    sess.plasticity.record_outcome(RecoveryOutcome::Failure);
-                } else {
-                    sess.plasticity.record_outcome(RecoveryOutcome::Success);
-                }
-            }
-        } else {
-            tracing::warn!("session mutex poisoned — skipping session plasticity update");
-        }
-    }
-    {
-        use crate::profiler::plasticity::RecoveryOutcome;
         if let Ok(mut tracker) = state.plasticity.lock() {
             if tracker.has_pending_recovery() {
                 if is_error {
@@ -610,8 +616,10 @@ async fn post_tool_use(
         }
     }
 
-    // Tier 1 verification: validate config files in-process
+    // Tier 1 verification: validate config files in-process.
+    // Collect verification results to push in a single lock below.
     let mut verification_context = String::new();
+    let mut pending_verification_results: Vec<String> = Vec::new();
     if (tool_name == "Write" || tool_name == "Edit")
         && let Some(ref tool_input) = input.tool_input
         && let Some(file_path) = tool_input.get("file_path").and_then(|v| v.as_str())
@@ -620,12 +628,7 @@ async fn post_tool_use(
         && let Some(error) = crate::verification::validate_file_content(file_path, content)
     {
         verification_context = format!(" SYNTAX ERROR in {}: {}", file_path, error);
-        if let Ok(mut sess) = session_ctx.lock() {
-            sess.verification_results
-                .push(format!("syntax_error: {} — {}", file_path, error));
-        } else {
-            tracing::warn!("session mutex poisoned — skipping verification_results push");
-        }
+        pending_verification_results.push(format!("syntax_error: {} — {}", file_path, error));
     }
 
     // Tier 1.5 verification: tree-sitter syntax check for code files
@@ -648,19 +651,15 @@ async fn post_tool_use(
                             file_path,
                             detail
                         ));
-                        if let Ok(mut sess) = session_ctx.lock() {
-                            sess.verification_results
-                                .push(format!("syntax_error: {} — {}", file_path, detail));
-                        } else {
-                            tracing::warn!("session mutex poisoned — skipping syntax verification_results push");
-                        }
+                        pending_verification_results
+                            .push(format!("syntax_error: {} — {}", file_path, detail));
                     }
                 }
             }
         }
     }
 
-    // Sequence monitor: record action for multi-step pattern detection
+    // Sequence monitor + MOP detection + deferred verification results: single lock
     {
         use metaygn_core::sequence_monitor::{ActionState, ActionType, TargetType};
 
@@ -709,6 +708,11 @@ async fn post_tool_use(
         };
 
         if let Ok(mut sess) = session_ctx.lock() {
+            // Push deferred verification results
+            sess.verification_results
+                .extend(pending_verification_results);
+
+            // Sequence monitor
             let alert_count_before = sess.sequence_monitor.alerts().len();
             sess.sequence_monitor.record(ActionState {
                 action_type,
@@ -716,7 +720,6 @@ async fn post_tool_use(
                 tool_name: tool_name.clone(),
                 detail: file_path.to_string(),
             });
-            // Log new alerts
             let alerts = sess.sequence_monitor.alerts();
             if alerts.len() > alert_count_before {
                 let latest = &alerts[alerts.len() - 1];
@@ -726,12 +729,8 @@ async fn post_tool_use(
                     "SEQUENCE ALERT: dangerous multi-action pattern detected"
                 );
             }
-        }
-    }
 
-    // MOP detection: check for behavioral meltdown
-    {
-        if let Ok(mut sess) = session_ctx.lock() {
+            // MOP detection
             let report = sess.mop_detector.record(&tool_name);
             if report.meltdown_detected {
                 tracing::warn!(
@@ -842,7 +841,7 @@ async fn user_prompt_submit(
     // Estimate and consume tokens: both session-local and global budget.
     {
         let estimated_tokens = (prompt_text.len() / 4) as u64;
-        let estimated_cost = estimated_tokens as f64 * 0.000003;
+        let estimated_cost = estimated_tokens as f64 * COST_PER_TOKEN_USD;
         if let Ok(mut sess) = session_ctx.lock() {
             sess.budget.consume(estimated_tokens, estimated_cost);
         } else {
@@ -859,7 +858,7 @@ async fn user_prompt_submit(
     let mut ctx = LoopContext::new(input);
     state.control_loop.run_range(&mut ctx, 0, 6);
 
-    // Persist control loop results into session context
+    // Persist control loop results and sync tokens_consumed in one lock
     {
         if let Ok(mut sess) = session_ctx.lock() {
             sess.task_type = ctx.task_type;
@@ -867,17 +866,9 @@ async fn user_prompt_submit(
             sess.strategy = ctx.strategy;
             sess.difficulty = ctx.difficulty;
             sess.competence = ctx.competence;
-        } else {
-            tracing::warn!("session mutex poisoned — skipping control loop results persist");
-        }
-    }
-
-    // Sync tokens_consumed from session-local budget
-    {
-        if let Ok(mut sess) = session_ctx.lock() {
             sess.tokens_consumed = sess.budget.consumed_tokens();
         } else {
-            tracing::warn!("session mutex poisoned — skipping tokens_consumed sync");
+            tracing::warn!("session mutex poisoned — skipping control loop results persist");
         }
     }
 

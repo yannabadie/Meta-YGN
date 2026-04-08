@@ -1,5 +1,6 @@
 use super::{Stage, StageResult};
 use crate::context::LoopContext;
+use metaygn_shared::budget_tracker::COST_PER_TOKEN_USD;
 use metaygn_shared::state::RiskLevel;
 
 /// Stage 5: Set token budget based on assessed difficulty and risk.
@@ -25,7 +26,7 @@ impl Stage for BudgetStage {
         };
 
         // Cost cap scales with token budget.
-        ctx.budget.max_cost_usd = ctx.budget.max_tokens as f64 * 0.00002;
+        ctx.budget.max_cost_usd = ctx.budget.max_tokens as f64 * COST_PER_TOKEN_USD;
 
         tracing::debug!(
             stage = self.name(),

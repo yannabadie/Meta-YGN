@@ -6,6 +6,8 @@
 //!
 //! Feature-gated behind `ast-guard`.
 
+use std::cell::RefCell;
+
 /// The kind of side-effect a shell command produces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectKind {
@@ -33,6 +35,14 @@ pub struct CommandEffect {
     pub tainted: bool,
 }
 
+thread_local! {
+    static BASH_PARSER: RefCell<tree_sitter::Parser> = RefCell::new({
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&tree_sitter_bash::LANGUAGE.into()).ok();
+        parser
+    });
+}
+
 /// Classify a shell command string by its effects.
 ///
 /// Parses the input with tree-sitter-bash and walks the AST to extract
@@ -44,23 +54,9 @@ pub fn classify_command(input: &str) -> Vec<CommandEffect> {
         return vec![];
     }
 
-    let mut parser = tree_sitter::Parser::new();
-    if parser
-        .set_language(&tree_sitter_bash::LANGUAGE.into())
-        .is_err()
-    {
-        return vec![CommandEffect {
-            kind: EffectKind::Unknown,
-            command: trimmed.to_string(),
-            recursive: false,
-            targets_root: false,
-            tainted: false,
-        }];
-    }
-
-    let tree = match parser.parse(trimmed, None) {
-        Some(t) => t,
-        None => {
+    BASH_PARSER.with(|parser| {
+        let mut parser = parser.borrow_mut();
+        let Some(tree) = parser.parse(trimmed, None) else {
             return vec![CommandEffect {
                 kind: EffectKind::Unknown,
                 command: trimmed.to_string(),
@@ -68,31 +64,31 @@ pub fn classify_command(input: &str) -> Vec<CommandEffect> {
                 targets_root: false,
                 tainted: false,
             }];
+        };
+
+        let root = tree.root_node();
+        let source = trimmed.as_bytes();
+
+        let mut effects = Vec::new();
+        walk_node(root, source, false, &mut effects);
+
+        // Fallback: if AST walk produced nothing, try simple word lookup
+        if effects.is_empty() {
+            let first_word = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            let kind = classify_command_word(first_word);
+            if kind != EffectKind::Unknown {
+                effects.push(CommandEffect {
+                    kind,
+                    command: first_word.to_string(),
+                    recursive: false,
+                    targets_root: false,
+                    tainted: false,
+                });
+            }
         }
-    };
 
-    let root = tree.root_node();
-    let source = trimmed.as_bytes();
-
-    let mut effects = Vec::new();
-    walk_node(root, source, false, &mut effects);
-
-    // Fallback: if AST walk produced nothing, try simple word lookup
-    if effects.is_empty() {
-        let first_word = trimmed.split_whitespace().next().unwrap_or(trimmed);
-        let kind = classify_command_word(first_word);
-        if kind != EffectKind::Unknown {
-            effects.push(CommandEffect {
-                kind,
-                command: first_word.to_string(),
-                recursive: false,
-                targets_root: false,
-                tainted: false,
-            });
-        }
-    }
-
-    effects
+        effects
+    })
 }
 
 /// Walk a tree-sitter node recursively, collecting effects.

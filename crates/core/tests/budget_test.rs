@@ -2,6 +2,7 @@ use metaygn_core::context::LoopContext;
 use metaygn_core::stages::budget::BudgetStage;
 use metaygn_core::stages::{Stage, StageResult};
 use metaygn_shared::protocol::{HookEvent, HookInput};
+use metaygn_shared::budget_tracker::COST_PER_TOKEN_USD;
 use metaygn_shared::state::RiskLevel;
 
 /// Helper: build a default `HookInput`.
@@ -176,26 +177,26 @@ fn latency_same_regardless_of_difficulty_high_risk() {
     assert_eq!(lat_low, 60_000);
 }
 
-// ─── Cost cap = max_tokens * 0.00002 ─────────────────────────────────────────
+// ─── Cost cap = max_tokens * COST_PER_TOKEN_USD ─────────────────────────────────────────
 
 #[test]
 fn cost_cap_low_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.1);
-    let expected = 1_000.0 * 0.00002;
+    let expected = 1_000.0 * COST_PER_TOKEN_USD;
     assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
 }
 
 #[test]
 fn cost_cap_medium_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.5);
-    let expected = 5_000.0 * 0.00002;
+    let expected = 5_000.0 * COST_PER_TOKEN_USD;
     assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
 }
 
 #[test]
 fn cost_cap_high_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.9);
-    let expected = 20_000.0 * 0.00002;
+    let expected = 20_000.0 * COST_PER_TOKEN_USD;
     assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
 }
 
@@ -291,7 +292,7 @@ fn all_fields_set_consistently_low_risk_low_difficulty() {
     let (tokens, latency, cost, tolerance) = budget(RiskLevel::Low, 0.1);
     assert_eq!(tokens, 1_000);
     assert_eq!(latency, 10_000);
-    assert!((cost - 0.02).abs() < 1e-10);
+    assert!((cost - 1_000.0 * COST_PER_TOKEN_USD).abs() < 1e-10);
     assert_eq!(tolerance, RiskLevel::Low);
 }
 
@@ -300,6 +301,6 @@ fn all_fields_set_consistently_high_risk_high_difficulty() {
     let (tokens, latency, cost, tolerance) = budget(RiskLevel::High, 0.9);
     assert_eq!(tokens, 20_000);
     assert_eq!(latency, 60_000);
-    assert!((cost - 0.4).abs() < 1e-10);
+    assert!((cost - 20_000.0 * COST_PER_TOKEN_USD).abs() < 1e-10);
     assert_eq!(tolerance, RiskLevel::High);
 }

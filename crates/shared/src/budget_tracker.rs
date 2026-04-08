@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+/// Approximate cost-per-token (input) for Claude Haiku in USD.
+/// Used across crates for consistent budget estimation.
+pub const COST_PER_TOKEN_USD: f64 = 0.000003;
+
 /// Tracks token and cost consumption for a session, making budget usage
 /// visible to the developer in every hook response.
 #[derive(Debug, Clone, Serialize, Deserialize)]

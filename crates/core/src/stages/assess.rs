@@ -95,9 +95,10 @@ fn estimate_difficulty(text: &str) -> f32 {
         "recursive",
         "cryptograph",
     ];
+    let lower = text.to_lowercase(); // allocate once
     let bonus = complexity_keywords
         .iter()
-        .filter(|kw| text.to_lowercase().contains(*kw))
+        .filter(|kw| lower.contains(*kw))
         .count() as f32
         * 0.1;
 
@@ -204,6 +205,7 @@ fn estimate_risk(ctx: &LoopContext) -> RiskLevel {
 
 fn contains_prompt_injection_markers(text: &str) -> bool {
     let lower = text.to_lowercase();
+    // Intentional: catches both correct spelling and common typo "iunstructions"
     let markers = [
         "ignore your previous iunstructions",
         "ignore your previous instructions",
