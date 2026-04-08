@@ -4,7 +4,7 @@
 
 Your AI coding agent runs `terraform destroy` on production. `rm -rf /` on your home directory. `git push --force` over your team's work. These are real incidents from 2025-2026.
 
-Aletheia-Nexus is a Rust daemon that intercepts every tool call, analyzes it through AST parsing and contextual risk scoring, creates automatic recovery checkpoints, and blocks destructive operations before they execute.
+Aletheia-Nexus is a Rust daemon that intercepts every tool call, analyzes it through AST parsing and contextual risk scoring, creates automatic recovery checkpoints, and blocks destructive operations before they execute. It integrates natively with Claude Code via hooks and with Codex via MCP.
 
 ![version](https://img.shields.io/badge/version-2.6.0-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -96,8 +96,19 @@ Response:
 ```bash
 git clone https://github.com/yannabadie/Meta-YGN && cd Meta-YGN
 cargo build --workspace && pnpm install
+```
+
+Claude Code:
+
+```bash
 cargo run -p metaygn-cli -- start
 claude --plugin-dir .
+```
+
+Codex:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
 ```
 
 Verify installation:
@@ -112,6 +123,7 @@ cargo run -p metaygn-cli -- doctor
 
 ```
 Claude Code --> Hooks --> Aletheia Daemon --> Decision + Checkpoint
+Codex       --> MCP ----^
                  |          |-- AST Guard (tree-sitter)
                  |          |-- 12-stage control loop
                  |          |-- Graph memory (SQLite + FTS5)
@@ -120,7 +132,7 @@ Claude Code --> Hooks --> Aletheia Daemon --> Decision + Checkpoint
                  +-- (if daemon offline) --> TypeScript fallback --> Regex guards
 ```
 
-Hooks fire on every Claude Code lifecycle event. The daemon runs a 12-stage control loop: classify, assess, route, verify, decide. It returns a verdict -- allow, deny, ask, or escalate -- plus a token budget and recovery instructions. Without the daemon, TypeScript hooks provide regex-based guards as a fallback.
+Claude Code uses automatic lifecycle hooks. Codex uses the same runtime through MCP plus the strict bootstrap workflow in `docs/CODEX-WORKFLOW.md`. The daemon runs a 12-stage control loop: classify, assess, route, verify, decide. It returns a verdict -- allow, deny, ask, or escalate -- plus a token budget and recovery instructions.
 
 ---
 
@@ -205,6 +217,15 @@ aletheia start                   # background, writes port to ~/.claude/aletheia
 claude --plugin-dir .            # Claude Code with Aletheia protection
 ```
 
+### Running with Codex
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-codex.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
+```
+
+This registers `aletheia` as a Codex MCP server, loads the strict bootstrap protocol, and launches Codex in MetaYGN-guarded mode.
+
 ### Optional feature flags
 
 ```bash
@@ -225,7 +246,7 @@ Hook latency is ~1-35ms depending on command complexity. The daemon runs locally
 TypeScript hooks fall back to regex-based guards. Destructive commands (`rm -rf /`, `find / -delete`) are still blocked. You lose AST parsing, sequence detection, and checkpoints.
 
 **Does it work with other AI agents?**
-Yes. The daemon exposes an HTTP API on localhost and MCP tools via stdio. Any agent that supports hooks or MCP can use it.
+Yes. Claude Code is supported through hooks. Codex is supported through MCP plus the included bootstrap workflow. The daemon also exposes a localhost HTTP API for other agents that can call hooks or local services.
 
 **Is it production-ready?**
 v2.6.0 has 774 tests across 54 test files with zero failures. Bearer auth on all endpoints. Auto-checkpoint system. But experimental features are clearly tagged -- check the tables above.

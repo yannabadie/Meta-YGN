@@ -5,7 +5,7 @@
 
 ## What It Does
 
-When you use Claude Code (or any MCP-compatible AI coding agent), MetaYGN:
+When you use Claude Code, Codex, or another MCP-capable AI coding agent, MetaYGN:
 
 1. **Blocks dangerous commands** — `rm -rf /`, `git push --force`, `sudo`, credential access → denied in <5ms
 2. **Detects when Claude is wrong** — overconfidence detection, test failure parsing, syntax checking
@@ -19,7 +19,7 @@ When you use Claude Code (or any MCP-compatible AI coding agent), MetaYGN:
 - [Rust](https://rustup.rs/) 1.85+
 - [Node.js](https://nodejs.org/) 22+
 - [pnpm](https://pnpm.io/) 9+ (`npm install -g pnpm`)
-- [Claude Code](https://claude.ai/code) CLI
+- [Claude Code](https://claude.ai/code) CLI or Codex CLI
 
 ### Install
 ```bash
@@ -28,7 +28,7 @@ cargo build --workspace          # builds daemon + CLI (2-3 min first time)
 pnpm install                     # installs TypeScript hook dependencies
 ```
 
-### Run
+### Run with Claude Code
 ```bash
 # Terminal 1: Start the daemon
 ./target/debug/aletheia start
@@ -38,6 +38,19 @@ claude --plugin-dir .
 ```
 
 That's it. MetaYGN is now watching every tool call Claude makes.
+
+### Run with Codex
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
+```
+
+```bash
+# macOS/Linux
+bash ./scripts/start-codex-metaygn.sh
+```
+
+This path uses MCP instead of hooks. The launch script registers `aletheia` as a Codex MCP server, injects the strict MetaYGN bootstrap protocol, and starts Codex in guarded mode.
 
 ### Verify it works
 ```bash
@@ -154,12 +167,16 @@ aletheia replay <session-id>      # view hook timeline with latencies
 ## Architecture (for AI agents reading this)
 
 ```
-Claude Code
+Claude Code / Codex
   │
-  ├── hooks/ (8 lifecycle events, TypeScript via npx tsx)
+  ├── Claude Code path: hooks/ (8 lifecycle events, TypeScript via npx tsx)
   │     ├── Calls daemon HTTP API (350ms timeout, local fallback)
   │     ├── 5 hooks call daemon (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SessionEnd)
   │     └── 3 hooks run locally in TS for speed (SessionStart, PostToolUseFailure, PreCompact)
+  │
+  ├── Codex path: MCP server (`aletheia mcp`)
+  │     ├── Explicit metacognitive tool calls from AGENTS/bootstrap protocol
+  │     └── Same runtime logic, no Claude hook dependency
   │
   ├── aletheiad (Rust daemon, 127.0.0.1:dynamic-port)
   │     ├── 12-stage control loop (classify→learn)

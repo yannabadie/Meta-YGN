@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde_json::Value;
+use std::process::Command;
 
 use crate::util::{http_client, read_daemon_port};
 
@@ -82,7 +83,38 @@ pub async fn cmd_doctor() -> Result<()> {
         println!("  Skills:     NOT FOUND");
     }
 
-    // 5. Check agents
+    // 5. Check Codex compatibility assets
+    let codex_assets_ready = std::path::Path::new("AGENTS.md").exists()
+        && std::path::Path::new("docs/codex-bootstrap-prompt.txt").exists()
+        && (std::path::Path::new("scripts/install-codex.ps1").exists()
+            || std::path::Path::new("scripts/install-codex.sh").exists());
+    if codex_assets_ready {
+        println!("  Codex:      ASSETS READY (AGENTS + bootstrap + install script)");
+    } else {
+        println!("  Codex:      ASSETS INCOMPLETE");
+        issues += 1;
+    }
+
+    match Command::new("codex").arg("--version").output() {
+        Ok(output) if output.status.success() => {
+            let configured = Command::new("codex")
+                .args(["mcp", "get", "aletheia"])
+                .output()
+                .map(|out| out.status.success())
+                .unwrap_or(false);
+            if configured {
+                println!("  Codex MCP:  REGISTERED (server 'aletheia')");
+            } else {
+                println!("  Codex MCP:  NOT REGISTERED (run scripts/install-codex.*)");
+                issues += 1;
+            }
+        }
+        _ => {
+            println!("  Codex MCP:  CLI NOT FOUND (optional)");
+        }
+    }
+
+    // 6. Check agents
     let agents_dir = std::path::Path::new("agents");
     if agents_dir.exists() {
         let count = std::fs::read_dir(agents_dir)
@@ -100,7 +132,7 @@ pub async fn cmd_doctor() -> Result<()> {
         println!("  Agents:     NOT FOUND");
     }
 
-    // 6. Check database
+    // 7. Check database
     let home = dirs::home_dir().unwrap_or_default();
     let db_path = home.join(".claude").join("aletheia").join("metaygn.db");
     if db_path.exists() {

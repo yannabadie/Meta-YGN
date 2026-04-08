@@ -54,7 +54,7 @@ The daemon starts on `127.0.0.1:3100` by default. It generates a bearer token at
 aletheia doctor
 ```
 
-`doctor` checks: daemon reachability, plugin structure, hooks.json validity, skills directory, agents directory, and database connectivity.
+`doctor` checks: daemon reachability, plugin structure, hooks.json validity, Codex assets, Codex MCP registration when the CLI is installed, skills directory, agents directory, and database connectivity.
 
 Expected output:
 
@@ -76,6 +76,22 @@ claude --plugin-dir .
 ```
 
 This loads the Aletheia-Nexus plugin. Every tool call from Claude Code now flows through the 5-layer protection cascade.
+
+## Run with Codex
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
+```
+
+macOS/Linux:
+
+```bash
+bash ./scripts/start-codex-metaygn.sh
+```
+
+This registers `aletheia` as a Codex MCP server if needed, loads the strict MetaYGN bootstrap protocol, and launches Codex against the same runtime.
 
 ## Initialize a new project
 

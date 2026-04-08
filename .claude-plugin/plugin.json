@@ -1,6 +1,6 @@
 {
   "name": "aletheia-nexus",
-  "description": "Safety runtime for AI coding agents. Blocks destructive commands via AST analysis, auto-checkpoints before risky operations, and detects agent meltdown patterns. Works with or without daemon.",
+  "description": "Safety runtime for AI coding agents. Blocks destructive commands via AST analysis, auto-checkpoints before risky operations, detects agent meltdown patterns, supports Claude Code via hooks, and supports Codex via MCP.",
   "version": "2.6.0",
   "author": {
     "name": "Yann Abadie"
@@ -11,6 +11,8 @@
     "security",
     "guardrails",
     "hooks",
+    "codex",
+    "mcp",
     "destructive-commands",
     "checkpoint",
     "verification",

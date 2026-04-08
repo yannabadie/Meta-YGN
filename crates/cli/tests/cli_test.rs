@@ -30,6 +30,7 @@ fn cli_doctor_runs() {
     let (stdout, _, code) = run_cli(&["doctor"]);
     assert_eq!(code, 0);
     assert!(stdout.contains("Doctor") || stdout.contains("Plugin"));
+    assert!(stdout.contains("Codex"));
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # MetaYGN Workflow For Codex
 
-MetaYGN works in Codex through MCP tools (not automatic Claude hooks).
+MetaYGN works in Codex through MCP tools, not through Claude hook automation.
 This workflow runs in strict mode by default.
 
 ## Quick Start
@@ -20,12 +20,19 @@ bash ./scripts/start-codex-metaygn.sh
 bash ./scripts/start-codex-metaygn.sh --no-launch
 ```
 
-This does three things:
+This does four things:
 
 1. Ensures `aletheia` is registered as a Codex MCP server.
 2. Loads a bootstrap metacognitive protocol prompt.
 3. Stops any running HTTP daemon to avoid DB contention with MCP mode.
 4. Launches `codex` with that prompt.
+
+You can verify the setup anytime with:
+
+```bash
+aletheia doctor
+codex mcp list
+```
 
 ## Runtime Protocol
 
@@ -38,5 +45,6 @@ This does three things:
 
 ## Notes
 
-- This gives Codex a useful “self-check loop” close to Claude-hook behavior, but it remains explicit MCP calls.
+- This gives Codex a useful self-check loop close to Claude-hook behavior, but it remains explicit MCP calls.
 - If `codex mcp list` does not show `aletheia`, run `scripts/install-codex.ps1` or `scripts/install-codex.sh`.
+- `aletheia doctor` reports both Codex assets and MCP registration status when the Codex CLI is available.
