@@ -35,7 +35,7 @@ pub struct AppState {
     pub guard_memory: Arc<Mutex<AdaptiveGuardMemory>>,
     pub embedding: Arc<dyn EmbeddingProvider>,
     #[cfg(feature = "semantic")]
-    pub router: std::sync::Arc<crate::semantic_router::SemanticRouter>,
+    pub router: Option<std::sync::Arc<crate::semantic_router::SemanticRouter>>,
 }
 
 impl AppState {
@@ -104,7 +104,15 @@ impl AppState {
         let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
         #[cfg(feature = "semantic")]
-        let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
+        let router = if embedding.provider_name() != "hash" {
+            Some(std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone())))
+        } else {
+            tracing::warn!(
+                "SemanticRouter disabled: hash embeddings provide no semantic similarity. \
+                 Enable --features embeddings for real classification."
+            );
+            None
+        };
 
         let guard_memory = Arc::new(Mutex::new(AdaptiveGuardMemory::new()));
 
@@ -155,7 +163,15 @@ impl AppState {
         let embedding: Arc<dyn EmbeddingProvider> = Arc::new(HashEmbedProvider::new(128));
 
         #[cfg(feature = "semantic")]
-        let router = std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone()));
+        let router = if embedding.provider_name() != "hash" {
+            Some(std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone())))
+        } else {
+            tracing::warn!(
+                "SemanticRouter disabled: hash embeddings provide no semantic similarity. \
+                 Enable --features embeddings for real classification."
+            );
+            None
+        };
 
         let guard_memory = Arc::new(Mutex::new(AdaptiveGuardMemory::new()));
 
