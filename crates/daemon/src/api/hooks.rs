@@ -249,6 +249,65 @@ async fn pre_tool_use(
             .unwrap_or_else(|| "Blocked by guard pipeline".to_string());
 
         let mut output = HookOutput::permission(decision, reason);
+
+        // Auto-checkpoint: save recovery point before destructive operation
+        let mut checkpoint_message: Option<String> = None;
+        {
+            let cwd = input.cwd.as_deref().unwrap_or(".");
+
+            // Git checkpoint for git-destructive operations
+            if command.contains("git")
+                && (command.contains("reset")
+                    || command.contains("checkout")
+                    || command.contains("push")
+                    || command.contains("rebase"))
+            {
+                let cp = metaygn_verifiers::checkpoint::git_checkpoint(cwd);
+                if cp.created {
+                    tracing::info!(
+                        checkpoint_type = ?cp.checkpoint_type,
+                        location = %cp.location,
+                        "auto-checkpoint created before git operation"
+                    );
+                    checkpoint_message = Some(cp.message);
+                }
+            }
+
+            // File checkpoint for file-destructive operations
+            if command.contains("rm") || command.contains("unlink") || command.contains("delete") {
+                let target_files =
+                    metaygn_verifiers::checkpoint::extract_target_files(&command);
+                if !target_files.is_empty() {
+                    let file_refs: Vec<&str> =
+                        target_files.iter().map(|s| s.as_str()).collect();
+                    let cp = metaygn_verifiers::checkpoint::file_checkpoint(cwd, &file_refs);
+                    if cp.created {
+                        tracing::info!(
+                            files_saved = cp.files_saved,
+                            location = %cp.location,
+                            "auto-checkpoint created before file deletion"
+                        );
+                        checkpoint_message = Some(cp.message);
+                    }
+                }
+            }
+        }
+
+        // Include recovery instructions in the response
+        if let Some(ref cp_msg) = checkpoint_message {
+            if let Some(ref mut hso) = output.hook_specific_output {
+                match hso.additional_context {
+                    Some(ref mut ctx) => {
+                        ctx.push_str(&format!(" [checkpoint] {}", cp_msg));
+                    }
+                    None => {
+                        hso.additional_context =
+                            Some(format!("[checkpoint] {}", cp_msg));
+                    }
+                }
+            }
+        }
+
         append_budget_to_output(&mut output, &state);
         append_latency(&mut output, start);
         let resp_json = serde_json::to_string(&output).unwrap_or_default();
