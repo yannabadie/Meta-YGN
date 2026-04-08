@@ -1,4 +1,4 @@
-#![cfg(feature = "syntax")]
+#![cfg(feature = "ast-guard")]
 
 use metaygn_verifiers::ast_guard::AstGuard;
 use metaygn_verifiers::guard_pipeline::Guard;

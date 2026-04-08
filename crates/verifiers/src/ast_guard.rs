@@ -4,7 +4,7 @@
 //! (via [`crate::effect_classifier`]) and assigns a safety score based on the
 //! combination of effects detected.  Non-Bash tools pass through with score 100.
 //!
-//! Feature-gated behind `syntax`.
+//! Feature-gated behind `ast-guard`.
 
 use crate::effect_classifier::{classify_command, CommandEffect, EffectKind};
 use crate::guard_pipeline::{Guard, GuardResult};

@@ -5,8 +5,9 @@ version.workspace = true
 license.workspace = true
 
 [features]
-default = []
-syntax = ["tree-sitter", "tree-sitter-rust", "tree-sitter-python", "tree-sitter-javascript", "tree-sitter-typescript", "tree-sitter-bash"]
+default = ["ast-guard"]
+ast-guard = ["tree-sitter", "tree-sitter-bash"]
+syntax = ["ast-guard", "tree-sitter-rust", "tree-sitter-python", "tree-sitter-javascript", "tree-sitter-typescript"]
 
 [dependencies]
 metaygn-shared = { path = "../shared" }

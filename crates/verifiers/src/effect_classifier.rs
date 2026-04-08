@@ -4,7 +4,7 @@
 //! side-effects (Read, Write, Delete, Execute, Network, Privilege).
 //! This replaces fragile regex-based detection that can be trivially bypassed.
 //!
-//! Feature-gated behind `syntax`.
+//! Feature-gated behind `ast-guard`.
 
 /// The kind of side-effect a shell command produces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

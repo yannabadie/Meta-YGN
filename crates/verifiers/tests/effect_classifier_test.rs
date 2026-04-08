@@ -1,4 +1,4 @@
-#![cfg(feature = "syntax")]
+#![cfg(feature = "ast-guard")]
 
 use metaygn_verifiers::effect_classifier::{classify_command, EffectKind};
 

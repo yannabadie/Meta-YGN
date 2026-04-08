@@ -1,10 +1,11 @@
 pub mod adaptive;
+pub mod checkpoint;
 pub mod completion;
 pub mod evidence;
 pub mod guard_pipeline;
-#[cfg(feature = "syntax")]
+#[cfg(feature = "ast-guard")]
 pub mod ast_guard;
-#[cfg(feature = "syntax")]
+#[cfg(feature = "ast-guard")]
 pub mod effect_classifier;
 #[cfg(feature = "syntax")]
 pub mod syntax;

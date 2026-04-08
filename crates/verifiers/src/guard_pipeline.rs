@@ -262,7 +262,7 @@ impl GuardPipeline {
     #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Self {
         let mut guards: Vec<Box<dyn Guard>> = Vec::new();
-        #[cfg(feature = "syntax")]
+        #[cfg(feature = "ast-guard")]
         guards.push(Box::new(crate::ast_guard::AstGuard));
         guards.push(Box::new(DestructiveGuard));
         guards.push(Box::new(HighRiskGuard));
