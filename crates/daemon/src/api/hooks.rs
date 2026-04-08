@@ -212,16 +212,25 @@ async fn pre_tool_use(
 
     if !pipeline_decision.allowed {
         // Record guard hit in adaptive guard memory
-        if let Some(ref guard_name) = pipeline_decision.blocking_guard {
-            if let Ok(mut mem) = state.guard_memory.lock() {
-                mem.record_hit(guard_name);
-            }
+        if let Some(ref guard_name) = pipeline_decision.blocking_guard
+            && let Ok(mut mem) = state.guard_memory.lock()
+        {
+            mem.record_hit(guard_name);
         }
 
         // Score 0 = destructive -> deny; score > 0 = high-risk -> ask
         let decision = if pipeline_decision.aggregate_score == 0 {
             PermissionDecision::Deny
         } else {
+            // "Ask" means the user will see a confirmation dialog.
+            // Track this guard block in the session so we can provide
+            // false-positive feedback at session end if the session succeeds.
+            if let Some(ref guard_name) = pipeline_decision.blocking_guard {
+                let session_ctx = state.sessions.get_or_create(&session_id);
+                if let Ok(mut sess) = session_ctx.lock() {
+                    sess.guard_blocks.push(guard_name.clone());
+                }
+            }
             PermissionDecision::Ask
         };
 
@@ -322,15 +331,17 @@ async fn pre_tool_use(
     }
     let mut ctx = LoopContext::new(input_for_loop);
 
-    // Semantic routing: classify the command for tiered verification
+    // Semantic routing: classify the command for tiered verification.
+    // Only runs when the semantic feature is enabled AND a real embedding
+    // provider is available (hash embeddings are gated out at init time).
     #[cfg(feature = "semantic")]
-    {
+    if let Some(ref router) = state.router {
         let task_context = if let Ok(sess) = session_ctx.lock() {
             sess.task_type.map(|t| format!("{:?}", t))
         } else {
             None
         };
-        let hint = state.router.routing_hint(&cmd, task_context.as_deref());
+        let hint = router.routing_hint(&cmd, task_context.as_deref());
         tracing::info!(
             command = %cmd,
             routing_hint = ?hint,
@@ -340,6 +351,51 @@ async fn pre_tool_use(
     }
 
     state.control_loop.run_range(&mut ctx, 0, 6);
+
+    // Evolver influence: if the best heuristic version has learned that
+    // the risk markers relevant to this command have lower weights than
+    // default thresholds, downgrade the risk from High to Medium.
+    // This closes the feedback loop: evolver outcomes → risk assessment.
+    if ctx.risk == RiskLevel::High
+        && let Ok(evolver) = state.evolver.lock()
+        && let Some(best) = evolver.best()
+    {
+        // Evolver influence: if the best heuristic version has learned that
+        // the risk markers relevant to this command have lower weights than
+        // default thresholds, downgrade the risk from High to Medium.
+        // This closes the feedback loop: evolver outcomes → risk assessment.
+        let cmd_lower = cmd.to_lowercase();
+        let marker_checks: &[(&str, &str)] = &[
+            ("exec_command", ""),        // Bash tool itself
+            ("fs_write", "write"),
+            ("network_access", "curl"),
+            ("env_mutation", "export"),
+            ("credential_access", "credential"),
+            ("large_diff", "large"),
+            ("multi_file", "multi"),
+        ];
+        let relevant_weights: Vec<f64> = marker_checks
+            .iter()
+            .filter(|(_, keyword)| keyword.is_empty() || cmd_lower.contains(keyword))
+            .filter_map(|(marker, _)| best.risk_weights.get(*marker))
+            .copied()
+            .collect();
+
+        // If the evolver has learned that relevant risk markers
+        // are all low-weight (< 0.4), downgrade from High to Medium.
+        if !relevant_weights.is_empty() {
+            let avg_weight: f64 =
+                relevant_weights.iter().sum::<f64>() / relevant_weights.len() as f64;
+            if avg_weight < 0.4 {
+                tracing::info!(
+                    avg_weight = avg_weight,
+                    generation = best.generation,
+                    "evolver influence: downgrading risk High → Medium (learned low weights)"
+                );
+                ctx.risk = RiskLevel::Medium;
+            }
+        }
+    }
 
     // Persist tool call count into session context
     {
@@ -982,6 +1038,36 @@ async fn stop(State(state): State<AppState>, Json(input): Json<HookInput>) -> Js
             crate::postprocess::after_stop(state_clone, session_clone, decision_str, lessons_clone)
                 .await;
         });
+    }
+
+    // Adaptive guard feedback: if the session had guard blocks (rules that
+    // triggered "ask") and completed with few errors, those blocks were likely
+    // false positives — the user overrode them and the session still succeeded.
+    {
+        let guard_blocks = if let Ok(sess) = session_ctx.lock() {
+            sess.guard_blocks.clone()
+        } else {
+            Vec::new()
+        };
+        if !guard_blocks.is_empty() {
+            let was_successful = ctx.verification_results.is_empty()
+                && session_ctx
+                    .lock()
+                    .map(|s| s.errors <= 1)
+                    .unwrap_or(false);
+            if let Ok(mut mem) = state.guard_memory.lock() {
+                for rule in &guard_blocks {
+                    // Successful session → guard block was likely a false positive.
+                    // Failed session → guard was probably right (true positive).
+                    mem.record_outcome(rule, !was_successful);
+                }
+            }
+            tracing::info!(
+                rules = ?guard_blocks,
+                was_successful = was_successful,
+                "adaptive guard feedback recorded"
+            );
+        }
     }
 
     // Clean up session context now that the session is ending

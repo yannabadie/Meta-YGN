@@ -44,6 +44,9 @@ pub struct SessionContext {
     pub sequence_monitor: SequenceMonitor,
     /// Session-local MOP detector for behavioral meltdown detection.
     pub mop_detector: MopDetector,
+    /// Guard rule names that blocked (with "ask") during this session.
+    /// Used at session end to provide false-positive feedback to AdaptiveGuardMemory.
+    pub guard_blocks: Vec<String>,
 }
 
 impl SessionContext {
@@ -78,6 +81,7 @@ impl SessionContext {
             budget: SessionBudget::new(100_000, 1.00),
             sequence_monitor: SequenceMonitor::new(),
             mop_detector: MopDetector::new(),
+            guard_blocks: Vec::new(),
         }
     }
 }
