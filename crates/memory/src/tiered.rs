@@ -104,16 +104,14 @@ impl TieredMemory {
         }
 
         // If still present in hot (not expired), bump and return.
-        if self.hot.contains_key(key) {
-            let entry = self.hot.get_mut(key).unwrap();
+        if let Some(entry) = self.hot.get_mut(key) {
             entry.access_count += 1;
             entry.accessed_at = Instant::now();
             return self.hot.get(key);
         }
 
         // Check warm tier.
-        if self.warm.contains_key(key) {
-            let entry = self.warm.get_mut(key).unwrap();
+        if let Some(entry) = self.warm.get_mut(key) {
             entry.access_count += 1;
             entry.accessed_at = Instant::now();
             return self.warm.get(key);
@@ -239,8 +237,11 @@ mod tests {
 
     /// Helper: build a TieredMemory backed by an in-memory SQLite store.
     fn make_mem(ttl: Duration) -> TieredMemory {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let store = rt.block_on(MemoryStore::open_in_memory()).unwrap();
+        let rt = tokio::runtime::Runtime::new()
+            .expect("tokio runtime should initialise in tests");
+        let store = rt
+            .block_on(MemoryStore::open_in_memory())
+            .expect("in-memory store should open");
         TieredMemory::new(Arc::new(store), ttl)
     }
 
@@ -248,7 +249,7 @@ mod tests {
     fn put_get_round_trip() {
         let mut mem = make_mem(Duration::from_secs(60));
         mem.put("k1", "v1", &["a", "b"]);
-        let e = mem.get("k1").unwrap();
+        let e = mem.get("k1").expect("key k1 should exist after put");
         assert_eq!(e.value, "v1");
         assert_eq!(e.tags, vec!["a", "b"]);
     }
@@ -266,7 +267,10 @@ mod tests {
         for _ in 0..5 {
             mem.get("k");
         }
-        assert_eq!(mem.get("k").unwrap().access_count, 6); // 5 + this get
+        assert_eq!(
+            mem.get("k").expect("key k should exist").access_count,
+            6 // 5 + this get
+        );
     }
 
     #[test]

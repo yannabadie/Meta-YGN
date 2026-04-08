@@ -328,7 +328,8 @@ mod tests {
 
     #[test]
     fn build_command_python() {
-        let (prog, args) = ProcessSandbox::build_command("python", "print('hi')").unwrap();
+        let (prog, args) = ProcessSandbox::build_command("python", "print('hi')")
+            .expect("python should be a supported language");
         if cfg!(windows) {
             assert_eq!(prog, "python");
         } else {
@@ -339,14 +340,16 @@ mod tests {
 
     #[test]
     fn build_command_node() {
-        let (prog, args) = ProcessSandbox::build_command("node", "console.log(1)").unwrap();
+        let (prog, args) = ProcessSandbox::build_command("node", "console.log(1)")
+            .expect("node should be a supported language");
         assert_eq!(prog, "node");
         assert_eq!(args, vec!["-e", "console.log(1)"]);
     }
 
     #[test]
     fn build_command_bash() {
-        let (prog, args) = ProcessSandbox::build_command("bash", "echo hi").unwrap();
+        let (prog, args) = ProcessSandbox::build_command("bash", "echo hi")
+            .expect("bash should be a supported language");
         if cfg!(windows) {
             // On Windows we prefer Git Bash over WSL bash.
             assert!(prog.contains("bash"), "expected a bash path, got: {prog}");
@@ -360,20 +363,16 @@ mod tests {
     fn build_command_rust_unsupported() {
         let result = ProcessSandbox::build_command("rust", "fn main() {}");
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            SandboxError::UnsupportedLanguage(_)
-        ));
+        let err = result.expect_err("rust should be unsupported");
+        assert!(matches!(err, SandboxError::UnsupportedLanguage(_)));
     }
 
     #[test]
     fn build_command_unknown_language() {
         let result = ProcessSandbox::build_command("cobol", "DISPLAY 'HI'");
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            SandboxError::UnsupportedLanguage(_)
-        ));
+        let err = result.expect_err("cobol should be unsupported");
+        assert!(matches!(err, SandboxError::UnsupportedLanguage(_)));
     }
 
     #[test]
@@ -400,8 +399,9 @@ mod tests {
             duration_ms: 42,
             timed_out: false,
         };
-        let json = serde_json::to_string(&result).unwrap();
-        let deserialized: SandboxResult = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&result).expect("SandboxResult should serialize");
+        let deserialized: SandboxResult =
+            serde_json::from_str(&json).expect("SandboxResult should deserialize");
         assert_eq!(deserialized.success, true);
         assert_eq!(deserialized.exit_code, Some(0));
         assert_eq!(deserialized.stdout, "hello");
@@ -415,8 +415,9 @@ mod tests {
             code: "print(1)".to_string(),
             expected_success: true,
         };
-        let json = serde_json::to_string(&h).unwrap();
-        let deserialized: Hypothesis = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&h).expect("Hypothesis should serialize");
+        let deserialized: Hypothesis =
+            serde_json::from_str(&json).expect("Hypothesis should deserialize");
         assert_eq!(deserialized.description, "test");
         assert_eq!(deserialized.expected_success, true);
     }
