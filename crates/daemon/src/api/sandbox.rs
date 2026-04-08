@@ -80,9 +80,9 @@ fn default_expected_success() -> bool {
 
 /// POST /sandbox/exec -- execute code in the process sandbox.
 async fn exec(State(state): State<AppState>, Json(req): Json<ExecRequest>) -> Json<SandboxResult> {
-    // TODO(security): Add bearer-token authentication. The daemon binds to
-    // 127.0.0.1 only, but any local process can execute arbitrary code via
-    // this endpoint. See security audit finding S5.
+    // Bearer-token auth is enforced by the top-level middleware on every route
+    // except /health. During the v2.5 compatibility window, unauthenticated
+    // localhost requests are still allowed unless METAYGN_STRICT_AUTH=1.
     let result = if let Some(timeout_ms) = req.timeout_ms {
         let timeout_sandbox = ProcessSandbox::new(SandboxConfig {
             timeout: Duration::from_millis(timeout_ms.clamp(1, 30_000)), // max 30 s

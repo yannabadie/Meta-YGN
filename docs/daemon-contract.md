@@ -1,12 +1,19 @@
 # Aletheia Daemon API Reference
 
-**Version**: 1.0.0 "Ship the Proof"
+**Version**: 2.6.0 "Hardened Architecture"
 **Base URL**: `http://127.0.0.1:{port}` (port read from `~/.claude/aletheia/daemon.port`)
 **Binary**: `aletheiad` (crate: `metaygn-daemon`)
 
 The daemon binds to a dynamic localhost port on startup and writes the port number
 to `~/.claude/aletheia/daemon.port`. Clients discover the port by reading this file.
 On graceful shutdown (Ctrl+C / SIGTERM), the port file is removed automatically.
+
+All routes except `/health` are protected by bearer-token auth. The daemon writes
+the current token to `~/.claude/aletheia/daemon.token` on startup.
+
+During the v2.5 compatibility window, missing or invalid bearer tokens emit a warning
+but still allow the request. Set `METAYGN_STRICT_AUTH=1` to reject unauthenticated
+requests with `401 Unauthorized`.
 
 ---
 
@@ -23,7 +30,7 @@ Returns daemon liveness, version, and kernel verification status.
 ```json
 {
   "status": "ok",
-  "version": "1.0.0",
+  "version": "2.6.0",
   "kernel": "verified"
 }
 ```
@@ -36,9 +43,29 @@ curl http://127.0.0.1:$(cat ~/.claude/aletheia/daemon.port)/health
 
 ---
 
+## Authentication
+
+### `Authorization: Bearer <token>`
+
+Read the current token from `~/.claude/aletheia/daemon.token` and send it on every
+request except `GET /health`.
+
+**Example**:
+
+```bash
+TOKEN=$(cat ~/.claude/aletheia/daemon.token)
+curl -X POST http://127.0.0.1:$PORT/hooks/pre-tool-use \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cargo test"}}'
+```
+
+---
+
 ## Hooks
 
 All hook endpoints accept a `HookInput` payload and return a `HookOutput`.
+In strict mode, include `Authorization: Bearer <token>` on every hook request.
 
 ### `HookInput` schema
 

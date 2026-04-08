@@ -1,4 +1,4 @@
-//! Integration E2E test harness for MetaYGN v0.10.0
+//! Integration E2E test harness for Aletheia-Nexus v2.6.0
 //!
 //! Starts an in-memory daemon and POSTs hooks in sequence to verify the full
 //! circuit works end-to-end: classification -> guard -> post-processing ->
@@ -451,5 +451,133 @@ async fn session_errors_increase_fatigue() {
     assert!(
         after_score > initial_score,
         "fatigue score should increase after error, was {initial_score}, now {after_score}"
+    );
+}
+
+#[tokio::test]
+async fn stop_removes_session_state() {
+    let (client, base) = start_test_daemon().await;
+
+    post_hook(
+        &client,
+        &base,
+        "/hooks/user-prompt-submit",
+        json!({
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "cleanup-stop-test",
+            "prompt": "fix a failing daemon test"
+        }),
+    )
+    .await;
+
+    let before_stop = client
+        .get(format!("{base}/session/cleanup-stop-test/state"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(before_stop.status(), 200);
+
+    post_hook(
+        &client,
+        &base,
+        "/hooks/stop",
+        json!({
+            "hook_event_name": "Stop",
+            "session_id": "cleanup-stop-test",
+            "last_assistant_message": "Implemented the daemon fix."
+        }),
+    )
+    .await;
+
+    let after_stop = client
+        .get(format!("{base}/session/cleanup-stop-test/state"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(after_stop.status(), 404);
+    let body: Value = after_stop.json().await.unwrap();
+    assert_eq!(body["error"], "session not found");
+}
+
+#[tokio::test]
+async fn session_end_removes_session_state() {
+    let (client, base) = start_test_daemon().await;
+
+    post_hook(
+        &client,
+        &base,
+        "/hooks/user-prompt-submit",
+        json!({
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "cleanup-session-end-test",
+            "prompt": "document daemon auth behavior"
+        }),
+    )
+    .await;
+
+    let before_end = client
+        .get(format!("{base}/session/cleanup-session-end-test/state"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(before_end.status(), 200);
+
+    let body = post_hook(
+        &client,
+        &base,
+        "/hooks/session-end",
+        json!({
+            "hook_event_name": "SessionEnd",
+            "session_id": "cleanup-session-end-test"
+        }),
+    )
+    .await;
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("Session ended."),
+        "session_end should confirm cleanup, got: {body:?}"
+    );
+
+    let after_end = client
+        .get(format!("{base}/session/cleanup-session-end-test/state"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(after_end.status(), 404);
+    let body: Value = after_end.json().await.unwrap();
+    assert_eq!(body["error"], "session not found");
+}
+
+#[tokio::test]
+async fn stop_reports_false_completion_claims() {
+    let (client, base) = start_test_daemon().await;
+
+    let body = post_hook(
+        &client,
+        &base,
+        "/hooks/stop",
+        json!({
+            "hook_event_name": "Stop",
+            "session_id": "completion-check-test",
+            "cwd": ".",
+            "last_assistant_message": "Done. I created missing_file_zz9q1w.rs and everything is complete."
+        }),
+    )
+    .await;
+
+    let context = body
+        .pointer("/hookSpecificOutput/additionalContext")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        context.contains("COMPLETION CHECK FAILED"),
+        "stop should flag unverifiable completion claims, got: {context}"
+    );
+    assert!(
+        context.contains("NOT FOUND"),
+        "stop should report the missing artifact, got: {context}"
     );
 }

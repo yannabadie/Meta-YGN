@@ -341,6 +341,30 @@ async fn sandbox_exec_python() {
 }
 
 #[tokio::test]
+async fn sandbox_exec_accepts_bearer_token() {
+    let addr = start_test_server().await;
+    let url = format!("http://{addr}/sandbox/exec");
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .bearer_auth("test-token")
+        .json(&json!({
+            "language": "python",
+            "code": "print('hello')",
+            "timeout_ms": 5000
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(
+        body.get("success").is_some(),
+        "Expected 'success' field in sandbox result: {body:?}"
+    );
+}
+
+#[tokio::test]
 async fn profiler_fatigue_starts_zero() {
     let addr = start_test_server().await;
     let url = format!("http://{addr}/profiler/fatigue");

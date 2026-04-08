@@ -1,6 +1,16 @@
 # Architecture Notes
 
-Status: `[confirmed]` -- validated through implementation in v0.3.0 "Adaptive Topology"
+Status: `[confirmed]` -- refreshed against implementation in v2.6.0 "Hardened Architecture"
+
+---
+
+## Snapshot (v2.6.0)
+
+- TypeScript hooks remain the thin shell; durable state, guard logic, replay, and memory live in `metaygn-daemon`.
+- Native MCP is integrated directly in `crates/daemon` behind the optional `mcp` feature. There is no separate `mcp-bridge` crate in the current workspace.
+- Runtime behavioral safety now combines the 5-guard pipeline, `SequenceMonitor`, `MopDetector`, the fatigue profiler, and the heuristic evolver.
+- Bearer-token auth wraps every daemon route except `/health`; set `METAYGN_STRICT_AUTH=1` to move from compatibility mode to strict rejection.
+- Daemon E2E coverage now includes 10 lifecycle scenarios in `crates/daemon/tests/integration_e2e.rs`.
 
 ---
 
@@ -45,9 +55,9 @@ based on real session outcomes. No LLM in the loop -- pure evolutionary search.
 │                     Plugin Shell (Tier 2)                            │
 │                                                                      │
 │  hooks/           scripts/         agents/        skills/            │
-│  hooks.json       hook-runner.sh   aletheia-main  metacog-preflight  │
-│                   common.py        skeptic         metacog-proof      │
-│  packages/        *.py hooks       verifier        metacog-challenge  │
+│  hooks.json       install.sh       aletheia-main  metacog-preflight  │
+│                   daemon-client.ts skeptic         metacog-proof      │
+│  packages/        *.ts hooks       verifier        metacog-challenge  │
 │  hooks/ (TS)                       researcher      metacog-threat     │
 │  shared/ (TS)                      repo-carto.     metacog-compact    │
 │                                    cost-auditor    metacog-quality    │
@@ -68,9 +78,9 @@ based on real session outcomes. No LLM in the loop -- pure evolutionary search.
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │
 │         │                 │                 │                        │
 │  ┌──────▼───────┐  ┌──────▼───────┐  ┌──────▼───────┐               │
-│  │ MASC Monitor │  │ Fatigue      │  │ Heuristic    │               │
-│  │ (anomaly     │  │ Profiler     │  │ Evolver      │               │
-│  │  detector)   │  │ (human)      │  │ (Layer 0)    │               │
+│  │ Sequence +   │  │ Fatigue      │  │ Heuristic    │               │
+│  │ MOP monitor  │  │ Profiler     │  │ Evolver      │               │
+│  │ (behavioral) │  │ (human)      │  │ (Layer 0)    │               │
 │  └──────────────┘  └──────────────┘  └──────────────┘               │
 │                                                                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
@@ -95,7 +105,7 @@ based on real session outcomes. No LLM in the loop -- pure evolutionary search.
 ┌──────────────────────────────────────────────────────────────────────┐
 │                     Tier 3: Edge Adapters (optional)                  │
 │  - MCP: only for capabilities needing external processes             │
-│  - mcp-bridge crate: planned for future (v0.4.0+)                   │
+│  - Native MCP server lives in `metaygn-daemon` behind feature `mcp` │
 └──────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -113,15 +123,15 @@ based on real session outcomes. No LLM in the loop -- pure evolutionary search.
 | Crate              | Path              | Purpose                                              |
 |--------------------|-------------------|------------------------------------------------------|
 | `metaygn-shared`   | `crates/shared`   | Protocol types, state enums, kernel, events           |
-| `metaygn-core`     | `crates/core`     | 12-stage control loop, topology planner, MASC monitor, heuristic evolver |
+| `metaygn-core`     | `crates/core`     | 12-stage control loop, topology planner, SequenceMonitor, MopDetector, heuristic evolver |
 | `metaygn-memory`   | `crates/memory`   | Episodic memory (FTS5), graph memory (nodes+edges+FTS5+cosine), tiered storage |
 | `metaygn-verifiers`| `crates/verifiers` | Guard pipeline (5 guards), evidence packs (hash chain+Merkle+ed25519) |
 | `metaygn-sandbox`  | `crates/sandbox`  | Process-based sandbox with timeout, hypothesis testing |
 | `metaygn-daemon`   | `crates/daemon`   | Axum HTTP server, all API routes, forge engine, fatigue profiler, context pruner |
 | `metaygn-cli`      | `crates/cli`      | CLI (`aletheia` command), Glass-Box TUI dashboard     |
 
-Note: an `mcp-bridge` crate is planned for future work to provide native MCP
-server integration.
+Note: native MCP server integration now lives in `metaygn-daemon` behind the
+optional `mcp` feature flag.
 
 ### TypeScript Packages (2)
 
@@ -204,17 +214,15 @@ AI actions. Each pack maintains three integrity layers:
 
 ---
 
-## MASC Anomaly Detector
+## Sequence Monitor and MOP Detector
 
-Metacognitive Anomaly via Similarity of Context (MASC) detects when the AI's
-current reasoning step is anomalous compared to its history. Uses TF-IDF
-cosine similarity against a sliding window of recent reasoning steps.
+The current runtime uses two lightweight behavioral sentinels instead of the
+older MASC monitor:
 
-| Condition                     | Flag        | Meaning                     |
-|-------------------------------|-------------|-----------------------------|
-| similarity < 0.15 (default)   | Anomaly     | Reasoning diverged (off-track) |
-| similarity > 0.95 (default)   | Stagnation  | Reasoning is repeating       |
-| 0.15 <= similarity <= 0.95    | Normal      | Healthy variation            |
+| Component | Signal | Meaning |
+|-----------|--------|---------|
+| `SequenceMonitor` | Sliding-window action rules | Detects repeated failure loops, suspicious multi-step patterns, and escalating unsafe sequences |
+| `MopDetector` | Shannon entropy over recent tool-call history | Detects behavioral collapse or meltdown onset when the action distribution becomes unstable |
 
 ---
 
@@ -389,7 +397,7 @@ Three-tier permission gating:
 
 | Decision | Rationale | Evidence | Status |
 |----------|-----------|----------|--------|
-| Python for hooks | Zero dependencies, stdlib only, fast startup | v0.1.0-v0.2.0 | `[confirmed]` |
+| TypeScript for hooks | Shared types with the plugin shell, thin adapter over daemon HTTP | v2.0.0 | `[confirmed]` |
 | Rust for daemon | Performance, safety, Axum async HTTP | v0.3.0 | `[confirmed]` |
 | Markdown for skills/agents | Native Claude Code format, lazy-loaded | v0.1.0 | `[confirmed]` |
 | JSONL for event logging | Append-only, crash-safe, easy to parse | v0.1.0 | `[confirmed]` |
@@ -403,7 +411,7 @@ Three-tier permission gating:
 | Statistical heuristic evolution | No LLM in the loop; OPENSAGE-style mutation | v0.3.0 | `[experimental]` |
 | 5-guard pipeline | Composable; each guard independently testable | v0.3.0 | `[confirmed]` |
 | Hash chain + Merkle + ed25519 | Three-layer integrity: tamper detection + compact verification + non-repudiation | v0.3.0 | `[confirmed]` |
-| TF-IDF cosine for MASC | Lightweight, no model dependency, real-time | v0.3.0 | `[confirmed]` |
+| SequenceMonitor + entropy-based MOP | Lightweight behavioral detection without external models | v2.4.0-v2.5.0 | `[confirmed]` |
 | Fatigue profiler signals | Behavioural indicators correlated with poor decisions | v0.3.0 | `[experimental]` |
 | Process-based sandbox | Simple, cross-platform, no WASM dependency | v0.3.0 | `[confirmed]` |
 | Content-hashed tool cache | Avoids re-generating identical forge scripts | v0.3.0 | `[confirmed]` |

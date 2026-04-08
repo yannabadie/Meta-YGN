@@ -27,7 +27,7 @@ Status: ✅ FIXED | ⬜ OPEN | 🔄 PARTIAL | ⏭️ DEFERRED
 | P1.1 | daemon-contract.md 90% outdated | ✅ FIXED v1.0.0 | Full rewrite with all endpoints, version from CARGO_PKG_VERSION |
 | P1.2 | Tier 2 forge trigger fragile | ✅ FIXED post-merge | Now checks file_path extension |
 | P1.3 | Competence stage fixed values | ✅ FIXED v0.12.0 | Adaptive blending with historical rate |
-| P1.4 | 10 E2E test scenarios missing | ⬜ OPEN | 294 unit tests, E2E validated manually |
+| P1.4 | Broader E2E coverage still incomplete | 🔄 PARTIAL | 10 daemon E2E scenarios automated; broader Claude Code / plugin flows still validated manually |
 | P1.5 | Graph nodes have embedding: None | ✅ FIXED v1.0.0 | Auto-embed via EmbeddingProvider in postprocess |
 | P1.6 | Benchmarks collect-only in CI | ⏭️ DEFERRED | No Python benchmarks in current stack |
 | P1.7 | aletheia eval lacks real Brier score | ✅ FIXED v1.0.0 | /calibration endpoint + Brier formula + buckets |
@@ -61,15 +61,15 @@ Status: ✅ FIXED | ⬜ OPEN | 🔄 PARTIAL | ⏭️ DEFERRED
 
 ## Summary
 
-| Priority | Total | Fixed | Open/Deferred |
-|----------|-------|-------|---------------|
+| Priority | Total | Fixed | Remaining |
+|----------|-------|-------|-----------|
 | P0 | 12 | **12** | 0 |
-| P1 | 9 | **8** | 1 (P1.4 E2E tests) |
+| P1 | 9 | **8** | 1 partial (P1.4 broader E2E breadth) |
 | P2 | 9 | **8** | 1 (P2.6 naming, cosmetic) |
 | P3 | 6 | **1** | 5 (deferred to v1.1) |
 | **Total** | **36** | **29** | **7** |
 
-**v1.0.0 released. All P0 resolved. All P1 resolved except E2E test automation. All P2 resolved except cosmetic naming. P3 deferred to v1.1.**
+**v1.0.0 released. All P0 resolved. P1.4 is now partially automated with 10 daemon E2E scenarios, but broader Claude Code / plugin E2E remains. All P2 resolved except cosmetic naming. P3 deferred to v1.1.**
 
 ## Research: Key Resources for Future Work
 
