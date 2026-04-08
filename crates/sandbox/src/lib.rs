@@ -288,15 +288,21 @@ fn find_python_command() -> String {
 
 /// Find Git Bash on Windows (avoids WSL's bash.exe which may not work).
 fn find_bash_command() -> String {
-    // Prefer Git Bash over WSL bash.
-    let git_bash = r"C:\Program Files\Git\usr\bin\bash.exe";
-    if std::path::Path::new(git_bash).exists() {
-        return git_bash.to_string();
+    // Prefer the Git Bash launcher under `bin\bash.exe`: it bootstraps the
+    // MSYS runtime and makes coreutils like `sleep` available on PATH.
+    let candidates = [
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files (x86)\Git\bin\bash.exe",
+        r"C:\Program Files\Git\usr\bin\bash.exe",
+        r"C:\Program Files (x86)\Git\usr\bin\bash.exe",
+    ];
+
+    for candidate in candidates {
+        if std::path::Path::new(candidate).exists() {
+            return candidate.to_string();
+        }
     }
-    let git_bash_x86 = r"C:\Program Files (x86)\Git\usr\bin\bash.exe";
-    if std::path::Path::new(git_bash_x86).exists() {
-        return git_bash_x86.to_string();
-    }
+
     // Fall back to whatever is on PATH.
     "bash".to_string()
 }
@@ -351,8 +357,20 @@ mod tests {
         let (prog, args) = ProcessSandbox::build_command("bash", "echo hi")
             .expect("bash should be a supported language");
         if cfg!(windows) {
-            // On Windows we prefer Git Bash over WSL bash.
-            assert!(prog.contains("bash"), "expected a bash path, got: {prog}");
+            let expected = [
+                r"C:\Program Files\Git\bin\bash.exe",
+                r"C:\Program Files (x86)\Git\bin\bash.exe",
+                r"C:\Program Files\Git\usr\bin\bash.exe",
+                r"C:\Program Files (x86)\Git\usr\bin\bash.exe",
+            ]
+            .into_iter()
+            .find(|path| std::path::Path::new(path).exists());
+
+            if let Some(expected) = expected {
+                assert_eq!(prog, expected);
+            } else {
+                assert_eq!(prog, "bash");
+            }
         } else {
             assert_eq!(prog, "bash");
         }

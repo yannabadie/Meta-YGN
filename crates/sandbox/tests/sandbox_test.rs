@@ -9,10 +9,16 @@ use metaygn_sandbox::{Hypothesis, ProcessSandbox, SandboxConfig, SandboxError};
 /// Check whether a command is available on the system.
 fn command_exists(cmd: &str) -> bool {
     // On Windows, "bash" resolves to WSL's bash.exe which may not work.
-    // Check for Git Bash specifically.
+    // Check for Git Bash specifically, preferring the launcher under `bin`.
     if cfg!(windows) && cmd == "bash" {
-        return std::path::Path::new(r"C:\Program Files\Git\usr\bin\bash.exe").exists()
-            || std::path::Path::new(r"C:\Program Files (x86)\Git\usr\bin\bash.exe").exists();
+        return [
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files (x86)\Git\bin\bash.exe",
+            r"C:\Program Files\Git\usr\bin\bash.exe",
+            r"C:\Program Files (x86)\Git\usr\bin\bash.exe",
+        ]
+        .into_iter()
+        .any(|path| std::path::Path::new(path).exists());
     }
     std::process::Command::new(cmd)
         .arg("--version")
