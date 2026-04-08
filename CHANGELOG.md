@@ -1,5 +1,6 @@
 # Changelog
-n## 2.5.0 "Safety Net"
+
+## 2.5.0 "Safety Net"
 
 ### Added
 - **Auto-checkpoint**: git stash/commit ref saved before git-destructive ops, file copies before rm/unlink

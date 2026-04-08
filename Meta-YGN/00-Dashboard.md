@@ -7,7 +7,7 @@ updated: 2026-04-07
 # Aletheia-Nexus — Runtime Metacognitif
 
 Control plane local-first pour coding agents. Daemon Rust + plugin Claude Code.
-v2.4.0 "Sentinel Mind" — Avril 2026.
+v2.5.0 "Safety Net" — Avril 2026.
 
 ## These produit
 
