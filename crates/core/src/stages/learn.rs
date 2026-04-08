@@ -1,4 +1,4 @@
-use super::{Stage, StageResult};
+use super::{is_error_result, Stage, StageResult};
 use crate::context::LoopContext;
 
 /// Stage 12: Collect lessons learned from the entire pipeline run.
@@ -27,7 +27,7 @@ impl Stage for LearnStage {
 
         // Record verification issues as lessons.
         for result in &ctx.verification_results {
-            if result.starts_with("tool_error") || result.starts_with("response_contains") {
+            if is_error_result(result) {
                 ctx.lessons.push(format!("verification_issue: {result}"));
             }
         }

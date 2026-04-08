@@ -13,36 +13,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { HookInputSchema } from "@metaygn/shared/src/types.js";
 import type { HookInput } from "@metaygn/shared/src/types.js";
+import { readStdin } from "./lib/stdin.js";
 
 const DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
-
-// Augment globalThis for Bun runtime detection
-declare const Bun: { stdin: { json(): Promise<unknown> } } | undefined;
-
-/**
- * Read JSON from stdin. Supports both Bun and Node.js runtimes.
- */
-async function readStdin(): Promise<unknown> {
-  // Bun runtime: use Bun.stdin.json()
-  if (typeof Bun !== "undefined") {
-    return Bun.stdin.json();
-  }
-
-  // Node.js runtime: read chunks from process.stdin
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on("data", (chunk: Buffer) => chunks.push(chunk));
-    process.stdin.on("end", () => {
-      try {
-        const text = Buffer.concat(chunks).toString("utf-8");
-        resolve(JSON.parse(text));
-      } catch (err) {
-        reject(err);
-      }
-    });
-    process.stdin.on("error", reject);
-  });
-}
 
 /**
  * Read the daemon port from the well-known port file.

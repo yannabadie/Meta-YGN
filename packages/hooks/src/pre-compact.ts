@@ -9,14 +9,7 @@
  */
 
 import type { HookOutput } from "@metaygn/shared/src/types.js";
-
-/**
- * Write hook output to stdout and exit.
- */
-function respond(output: HookOutput): void {
-  process.stdout.write(JSON.stringify(output) + "\n");
-  process.exit(0);
-}
+import { respond } from "./lib/stdin.js";
 
 function main(): void {
   respond({

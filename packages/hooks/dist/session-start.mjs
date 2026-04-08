@@ -2,12 +2,16 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
-var TIMEOUT_MS = 350;
+
+// src/lib/stdin.ts
 function respond(output) {
   process.stdout.write(JSON.stringify(output) + "\n");
   process.exit(0);
 }
+
+// src/session-start.ts
+var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
+var TIMEOUT_MS = 350;
 async function readDaemonPort() {
   try {
     const raw = await readFile(DAEMON_PORT_FILE, "utf-8");

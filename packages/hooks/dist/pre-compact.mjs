@@ -1,8 +1,10 @@
-// src/pre-compact.ts
+// src/lib/stdin.ts
 function respond(output) {
   process.stdout.write(JSON.stringify(output) + "\n");
   process.exit(0);
 }
+
+// src/pre-compact.ts
 function main() {
   respond({
     hookSpecificOutput: {

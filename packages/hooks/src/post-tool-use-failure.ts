@@ -11,42 +11,7 @@
 import { HookInputSchema } from "@metaygn/shared/src/types.js";
 import type { HookInput, HookOutput } from "@metaygn/shared/src/types.js";
 import { callDaemon } from "./lib/daemon-client.js";
-
-// Augment globalThis for Bun runtime detection
-declare const Bun: { stdin: { json(): Promise<unknown> } } | undefined;
-
-/**
- * Read JSON from stdin. Supports both Bun and Node.js runtimes.
- */
-async function readStdin(): Promise<unknown> {
-  // Bun runtime: use Bun.stdin.json()
-  if (typeof Bun !== "undefined") {
-    return Bun.stdin.json();
-  }
-
-  // Node.js runtime: read chunks from process.stdin
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on("data", (chunk: Buffer) => chunks.push(chunk));
-    process.stdin.on("end", () => {
-      try {
-        const text = Buffer.concat(chunks).toString("utf-8");
-        resolve(JSON.parse(text));
-      } catch (err) {
-        reject(err);
-      }
-    });
-    process.stdin.on("error", reject);
-  });
-}
-
-/**
- * Write hook output to stdout and exit.
- */
-function respond(output: HookOutput): void {
-  process.stdout.write(JSON.stringify(output) + "\n");
-  process.exit(0);
-}
+import { readStdin, respond } from "./lib/stdin.js";
 
 async function main(): Promise<void> {
   let raw: unknown;

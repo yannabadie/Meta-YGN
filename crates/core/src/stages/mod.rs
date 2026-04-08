@@ -24,6 +24,15 @@ pub enum StageResult {
     Escalate(String),
 }
 
+/// Check if a verification result indicates an error condition.
+pub fn is_error_result(result: &str) -> bool {
+    result.starts_with("tool_error")
+        || result.starts_with("response_contains")
+        || result.starts_with("test_failures")
+        || result.starts_with("tool_mismatch")
+        || result.starts_with("syntax_error")
+}
+
 /// Trait that every pipeline stage implements.
 pub trait Stage: Send + Sync {
     /// A unique, human-readable name for this stage (e.g. `"classify"`).

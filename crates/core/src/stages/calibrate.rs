@@ -1,4 +1,4 @@
-use super::{Stage, StageResult};
+use super::{is_error_result, Stage, StageResult};
 use crate::context::LoopContext;
 
 /// Stage 9: Adjust the metacognitive vector based on verification results.
@@ -16,14 +16,7 @@ impl Stage for CalibrateStage {
         let error_count = ctx
             .verification_results
             .iter()
-            .filter(|r| {
-                r.starts_with("tool_error")
-                    || r.starts_with("response_contains")
-                    || r.starts_with("test_failures")
-                    || r.starts_with("tool_mismatch")
-                    || r.starts_with("syntax_error")
-                    || r.contains("empty tool response")
-            })
+            .filter(|r| is_error_result(r) || r.contains("empty tool response"))
             .count();
 
         if error_count == 0 {

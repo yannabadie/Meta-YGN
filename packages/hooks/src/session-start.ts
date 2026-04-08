@@ -14,17 +14,10 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { HookOutput } from "@metaygn/shared/src/types.js";
+import { respond } from "./lib/stdin.js";
 
 const DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
 const TIMEOUT_MS = 350;
-
-/**
- * Write hook output to stdout and exit.
- */
-function respond(output: HookOutput): void {
-  process.stdout.write(JSON.stringify(output) + "\n");
-  process.exit(0);
-}
 
 /**
  * Read the daemon port from the well-known port file.

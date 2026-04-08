@@ -4127,7 +4127,7 @@ function fallbackUserPromptSubmit(input) {
   };
 }
 
-// src/user-prompt-submit.ts
+// src/lib/stdin.ts
 async function readStdin() {
   if (typeof Bun !== "undefined") {
     return Bun.stdin.json();
@@ -4137,8 +4137,7 @@ async function readStdin() {
     process.stdin.on("data", (chunk) => chunks.push(chunk));
     process.stdin.on("end", () => {
       try {
-        const text = Buffer.concat(chunks).toString("utf-8");
-        resolve(JSON.parse(text));
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
       } catch (err) {
         reject(err);
       }
@@ -4150,6 +4149,8 @@ function respond(output) {
   process.stdout.write(JSON.stringify(output) + "\n");
   process.exit(0);
 }
+
+// src/user-prompt-submit.ts
 async function main() {
   let raw;
   try {

@@ -4080,8 +4080,7 @@ var HookInputSchema = external_exports.object({
   // matches Rust HookInput.trigger
 });
 
-// src/session-end.ts
-var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
+// src/lib/stdin.ts
 async function readStdin() {
   if (typeof Bun !== "undefined") {
     return Bun.stdin.json();
@@ -4091,8 +4090,7 @@ async function readStdin() {
     process.stdin.on("data", (chunk) => chunks.push(chunk));
     process.stdin.on("end", () => {
       try {
-        const text = Buffer.concat(chunks).toString("utf-8");
-        resolve(JSON.parse(text));
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
       } catch (err) {
         reject(err);
       }
@@ -4100,6 +4098,9 @@ async function readStdin() {
     process.stdin.on("error", reject);
   });
 }
+
+// src/session-end.ts
+var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
 async function readDaemonPort() {
   try {
     const raw = await readFile(DAEMON_PORT_FILE, "utf-8");
