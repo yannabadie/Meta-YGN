@@ -639,16 +639,21 @@ impl GraphMemory {
 // ---------------------------------------------------------------------------
 
 /// Map a rusqlite Row to a MemoryNode. Must be called inside a `call` closure.
+///
+/// Uses safe defaults instead of panicking on unexpected data (schema
+/// migration, corruption, etc.).
 fn row_to_node(row: &rusqlite::Row<'_>) -> MemoryNode {
     let embedding_blob: Option<Vec<u8>> = row.get(5).unwrap_or(None);
     MemoryNode {
-        id: row.get(0).unwrap(),
-        node_type: NodeType::from_str(&row.get::<_, String>(1).unwrap()).unwrap(),
-        scope: Scope::from_str(&row.get::<_, String>(2).unwrap()).unwrap(),
-        label: row.get(3).unwrap(),
-        content: row.get(4).unwrap(),
+        id: row.get(0).unwrap_or_default(),
+        node_type: NodeType::from_str(&row.get::<_, String>(1).unwrap_or_default())
+            .unwrap_or(NodeType::Task),
+        scope: Scope::from_str(&row.get::<_, String>(2).unwrap_or_default())
+            .unwrap_or(Scope::Session),
+        label: row.get(3).unwrap_or_default(),
+        content: row.get(4).unwrap_or_default(),
         embedding: embedding_blob.map(|b| deserialize_embedding(&b)),
-        created_at: row.get(6).unwrap(),
-        access_count: row.get(7).unwrap(),
+        created_at: row.get(6).unwrap_or_default(),
+        access_count: row.get(7).unwrap_or_default(),
     }
 }
