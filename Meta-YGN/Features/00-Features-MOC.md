@@ -29,6 +29,8 @@ Testees end-to-end, shipped avec le daemon.
 | [[Heuristic-Evolution]] | Population d'heuristiques avec mutation | core/heuristics/evolver.rs |
 | [[Prompt-Injection-Guard]] | Detection patterns injection dans assess | core/stages/assess.rs |
 | [[OTEL-Exporter]] | OTLP exporter feature-gated | daemon/telemetry.rs |
+| [[Auto-Checkpoint]] | git stash/commit ref before destructive ops, file copies before rm | verifiers/checkpoint.rs |
+| [[Bearer-Auth]] | UUID bearer token on all endpoints except /health | daemon/auth.rs |
 
 ## Experimentales (`[experimental]`)
 

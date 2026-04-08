@@ -14,7 +14,7 @@ updated: 2026-04-07
 **Framework** : Axum
 **Port** : dynamique, ecrit dans `~/.claude/aletheia/daemon.port`
 
-## 16+ Endpoints HTTP
+## 20+ Endpoints HTTP
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -37,6 +37,27 @@ updated: 2026-04-07
 | GET | `/metrics` | Prometheus metrics |
 | GET | `/heuristics/population` | Heuristic population |
 | GET | `/heuristics/best` | Best heuristic version |
+
+## Auth (v2.6)
+
+Bearer-token auth sur tous les endpoints sauf `/health`.
+Token UUID v4 genere au demarrage, ecrit dans `~/.claude/aletheia/daemon.token`.
+Middleware Axum (`auth_middleware`) verifie `Authorization: Bearer <token>`.
+Mode strict via `METAYGN_STRICT_AUTH=1` (sinon warn-only pour compat v2.5).
+Token et port files supprimes au shutdown.
+
+## Module split (v2.6)
+
+Les handlers hooks sont factorisees dans `crates/daemon/src/api/hooks/` :
+- `routes.rs` — routage
+- `pre_tool_use.rs` — guard pipeline + risk
+- `post_tool_use.rs` — verify + fatigue + graph
+- `user_prompt_submit.rs` — classify + assess + strategize
+- `stop.rs` — finalization (calibrate, compact, decide, learn)
+- `session_end.rs` — async persistence + evo trigger
+
+Les commandes CLI sont factorisees dans `crates/cli/src/commands/` :
+11 modules (doctor, eval, export, init, mcp, recall, replay, start, status, stop, top).
 
 ## Lifecycle
 

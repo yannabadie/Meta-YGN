@@ -7,7 +7,7 @@ updated: 2026-04-07
 # Aletheia-Nexus — Runtime Metacognitif
 
 Control plane local-first pour coding agents. Daemon Rust + plugin Claude Code.
-v2.5.0 "Safety Net" — Avril 2026.
+v2.6.0 "Hardened Architecture" — Avril 2026.
 
 ## These produit
 
@@ -44,6 +44,8 @@ Le produit gagne s'il :
 | Sequence Monitor | `[experimental]` | 3 regles, fenetre glissante, Pro2Guard-inspired |
 | Semantic Router | `[experimental]` | kNN risk classification, context-aware override |
 | Haiku Judge | `[experimental]` | Tier 3 LLM judge via native Claude Code prompt hook (hooks.json), no Rust code, runs in parallel with daemon hook |
+| Auto-Checkpoint | `[confirmed]` | git stash/commit ref before destructive ops, file copies before rm |
+| Bearer Auth | `[confirmed]` | UUID token at startup, checked on all endpoints except /health |
 | WASM Sandbox | `[experimental]` | Tier 4 Wasmtime isolation, fuel-limited, deny-by-default |
 
 ## Navigation
@@ -72,9 +74,9 @@ Le produit gagne s'il :
 | Metrique | Valeur |
 |----------|--------|
 | Crates Rust | 7 |
-| Rust LOC (src) | ~6,900 |
-| Rust LOC (tests) | ~9,500+ |
-| Fichiers de tests | 55+ |
+| Rust LOC (src) | ~15,200 |
+| Rust LOC (tests) | ~10,100 |
+| Fichiers de tests | 54 |
 | Packages TS | 2 (hooks, shared) |
 | Guards/Regles | 5 / 28 |
 | Stages control loop | 12 |

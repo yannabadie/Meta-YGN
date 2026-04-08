@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.6.0 "Hardened Architecture"
+
+### Added
+- **Bearer-token auth on daemon**: UUID v4 token generated at startup, written to `daemon.token`, checked on all endpoints except `/health`. Strict rejection via `METAYGN_STRICT_AUTH=1`.
+- **5 CLI integration tests**: help, status, doctor, init, recall (`crates/cli/tests/cli_test.rs`)
+
+### Changed
+- **hooks.rs split into 6 per-handler modules**: `crates/daemon/src/api/hooks/` (1216 -> ~200 lines each): routes, pre_tool_use, post_tool_use, user_prompt_submit, stop, session_end
+- **cli/main.rs split into 11 per-command modules**: `crates/cli/src/commands/` (899 -> ~80 lines each): doctor, eval, export, init, mcp, recall, replay, start, status, stop, top
+
+### Fixed
+- 8 `.unwrap()` in `graph.rs` row parsing replaced with safe defaults
+- 13 `.unwrap()` in `sandbox/tiered` replaced with safe alternatives
+- TS hooks: `readStdin`/`respond` extracted from 7 files to `lib/stdin.ts`
+- Error result checks deduplicated across calibrate/decide/learn stages
+
 ## 2.5.0 "Safety Net"
 
 ### Added
