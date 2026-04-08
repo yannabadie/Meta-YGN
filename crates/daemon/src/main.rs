@@ -5,6 +5,7 @@ use clap::Parser;
 use tokio::sync::watch;
 
 use metaygn_daemon::app_state::AppState;
+use metaygn_daemon::auth::AuthToken;
 
 mod telemetry;
 
@@ -84,7 +85,14 @@ async fn run_http_server(state: AppState, db_dir: PathBuf) -> Result<()> {
     // Create a shutdown watch channel for the /admin/shutdown endpoint
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    let app = metaygn_daemon::build_app_with_state(state).layer(axum::Extension(shutdown_tx));
+    // Generate a random auth token and write it next to the port file.
+    let token_string = uuid::Uuid::new_v4().to_string();
+    let token = AuthToken(token_string.clone());
+    let token_file = db_dir.join("daemon.token");
+    std::fs::write(&token_file, &token_string)?;
+    tracing::info!("Token file written to {}", token_file.display());
+
+    let app = metaygn_daemon::build_app_with_state(state, token).layer(axum::Extension(shutdown_tx));
 
     // Bind to dynamic port on localhost
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
@@ -98,20 +106,26 @@ async fn run_http_server(state: AppState, db_dir: PathBuf) -> Result<()> {
 
     // Serve with graceful shutdown on Ctrl+C or /admin/shutdown
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(port_file.clone(), shutdown_rx))
+        .with_graceful_shutdown(shutdown_signal(port_file.clone(), token_file.clone(), shutdown_rx))
         .await?;
 
-    // Cleanup port file after shutdown (in case shutdown_signal didn't remove it)
-    if port_file.exists() {
-        let _ = std::fs::remove_file(&port_file);
-        tracing::info!("Removed port file during final cleanup");
+    // Cleanup port and token files after shutdown (in case shutdown_signal didn't remove them)
+    for f in [&port_file, &token_file] {
+        if f.exists() {
+            let _ = std::fs::remove_file(f);
+            tracing::info!("Removed {} during final cleanup", f.display());
+        }
     }
 
     Ok(())
 }
 
-/// Wait for Ctrl+C or the shutdown watch channel, then clean up the port file.
-async fn shutdown_signal(port_file: PathBuf, mut shutdown_rx: watch::Receiver<bool>) {
+/// Wait for Ctrl+C or the shutdown watch channel, then clean up the port and token files.
+async fn shutdown_signal(
+    port_file: PathBuf,
+    token_file: PathBuf,
+    mut shutdown_rx: watch::Receiver<bool>,
+) {
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
             tracing::info!("Ctrl+C received, shutting down...");
@@ -128,9 +142,11 @@ async fn shutdown_signal(port_file: PathBuf, mut shutdown_rx: watch::Receiver<bo
         }
     }
 
-    // Remove port file on clean shutdown
-    if port_file.exists() {
-        let _ = std::fs::remove_file(&port_file);
-        tracing::info!("Removed port file");
+    // Remove port and token files on clean shutdown
+    for f in [&port_file, &token_file] {
+        if f.exists() {
+            let _ = std::fs::remove_file(f);
+            tracing::info!("Removed {}", f.display());
+        }
     }
 }

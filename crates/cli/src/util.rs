@@ -9,6 +9,12 @@ pub fn port_file_path() -> Result<PathBuf> {
     Ok(home.join(".claude").join("aletheia").join("daemon.port"))
 }
 
+/// Token file location: ~/.claude/aletheia/daemon.token
+pub fn token_file_path() -> Result<PathBuf> {
+    let home = dirs::home_dir().context("could not determine home directory")?;
+    Ok(home.join(".claude").join("aletheia").join("daemon.token"))
+}
+
 /// Read the daemon port from the port file.
 /// Returns None if the file doesn't exist or can't be parsed.
 pub fn read_daemon_port() -> Option<u16> {
@@ -17,10 +23,29 @@ pub fn read_daemon_port() -> Option<u16> {
     contents.trim().parse::<u16>().ok()
 }
 
+/// Read the daemon auth token from the token file.
+/// Returns None if the file doesn't exist or can't be read.
+pub fn read_daemon_token() -> Option<String> {
+    let path = token_file_path().ok()?;
+    let contents = std::fs::read_to_string(path).ok()?;
+    let token = contents.trim().to_string();
+    if token.is_empty() { None } else { Some(token) }
+}
+
 /// Build a reqwest client with a 2-second timeout.
+///
+/// If a daemon token file exists, the client automatically attaches an
+/// `Authorization: Bearer <token>` header to every request.
 pub fn http_client() -> Result<reqwest::Client> {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()
-        .context("failed to build HTTP client")
+    let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(2));
+
+    if let Some(token) = read_daemon_token() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}")) {
+            headers.insert(reqwest::header::AUTHORIZATION, val);
+        }
+        builder = builder.default_headers(headers);
+    }
+
+    builder.build().context("failed to build HTTP client")
 }
