@@ -1,4 +1,23 @@
 # Changelog
+n## 2.5.0 "Safety Net"
+
+### Added
+- **Auto-checkpoint**: git stash/commit ref saved before git-destructive ops, file copies before rm/unlink
+- Recovery message shown in hook response: `[checkpoint] To recover: git checkout <sha>`
+
+### Changed
+- **AstGuard enabled by default**: `find / -delete` now blocked without `--features syntax`
+- New `ast-guard` feature (tree-sitter + tree-sitter-bash only) is default
+
+### Removed
+- Dead code: `policy_engine.rs` (crepe Datalog), `monitor.rs` (MascMonitor)
+- `crepe` dependency removed
+
+### Fixed
+- Semantic router gated on real embeddings (refuses to start with hash provider)
+- Adaptive guard feedback loop wired (session outcomes feed TP/FP)
+- Heuristic evolver output now influences risk assessment
+
 
 ## 2.4.0 "Sentinel Mind"
 
