@@ -11,7 +11,7 @@ const TIMEOUT_MS = 350;
  * Read the daemon port from the well-known port file.
  * Returns null if the file doesn't exist or is unreadable.
  */
-async function readDaemonPort(): Promise<number | null> {
+export async function readDaemonPort(): Promise<number | null> {
   try {
     const raw = await readFile(DAEMON_PORT_FILE, "utf-8");
     const port = parseInt(raw.trim(), 10);
@@ -25,7 +25,7 @@ async function readDaemonPort(): Promise<number | null> {
  * Read the daemon auth token from the well-known token file.
  * Returns null if the file doesn't exist or is unreadable.
  */
-async function readDaemonToken(): Promise<string | null> {
+export async function readDaemonToken(): Promise<string | null> {
   try {
     const raw = await readFile(DAEMON_TOKEN_FILE, "utf-8");
     const token = raw.trim();
@@ -78,6 +78,42 @@ export async function callDaemon(
   } catch {
     // Daemon unreachable, timed out, or returned invalid JSON — silent failure
     return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Best-effort daemon POST that preserves auth headers but ignores the response
+ * body. Used by fire-and-forget hooks such as SessionEnd.
+ */
+export async function notifyDaemon(route: string, input: HookInput): Promise<boolean> {
+  const port = await readDaemonPort();
+  if (port === null) return false;
+
+  const token = await readDaemonToken();
+
+  const url = `http://127.0.0.1:${port}${route}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
   } finally {
     clearTimeout(timer);
   }

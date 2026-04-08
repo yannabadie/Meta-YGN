@@ -4080,6 +4080,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
+var DAEMON_TOKEN_FILE = join(homedir(), ".claude", "aletheia", "daemon.token");
 var TIMEOUT_MS = 350;
 async function readDaemonPort() {
   try {
@@ -4090,16 +4091,32 @@ async function readDaemonPort() {
     return null;
   }
 }
+async function readDaemonToken() {
+  try {
+    const raw = await readFile(DAEMON_TOKEN_FILE, "utf-8");
+    const token = raw.trim();
+    return token.length > 0 ? token : null;
+  } catch {
+    return null;
+  }
+}
 async function callDaemon(route, input) {
   const port = await readDaemonPort();
   if (port === null) return null;
+  const token = await readDaemonToken();
   const url = `http://127.0.0.1:${port}${route}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(input),
       signal: controller.signal
     });

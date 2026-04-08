@@ -343,8 +343,8 @@ Stop (when Claude finishes)
 PreCompact (on context limit or manual trigger)
   -> structured compaction guidance
   |
-SessionEnd (async)
-  -> event log + daemon notification
+SessionEnd (best effort)
+  -> event log + bounded daemon notification
 ```
 
 ### Hook Execution Model
@@ -358,7 +358,7 @@ SessionEnd (async)
 | PostToolUseFailure | post-tool-use-failure.ts | None (TS-only) | Error diagnosis, always emits output |
 | Stop | stop.ts | POST /hooks/stop | Completion verification + outcome recording |
 | PreCompact | pre-compact.ts | None (TS-only) | Static compaction guidance |
-| SessionEnd | session-end.ts | POST /hooks/session-end (fire-and-forget) | Logs event, idempotent cleanup |
+| SessionEnd | session-end.ts | POST /hooks/session-end (best-effort bounded POST) | Logs event, idempotent cleanup, auth-aware |
 
 **Design rationale:** Hooks that require daemon state (sessions, guard pipeline, control loop,
 graph memory) call the daemon. Hooks that are stateless (PostToolUseFailure, PreCompact) run

@@ -8,27 +8,10 @@
  *   or:   npx tsx packages/hooks/src/session-end.ts
  */
 
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { HookInputSchema } from "@metaygn/shared/src/types.js";
 import type { HookInput } from "@metaygn/shared/src/types.js";
 import { readStdin } from "./lib/stdin.js";
-
-const DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
-
-/**
- * Read the daemon port from the well-known port file.
- */
-async function readDaemonPort(): Promise<number | null> {
-  try {
-    const raw = await readFile(DAEMON_PORT_FILE, "utf-8");
-    const port = parseInt(raw.trim(), 10);
-    return Number.isFinite(port) ? port : null;
-  } catch {
-    return null;
-  }
-}
+import { notifyDaemon } from "./lib/daemon-client.js";
 
 async function main(): Promise<void> {
   let raw: unknown;
@@ -45,18 +28,9 @@ async function main(): Promise<void> {
 
   const input: HookInput = parsed.data;
 
-  // Fire and forget — send to daemon but do NOT wait for response
-  const port = await readDaemonPort();
-  if (port !== null) {
-    // Intentionally not awaiting — fire and forget
-    fetch(`http://127.0.0.1:${port}/hooks/session-end`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }).catch(() => {
-      // Ignore errors silently
-    });
-  }
+  // Best-effort notify the daemon. Bounded timeout keeps the hook non-blocking
+  // while still guaranteeing the request is actually attempted.
+  await notifyDaemon("/hooks/session-end", input);
 
   // Exit immediately regardless of daemon response
   process.exit(0);

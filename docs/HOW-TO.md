@@ -171,6 +171,7 @@ Claude Code / Codex
   │
   ├── Claude Code path: hooks/ (8 lifecycle events, TypeScript via npx tsx)
   │     ├── Calls daemon HTTP API (350ms timeout, local fallback)
+  │     ├── Automatically attaches `Authorization: Bearer <token>` when `~/.claude/aletheia/daemon.token` exists
   │     ├── 5 hooks call daemon (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SessionEnd)
   │     └── 3 hooks run locally in TS for speed (SessionStart, PostToolUseFailure, PreCompact)
   │
@@ -226,6 +227,7 @@ MetaYGN communicates with you through hook responses. Here's how to interpret th
 |---------|----------|
 | Hooks don't fire | Run `pnpm install` in repo root |
 | Daemon won't start | Check `~/.claude/aletheia/daemon.port` for stale file, delete it |
+| Hooks get 401 in strict auth | Verify `~/.claude/aletheia/daemon.token` exists and restart the daemon so hooks read the current token |
 | "npx tsx not found" | Install Node.js 22+ |
 | Plugin not loading | Run `claude plugin validate .` to check structure |
 | Slow first hook | `npx tsx` downloads tsx on first run (~2s), then cached |

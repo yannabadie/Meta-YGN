@@ -104,7 +104,12 @@ If `METAYGN_STRICT_AUTH=1` is set, unauthenticated requests are rejected outrigh
 unset METAYGN_STRICT_AUTH
 ```
 
-**Fix 3: Token file missing**
+**Fix 3: Hook client token file**
+
+Claude Code hooks read `~/.claude/aletheia/daemon.token` automatically. If hooks still
+fail under strict auth, ensure the file exists and matches the current daemon instance.
+
+**Fix 4: Token file missing**
 
 If `daemon.token` does not exist, the daemon may not have started correctly. Restart it:
 

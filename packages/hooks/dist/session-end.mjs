@@ -4,11 +4,6 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// src/session-end.ts
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -4099,8 +4094,13 @@ async function readStdin() {
   });
 }
 
-// src/session-end.ts
+// src/lib/daemon-client.ts
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 var DAEMON_PORT_FILE = join(homedir(), ".claude", "aletheia", "daemon.port");
+var DAEMON_TOKEN_FILE = join(homedir(), ".claude", "aletheia", "daemon.token");
+var TIMEOUT_MS = 350;
 async function readDaemonPort() {
   try {
     const raw = await readFile(DAEMON_PORT_FILE, "utf-8");
@@ -4110,6 +4110,44 @@ async function readDaemonPort() {
     return null;
   }
 }
+async function readDaemonToken() {
+  try {
+    const raw = await readFile(DAEMON_TOKEN_FILE, "utf-8");
+    const token = raw.trim();
+    return token.length > 0 ? token : null;
+  } catch {
+    return null;
+  }
+}
+async function notifyDaemon(route, input) {
+  const port = await readDaemonPort();
+  if (port === null) return false;
+  const token = await readDaemonToken();
+  const url = `http://127.0.0.1:${port}${route}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+      signal: controller.signal
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// src/session-end.ts
 async function main() {
   let raw;
   try {
@@ -4122,15 +4160,7 @@ async function main() {
     process.exit(0);
   }
   const input = parsed.data;
-  const port = await readDaemonPort();
-  if (port !== null) {
-    fetch(`http://127.0.0.1:${port}/hooks/session-end`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input)
-    }).catch(() => {
-    });
-  }
+  await notifyDaemon("/hooks/session-end", input);
   process.exit(0);
 }
 main().catch(() => {

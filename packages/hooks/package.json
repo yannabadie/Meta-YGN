@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/bundle.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/session-end.test.mjs"
   },
   "dependencies": {
     "@metaygn/shared": "workspace:*"
