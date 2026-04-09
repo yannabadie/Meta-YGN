@@ -28,7 +28,8 @@ pub fn cmd_init(force: bool) -> Result<()> {
     println!("Next steps:");
     println!("  1. Start the daemon:  aletheia start (or cargo run -p metaygn-daemon)");
     println!("  2. Use Claude Code:   claude --plugin-dir /path/to/MetaYGN");
-    println!("  3. Check status:      aletheia status");
+    println!("  3. Use Codex:         powershell -ExecutionPolicy Bypass -File .\\scripts\\start-codex-metaygn.ps1");
+    println!("  4. Check status:      aletheia status");
 
     Ok(())
 }

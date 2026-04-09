@@ -12,6 +12,18 @@ fn run_cli(args: &[&str]) -> (String, String, i32) {
     (stdout, stderr, code)
 }
 
+fn run_cli_in_dir(args: &[&str], dir: &std::path::Path) -> (String, String, i32) {
+    let output = Command::new(env!("CARGO_BIN_EXE_aletheia"))
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("failed to run aletheia");
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let code = output.status.code().unwrap_or(-1);
+    (stdout, stderr, code)
+}
+
 #[test]
 fn cli_help_exits_zero() {
     let (stdout, _, code) = run_cli(&["--help"]);
@@ -39,6 +51,24 @@ fn cli_init_with_existing_config() {
     let (stdout, _, code) = run_cli(&["init"]);
     assert_eq!(code, 0);
     assert!(stdout.contains("already exists") || stdout.contains("initialized"));
+}
+
+#[test]
+fn cli_init_mentions_codex_on_fresh_project() {
+    let tmp = std::env::temp_dir().join(format!(
+        "metaygn-cli-init-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&tmp).unwrap();
+
+    let (stdout, _, code) = run_cli_in_dir(&["init"], &tmp);
+    assert_eq!(code, 0);
+    assert!(stdout.contains("Codex"), "expected Codex guidance in init output: {stdout}");
+
+    std::fs::remove_dir_all(&tmp).unwrap();
 }
 
 #[test]

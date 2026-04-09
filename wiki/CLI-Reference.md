@@ -190,9 +190,14 @@ Example:
 
 ```bash
 $ aletheia init
-Created .claude/settings.json
-Created hooks.json
-Initialized MetaYGN configuration.
+MetaYGN initialized!
+  Created: .claude/settings.json
+
+Next steps:
+  1. Start the daemon:  aletheia start (or cargo run -p metaygn-daemon)
+  2. Use Claude Code:   claude --plugin-dir /path/to/MetaYGN
+  3. Use Codex:         powershell -ExecutionPolicy Bypass -File .\scripts\start-codex-metaygn.ps1
+  4. Check status:      aletheia status
 ```
 
 ---
