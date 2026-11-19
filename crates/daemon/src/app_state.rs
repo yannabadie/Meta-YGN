@@ -105,7 +105,9 @@ impl AppState {
 
         #[cfg(feature = "semantic")]
         let router = if embedding.provider_name() != "hash" {
-            Some(std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone())))
+            Some(std::sync::Arc::new(
+                crate::semantic_router::SemanticRouter::new(embedding.clone()),
+            ))
         } else {
             tracing::warn!(
                 "SemanticRouter disabled: hash embeddings provide no semantic similarity. \
@@ -164,7 +166,9 @@ impl AppState {
 
         #[cfg(feature = "semantic")]
         let router = if embedding.provider_name() != "hash" {
-            Some(std::sync::Arc::new(crate::semantic_router::SemanticRouter::new(embedding.clone())))
+            Some(std::sync::Arc::new(
+                crate::semantic_router::SemanticRouter::new(embedding.clone()),
+            ))
         } else {
             tracing::warn!(
                 "SemanticRouter disabled: hash embeddings provide no semantic similarity. \

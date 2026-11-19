@@ -1,5 +1,5 @@
 use metaygn_verifiers::checkpoint::{
-    extract_target_files, file_checkpoint, git_checkpoint, CheckpointType,
+    CheckpointType, extract_target_files, file_checkpoint, git_checkpoint,
 };
 
 // ---------------------------------------------------------------------------

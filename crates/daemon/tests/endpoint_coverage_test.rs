@@ -171,10 +171,7 @@ async fn endpoint_memory_stats() {
     );
     // Fresh in-memory DB should start at 0
     let count = body["event_count"].as_u64().unwrap_or(u64::MAX);
-    assert_eq!(
-        count, 0,
-        "fresh daemon should have 0 events, got {count}"
-    );
+    assert_eq!(count, 0, "fresh daemon should have 0 events, got {count}");
 }
 
 // ---------------------------------------------------------------------------

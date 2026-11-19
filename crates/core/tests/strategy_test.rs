@@ -23,7 +23,11 @@ fn select(risk: RiskLevel, difficulty: f32, task_type: Option<TaskType>) -> Stra
     ctx.difficulty = difficulty;
     ctx.task_type = task_type;
     let result = stage.run(&mut ctx);
-    assert_eq!(result, StageResult::Continue, "strategy stage should always return Continue");
+    assert_eq!(
+        result,
+        StageResult::Continue,
+        "strategy stage should always return Continue"
+    );
     ctx.strategy
 }
 
@@ -47,39 +51,61 @@ fn stage_always_returns_continue() {
 #[test]
 fn default_strategy_is_step_by_step() {
     let ctx = LoopContext::new(default_input());
-    assert_eq!(ctx.strategy, Strategy::StepByStep, "default strategy should be StepByStep");
+    assert_eq!(
+        ctx.strategy,
+        Strategy::StepByStep,
+        "default strategy should be StepByStep"
+    );
 }
 
 // ─── Task-type overrides (highest priority) ──────────────────────────────────
 
 #[test]
 fn security_always_adversarial_low_risk_low_difficulty() {
-    assert_eq!(select(RiskLevel::Low, 0.1, Some(TaskType::Security)), Strategy::Adversarial);
+    assert_eq!(
+        select(RiskLevel::Low, 0.1, Some(TaskType::Security)),
+        Strategy::Adversarial
+    );
 }
 
 #[test]
 fn security_always_adversarial_high_risk_high_difficulty() {
-    assert_eq!(select(RiskLevel::High, 0.9, Some(TaskType::Security)), Strategy::Adversarial);
+    assert_eq!(
+        select(RiskLevel::High, 0.9, Some(TaskType::Security)),
+        Strategy::Adversarial
+    );
 }
 
 #[test]
 fn security_always_adversarial_medium_risk_medium_difficulty() {
-    assert_eq!(select(RiskLevel::Medium, 0.5, Some(TaskType::Security)), Strategy::Adversarial);
+    assert_eq!(
+        select(RiskLevel::Medium, 0.5, Some(TaskType::Security)),
+        Strategy::Adversarial
+    );
 }
 
 #[test]
 fn research_always_tree_explore_low_risk() {
-    assert_eq!(select(RiskLevel::Low, 0.1, Some(TaskType::Research)), Strategy::TreeExplore);
+    assert_eq!(
+        select(RiskLevel::Low, 0.1, Some(TaskType::Research)),
+        Strategy::TreeExplore
+    );
 }
 
 #[test]
 fn research_always_tree_explore_high_risk() {
-    assert_eq!(select(RiskLevel::High, 0.9, Some(TaskType::Research)), Strategy::TreeExplore);
+    assert_eq!(
+        select(RiskLevel::High, 0.9, Some(TaskType::Research)),
+        Strategy::TreeExplore
+    );
 }
 
 #[test]
 fn research_always_tree_explore_medium_risk() {
-    assert_eq!(select(RiskLevel::Medium, 0.5, Some(TaskType::Research)), Strategy::TreeExplore);
+    assert_eq!(
+        select(RiskLevel::Medium, 0.5, Some(TaskType::Research)),
+        Strategy::TreeExplore
+    );
 }
 
 // ─── Non-override task types fall through to matrix ──────────────────────────
@@ -87,27 +113,42 @@ fn research_always_tree_explore_medium_risk() {
 #[test]
 fn bugfix_does_not_override_uses_matrix() {
     // Low risk, low difficulty => Rapid (same as None task type)
-    assert_eq!(select(RiskLevel::Low, 0.1, Some(TaskType::Bugfix)), Strategy::Rapid);
+    assert_eq!(
+        select(RiskLevel::Low, 0.1, Some(TaskType::Bugfix)),
+        Strategy::Rapid
+    );
 }
 
 #[test]
 fn feature_does_not_override_uses_matrix() {
-    assert_eq!(select(RiskLevel::Medium, 0.5, Some(TaskType::Feature)), Strategy::TreeExplore);
+    assert_eq!(
+        select(RiskLevel::Medium, 0.5, Some(TaskType::Feature)),
+        Strategy::TreeExplore
+    );
 }
 
 #[test]
 fn refactor_does_not_override_uses_matrix() {
-    assert_eq!(select(RiskLevel::High, 0.1, Some(TaskType::Refactor)), Strategy::VerifyFirst);
+    assert_eq!(
+        select(RiskLevel::High, 0.1, Some(TaskType::Refactor)),
+        Strategy::VerifyFirst
+    );
 }
 
 #[test]
 fn architecture_does_not_override_uses_matrix() {
-    assert_eq!(select(RiskLevel::Low, 0.9, Some(TaskType::Architecture)), Strategy::DivideConquer);
+    assert_eq!(
+        select(RiskLevel::Low, 0.9, Some(TaskType::Architecture)),
+        Strategy::DivideConquer
+    );
 }
 
 #[test]
 fn release_does_not_override_uses_matrix() {
-    assert_eq!(select(RiskLevel::Medium, 0.8, Some(TaskType::Release)), Strategy::Iterative);
+    assert_eq!(
+        select(RiskLevel::Medium, 0.8, Some(TaskType::Release)),
+        Strategy::Iterative
+    );
 }
 
 // ─── Risk x Difficulty matrix: Low risk ──────────────────────────────────────
@@ -230,7 +271,11 @@ fn strategy_stage_overwrites_default() {
     ctx.difficulty = 0.1;
     ctx.task_type = None;
     stage.run(&mut ctx);
-    assert_eq!(ctx.strategy, Strategy::Rapid, "strategy stage should overwrite the default");
+    assert_eq!(
+        ctx.strategy,
+        Strategy::Rapid,
+        "strategy stage should overwrite the default"
+    );
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use super::{is_error_result, Stage, StageResult};
+use super::{Stage, StageResult, is_error_result};
 use crate::context::LoopContext;
 
 /// Stage 12: Collect lessons learned from the entire pipeline run.

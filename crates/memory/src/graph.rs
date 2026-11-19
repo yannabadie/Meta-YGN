@@ -176,7 +176,10 @@ fn serialize_embedding(embedding: &[f32]) -> Vec<u8> {
 fn deserialize_embedding(bytes: &[u8]) -> Vec<f32> {
     // Trailing bytes that do not form a whole f32 are ignored (same as chunks_exact).
     let (chunks, _remainder) = bytes.as_chunks::<4>();
-    chunks.iter().map(|chunk| f32::from_le_bytes(*chunk)).collect()
+    chunks
+        .iter()
+        .map(|chunk| f32::from_le_bytes(*chunk))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------

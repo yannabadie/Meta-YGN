@@ -6,7 +6,7 @@
 //!
 //! Feature-gated behind `ast-guard`.
 
-use crate::effect_classifier::{classify_command, CommandEffect, EffectKind};
+use crate::effect_classifier::{CommandEffect, EffectKind, classify_command};
 use crate::guard_pipeline::{Guard, GuardResult};
 
 /// Guard that classifies shell commands via AST-based effect analysis.
@@ -63,10 +63,7 @@ fn score_effects(effects: &[CommandEffect]) -> (u8, Option<String>) {
         if eff.kind == EffectKind::Delete && eff.targets_root {
             return (
                 0,
-                Some(format!(
-                    "delete targeting root via `{}`",
-                    eff.command
-                )),
+                Some(format!("delete targeting root via `{}`", eff.command)),
             );
         }
     }
@@ -87,10 +84,7 @@ fn score_effects(effects: &[CommandEffect]) -> (u8, Option<String>) {
     // Rule 3: Delete (non-root)  -> 20 ASK
     for eff in effects {
         if eff.kind == EffectKind::Delete && !eff.targets_root {
-            return (
-                20,
-                Some(format!("delete operation via `{}`", eff.command)),
-            );
+            return (20, Some(format!("delete operation via `{}`", eff.command)));
         }
     }
 
@@ -99,10 +93,7 @@ fn score_effects(effects: &[CommandEffect]) -> (u8, Option<String>) {
         if eff.kind == EffectKind::Privilege {
             return (
                 30,
-                Some(format!(
-                    "privilege escalation via `{}`",
-                    eff.command
-                )),
+                Some(format!("privilege escalation via `{}`", eff.command)),
             );
         }
     }
@@ -121,10 +112,7 @@ fn score_effects(effects: &[CommandEffect]) -> (u8, Option<String>) {
     let all_unknown = effects.iter().all(|e| e.kind == EffectKind::Unknown);
     if all_unknown {
         let cmds: Vec<&str> = effects.iter().map(|e| e.command.as_str()).collect();
-        return (
-            50,
-            Some(format!("unknown command(s): {}", cmds.join(", "))),
-        );
+        return (50, Some(format!("unknown command(s): {}", cmds.join(", "))));
     }
 
     // Rule 7: Read-only / safe  -> 100 ALLOW

@@ -112,9 +112,7 @@ pub(crate) async fn pre_tool_use(
 
         // File checkpoint for file-destructive operations
         if checkpoint_message.is_none()
-            && (command.contains("rm")
-                || command.contains("unlink")
-                || command.contains("delete"))
+            && (command.contains("rm") || command.contains("unlink") || command.contains("delete"))
         {
             let cwd_owned = input.cwd.clone().unwrap_or_else(|| ".".to_string());
             let command_owned = command.clone();
@@ -124,10 +122,8 @@ pub(crate) async fn pre_tool_use(
                 if target_files.is_empty() {
                     return None;
                 }
-                let file_refs: Vec<&str> =
-                    target_files.iter().map(|s| s.as_str()).collect();
-                let cp =
-                    metaygn_verifiers::checkpoint::file_checkpoint(&cwd_owned, &file_refs);
+                let file_refs: Vec<&str> = target_files.iter().map(|s| s.as_str()).collect();
+                let cp = metaygn_verifiers::checkpoint::file_checkpoint(&cwd_owned, &file_refs);
                 if cp.created {
                     tracing::info!(
                         files_saved = cp.files_saved,
@@ -270,7 +266,7 @@ pub(crate) async fn pre_tool_use(
     {
         let cmd_lower = cmd.to_lowercase();
         let marker_checks: &[(&str, &str)] = &[
-            ("exec_command", ""),        // Bash tool itself
+            ("exec_command", ""), // Bash tool itself
             ("fs_write", "write"),
             ("network_access", "curl"),
             ("env_mutation", "export"),

@@ -21,8 +21,7 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    telemetry::init_tracing(args.mcp)
-        .expect("failed to initialise tracing");
+    telemetry::init_tracing(args.mcp).expect("failed to initialise tracing");
 
     // Determine database path:
     // 1. METAYGN_DB_PATH env var (set by CLI --db-path flag)
@@ -92,7 +91,8 @@ async fn run_http_server(state: AppState, db_dir: PathBuf) -> Result<()> {
     std::fs::write(&token_file, &token_string)?;
     tracing::info!("Token file written to {}", token_file.display());
 
-    let app = metaygn_daemon::build_app_with_state(state, token).layer(axum::Extension(shutdown_tx));
+    let app =
+        metaygn_daemon::build_app_with_state(state, token).layer(axum::Extension(shutdown_tx));
 
     // Bind to dynamic port on localhost
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
@@ -106,7 +106,11 @@ async fn run_http_server(state: AppState, db_dir: PathBuf) -> Result<()> {
 
     // Serve with graceful shutdown on Ctrl+C or /admin/shutdown
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(port_file.clone(), token_file.clone(), shutdown_rx))
+        .with_graceful_shutdown(shutdown_signal(
+            port_file.clone(),
+            token_file.clone(),
+            shutdown_rx,
+        ))
         .await?;
 
     // Cleanup port and token files after shutdown (in case shutdown_signal didn't remove them)

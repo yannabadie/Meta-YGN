@@ -102,10 +102,7 @@ pub async fn after_post_tool_use(
     }
 
     // Create edge: Task → Evidence (DependsOn)
-    let task_node_id = session
-        .lock()
-        .ok()
-        .and_then(|s| s.task_node_id.clone());
+    let task_node_id = session.lock().ok().and_then(|s| s.task_node_id.clone());
     if let Some(task_id) = task_node_id {
         let edge = MemoryEdge {
             source_id: task_id,
@@ -143,7 +140,9 @@ pub async fn after_post_tool_use(
                                     || result.stdout.contains("\"valid\":false")
                                 {
                                     let Ok(mut sess) = session.lock() else {
-                                        tracing::warn!("session mutex poisoned — skipping verification result");
+                                        tracing::warn!(
+                                            "session mutex poisoned — skipping verification result"
+                                        );
                                         return;
                                     };
                                     sess.verification_results.push(format!(

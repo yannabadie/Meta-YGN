@@ -76,12 +76,16 @@ pub(crate) async fn stop(
         if let Ok(mut sess) = session_ctx.lock() {
             sess.plasticity.record_recovery_injected();
         } else {
-            tracing::warn!("session mutex poisoned — skipping session plasticity record_recovery_injected");
+            tracing::warn!(
+                "session mutex poisoned — skipping session plasticity record_recovery_injected"
+            );
         }
         if let Ok(mut tracker) = state.plasticity.lock() {
             tracker.record_recovery_injected();
         } else {
-            tracing::warn!("plasticity mutex poisoned — skipping global plasticity record_recovery_injected");
+            tracing::warn!(
+                "plasticity mutex poisoned — skipping global plasticity record_recovery_injected"
+            );
         }
         Some(recovery_msg)
     } else {
@@ -177,10 +181,7 @@ pub(crate) async fn stop(
         };
         if !guard_blocks.is_empty() {
             let was_successful = ctx.verification_results.is_empty()
-                && session_ctx
-                    .lock()
-                    .map(|s| s.errors <= 1)
-                    .unwrap_or(false);
+                && session_ctx.lock().map(|s| s.errors <= 1).unwrap_or(false);
             if let Ok(mut mem) = state.guard_memory.lock() {
                 for rule in &guard_blocks {
                     // Successful session -> guard block was likely a false positive.

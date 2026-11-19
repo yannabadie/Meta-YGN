@@ -237,8 +237,7 @@ mod tests {
 
     /// Helper: build a TieredMemory backed by an in-memory SQLite store.
     fn make_mem(ttl: Duration) -> TieredMemory {
-        let rt = tokio::runtime::Runtime::new()
-            .expect("tokio runtime should initialise in tests");
+        let rt = tokio::runtime::Runtime::new().expect("tokio runtime should initialise in tests");
         let store = rt
             .block_on(MemoryStore::open_in_memory())
             .expect("in-memory store should open");

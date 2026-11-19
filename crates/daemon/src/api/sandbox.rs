@@ -39,7 +39,7 @@ async fn exec_wasm(Json(req): Json<WasmExecRequest>) -> Json<SandboxResult> {
                 stderr: format!("Failed to create WASM sandbox: {e}"),
                 duration_ms: 0,
                 timed_out: false,
-            })
+            });
         }
     };
 

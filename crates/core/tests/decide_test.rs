@@ -138,8 +138,16 @@ fn escalation_reason_mentions_risk_and_competence() {
     ctx.competence = 0.2;
     let (_, result) = decide(&mut ctx);
     if let StageResult::Escalate(reason) = result {
-        assert!(reason.contains("high risk"), "reason should mention high risk: {}", reason);
-        assert!(reason.contains("competence"), "reason should mention competence: {}", reason);
+        assert!(
+            reason.contains("high risk"),
+            "reason should mention high risk: {}",
+            reason
+        );
+        assert!(
+            reason.contains("competence"),
+            "reason should mention competence: {}",
+            reason
+        );
     } else {
         panic!("expected StageResult::Escalate");
     }
@@ -375,7 +383,11 @@ fn escalation_takes_priority_over_plasticity_lost() {
     assert!(matches!(result, StageResult::Escalate(_)));
     // The reason should be about risk+competence, not plasticity.
     if let StageResult::Escalate(reason) = result {
-        assert!(reason.contains("competence"), "first escalation path should win: {}", reason);
+        assert!(
+            reason.contains("competence"),
+            "first escalation path should win: {}",
+            reason
+        );
     }
 }
 
@@ -456,10 +468,18 @@ fn low_quality_takes_priority_over_verification_errors() {
 fn decision_field_is_set_by_stage() {
     // Verify that the decision field on the context is actually updated.
     let mut ctx = LoopContext::new(make_input());
-    assert_eq!(ctx.decision, Decision::Continue, "default decision before stage runs");
+    assert_eq!(
+        ctx.decision,
+        Decision::Continue,
+        "default decision before stage runs"
+    );
     ctx.plasticity_lost = true;
     decide(&mut ctx);
-    assert_eq!(ctx.decision, Decision::Escalate, "decision should be updated after stage runs");
+    assert_eq!(
+        ctx.decision,
+        Decision::Escalate,
+        "decision should be updated after stage runs"
+    );
 }
 
 #[test]

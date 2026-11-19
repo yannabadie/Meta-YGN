@@ -100,11 +100,7 @@ impl MopDetector {
         // Shannon entropy: H = -SUM p_i * log2(p_i)
         let entropy = counts.values().fold(0.0_f64, |acc, &c| {
             let p = c as f64 / n;
-            if p > 0.0 {
-                acc - p * p.log2()
-            } else {
-                acc
-            }
+            if p > 0.0 { acc - p * p.log2() } else { acc }
         });
 
         let entropy_delta = entropy - self.prev_entropy;

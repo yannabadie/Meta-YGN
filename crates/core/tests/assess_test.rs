@@ -43,7 +43,11 @@ fn assess(input: HookInput) -> (RiskLevel, f32) {
     let stage = AssessStage;
     let mut ctx = LoopContext::new(input);
     let result = stage.run(&mut ctx);
-    assert_eq!(result, StageResult::Continue, "assess stage should always return Continue");
+    assert_eq!(
+        result,
+        StageResult::Continue,
+        "assess stage should always return Continue"
+    );
     (ctx.risk, ctx.difficulty)
 }
 
@@ -77,59 +81,92 @@ fn stage_always_returns_continue() {
 
 #[test]
 fn high_risk_keyword_delete() {
-    assert_eq!(assess_risk(input_with_prompt("delete the database")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("delete the database")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_rm_space() {
     // "rm " (with trailing space) is a high-risk pattern
-    assert_eq!(assess_risk(input_with_prompt("rm -rf /tmp/files")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("rm -rf /tmp/files")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_rm_tab() {
     // "rm\t" (with trailing tab) is a high-risk pattern
-    assert_eq!(assess_risk(input_with_prompt("rm\t-rf /tmp")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("rm\t-rf /tmp")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_drop() {
-    assert_eq!(assess_risk(input_with_prompt("drop table users")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("drop table users")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_force() {
-    assert_eq!(assess_risk(input_with_prompt("force push to main")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("force push to main")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_deploy() {
-    assert_eq!(assess_risk(input_with_prompt("deploy to production")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("deploy to production")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_push() {
-    assert_eq!(assess_risk(input_with_prompt("push to remote")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("push to remote")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_credential() {
-    assert_eq!(assess_risk(input_with_prompt("update the credential store")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("update the credential store")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_secret() {
-    assert_eq!(assess_risk(input_with_prompt("rotate the api secret")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("rotate the api secret")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_vulnerability() {
-    assert_eq!(assess_risk(input_with_prompt("found a vulnerability")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("found a vulnerability")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_keyword_exploit() {
-    assert_eq!(assess_risk(input_with_prompt("test the exploit path")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt("test the exploit path")),
+        RiskLevel::High
+    );
 }
 
 // ─── High-risk: keywords matched via tool_name ───────────────────────────────
@@ -137,12 +174,18 @@ fn high_risk_keyword_exploit() {
 #[test]
 fn high_risk_keyword_in_tool_name() {
     // "delete" in tool_name is matched via combined = "{tool} {prompt}".to_lowercase()
-    assert_eq!(assess_risk(input_with_prompt_and_tool("do something", "delete_file")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("do something", "delete_file")),
+        RiskLevel::High
+    );
 }
 
 #[test]
 fn high_risk_deploy_in_tool_name() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("run it", "deploy_service")), RiskLevel::High);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("run it", "deploy_service")),
+        RiskLevel::High
+    );
 }
 
 // ─── High-risk: bash tool with no prompt ─────────────────────────────────────
@@ -169,137 +212,218 @@ fn bash_tool_no_prompt_field_is_high_risk() {
 
 #[test]
 fn low_risk_bash_ls() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("ls -la", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("ls -la", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cat() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cat /tmp/file.txt", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cat /tmp/file.txt", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_head() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("head -n 10 file.rs", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("head -n 10 file.rs", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_tail() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("tail -f logs.txt", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("tail -f logs.txt", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_echo() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("echo hello world", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("echo hello world", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_pwd() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("pwd", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("pwd", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_date() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("date", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("date", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_whoami() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("whoami", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("whoami", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_find() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("find . -name '*.rs'", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("find . -name '*.rs'", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_grep() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("grep -r 'TODO' src/", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("grep -r 'TODO' src/", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_rg() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("rg pattern src/", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("rg pattern src/", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_which() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("which cargo", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("which cargo", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_env() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("env", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("env", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_printenv() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("printenv HOME", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("printenv HOME", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cargo_test() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cargo test --all", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cargo test --all", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cargo_check() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cargo check", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cargo check", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cargo_build() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cargo build --release", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cargo build --release", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cargo_clippy() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cargo clippy", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cargo clippy", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_cargo_fmt() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("cargo fmt --check", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("cargo fmt --check", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_npm_test() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("npm test", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("npm test", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_npm_run() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("npm run lint", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("npm run lint", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_git_status() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("git status", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("git status", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_git_log() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("git log --oneline", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("git log --oneline", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_git_diff() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("git diff HEAD", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("git diff HEAD", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_git_branch() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("git branch -a", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("git branch -a", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_wc() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("wc -l src/main.rs", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("wc -l src/main.rs", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
 fn low_risk_bash_uname() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("uname -a", "Bash")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("uname -a", "Bash")),
+        RiskLevel::Low
+    );
 }
 
 // ─── Medium-risk: bash with unknown commands ─────────────────────────────────
@@ -307,17 +431,32 @@ fn low_risk_bash_uname() {
 #[test]
 fn medium_risk_bash_unknown_command() {
     // Bash tool with a command that doesn't match any safe prefix => Medium
-    assert_eq!(assess_risk(input_with_prompt_and_tool("curl https://example.com", "Bash")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool(
+            "curl https://example.com",
+            "Bash"
+        )),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_bash_sed() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("sed -i 's/foo/bar/' file.txt", "Bash")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool(
+            "sed -i 's/foo/bar/' file.txt",
+            "Bash"
+        )),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_bash_chmod() {
-    assert_eq!(assess_risk(input_with_prompt_and_tool("chmod 755 script.sh", "Bash")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt_and_tool("chmod 755 script.sh", "Bash")),
+        RiskLevel::Medium
+    );
 }
 
 // ─── Medium-risk: Write tool ─────────────────────────────────────────────────
@@ -338,39 +477,60 @@ fn medium_risk_write_tool_case_insensitive() {
 
 #[test]
 fn medium_risk_keyword_edit() {
-    assert_eq!(assess_risk(input_with_prompt("edit the config")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("edit the config")),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_keyword_replace() {
-    assert_eq!(assess_risk(input_with_prompt("replace the string")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("replace the string")),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_keyword_modify() {
-    assert_eq!(assess_risk(input_with_prompt("modify the settings")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("modify the settings")),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_keyword_update() {
-    assert_eq!(assess_risk(input_with_prompt("update the dependency")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("update the dependency")),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_keyword_install() {
-    assert_eq!(assess_risk(input_with_prompt("install the package")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("install the package")),
+        RiskLevel::Medium
+    );
 }
 
 #[test]
 fn medium_risk_keyword_create() {
-    assert_eq!(assess_risk(input_with_prompt("create a new module")), RiskLevel::Medium);
+    assert_eq!(
+        assess_risk(input_with_prompt("create a new module")),
+        RiskLevel::Medium
+    );
 }
 
 // ─── Low-risk: no risk indicators ────────────────────────────────────────────
 
 #[test]
 fn low_risk_benign_prompt_no_tool() {
-    assert_eq!(assess_risk(input_with_prompt("explain how iterators work")), RiskLevel::Low);
+    assert_eq!(
+        assess_risk(input_with_prompt("explain how iterators work")),
+        RiskLevel::Low
+    );
 }
 
 #[test]
@@ -414,7 +574,10 @@ fn high_risk_delete_in_bash_safe_command() {
 #[test]
 fn difficulty_zero_for_empty_prompt() {
     let d = assess_difficulty(input_with_prompt(""));
-    assert!(d < 0.01, "empty prompt should have near-zero difficulty, got {d}");
+    assert!(
+        d < 0.01,
+        "empty prompt should have near-zero difficulty, got {d}"
+    );
 }
 
 #[test]
@@ -428,7 +591,10 @@ fn difficulty_increases_with_length() {
     let short = assess_difficulty(input_with_prompt("fix the bug"));
     let long_text = "word ".repeat(100);
     let long = assess_difficulty(input_with_prompt(&long_text));
-    assert!(long > short, "longer prompt should have higher difficulty: short={short}, long={long}");
+    assert!(
+        long > short,
+        "longer prompt should have higher difficulty: short={short}, long={long}"
+    );
 }
 
 #[test]
@@ -437,7 +603,10 @@ fn difficulty_base_capped_at_06() {
     let very_long = "word ".repeat(300);
     let d = assess_difficulty(input_with_prompt(&very_long));
     // Without any complexity keywords, difficulty should be exactly 0.6
-    assert!((d - 0.6).abs() < 0.01, "base difficulty capped at 0.6, got {d}");
+    assert!(
+        (d - 0.6).abs() < 0.01,
+        "base difficulty capped at 0.6, got {d}"
+    );
 }
 
 // ─── Difficulty: complexity keywords ─────────────────────────────────────────
@@ -446,7 +615,10 @@ fn difficulty_base_capped_at_06() {
 fn difficulty_increases_with_complexity_keywords() {
     let without = assess_difficulty(input_with_prompt("implement a simple feature"));
     let with_one = assess_difficulty(input_with_prompt("implement an async feature"));
-    assert!(with_one > without, "complexity keyword should increase difficulty: without={without}, with={with_one}");
+    assert!(
+        with_one > without,
+        "complexity keyword should increase difficulty: without={without}, with={with_one}"
+    );
 }
 
 #[test]
@@ -533,7 +705,10 @@ fn difficulty_keyword_cryptograph() {
 fn difficulty_multiple_keywords_stack() {
     let one = assess_difficulty(input_with_prompt("async task"));
     let three = assess_difficulty(input_with_prompt("async distributed parallel task"));
-    assert!(three > one, "multiple keywords should stack: one={one}, three={three}");
+    assert!(
+        three > one,
+        "multiple keywords should stack: one={one}, three={three}"
+    );
 }
 
 #[test]
@@ -543,13 +718,19 @@ fn difficulty_capped_at_1() {
         + " complex concurrent async parallel distributed performance optimize scale migration backward compatibility recursive cryptograph";
     let d = assess_difficulty(input_with_prompt(&many_keywords));
     assert!(d <= 1.0, "difficulty should be capped at 1.0, got {d}");
-    assert!((d - 1.0).abs() < 0.01, "should be very close to 1.0 with max keywords, got {d}");
+    assert!(
+        (d - 1.0).abs() < 0.01,
+        "should be very close to 1.0 with max keywords, got {d}"
+    );
 }
 
 #[test]
 fn difficulty_case_insensitive() {
     let d = assess_difficulty(input_with_prompt("ASYNC PARALLEL Processing"));
-    assert!(d >= 0.2, "keyword matching should be case insensitive, got {d}");
+    assert!(
+        d >= 0.2,
+        "keyword matching should be case insensitive, got {d}"
+    );
 }
 
 // ─── Difficulty: uses tool_input too ─────────────────────────────────────────
@@ -560,7 +741,10 @@ fn difficulty_includes_tool_input() {
     input.tool_input = Some(serde_json::json!({"command": "complex distributed async system"}));
     let d = assess_difficulty(input);
     let simple_d = assess_difficulty(input_with_prompt("simple task"));
-    assert!(d > simple_d, "tool_input keywords should contribute to difficulty: with={d}, without={simple_d}");
+    assert!(
+        d > simple_d,
+        "tool_input keywords should contribute to difficulty: with={d}, without={simple_d}"
+    );
 }
 
 // ─── Edge cases ──────────────────────────────────────────────────────────────
@@ -584,14 +768,21 @@ fn empty_prompt_no_tool_is_low_risk() {
 fn default_context_risk_is_low_before_assess() {
     let input = input_with_prompt("anything");
     let ctx = LoopContext::new(input);
-    assert_eq!(ctx.risk, RiskLevel::Low, "default risk before assess runs should be Low");
+    assert_eq!(
+        ctx.risk,
+        RiskLevel::Low,
+        "default risk before assess runs should be Low"
+    );
 }
 
 #[test]
 fn default_context_difficulty_is_05_before_assess() {
     let input = input_with_prompt("anything");
     let ctx = LoopContext::new(input);
-    assert!((ctx.difficulty - 0.5).abs() < 0.01, "default difficulty before assess runs should be 0.5");
+    assert!(
+        (ctx.difficulty - 0.5).abs() < 0.01,
+        "default difficulty before assess runs should be 0.5"
+    );
 }
 
 #[test]
@@ -600,7 +791,10 @@ fn assess_overwrites_default_difficulty() {
     let d = assess_difficulty(input);
     // "hello" is 1 word => base = 1/200 = 0.005, no keywords => ~0.005
     // This is different from the default 0.5
-    assert!(d < 0.1, "assess should overwrite default difficulty with computed value, got {d}");
+    assert!(
+        d < 0.1,
+        "assess should overwrite default difficulty with computed value, got {d}"
+    );
 }
 
 // ─── Case sensitivity of tool_name matching ──────────────────────────────────

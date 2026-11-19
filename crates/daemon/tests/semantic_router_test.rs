@@ -88,7 +88,5 @@ fn hash_embeddings_do_not_crash_on_any_input() {
 fn classify_with_context_does_not_panic() {
     let router = make_router();
     let tier = router.classify("rm -rf /tmp/build", Some("CI cleanup step"));
-    assert!(
-        tier == RiskTier::Safe || tier == RiskTier::Ambiguous || tier == RiskTier::Dangerous
-    );
+    assert!(tier == RiskTier::Safe || tier == RiskTier::Ambiguous || tier == RiskTier::Dangerous);
 }

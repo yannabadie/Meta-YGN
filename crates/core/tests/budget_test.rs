@@ -1,8 +1,8 @@
 use metaygn_core::context::LoopContext;
 use metaygn_core::stages::budget::BudgetStage;
 use metaygn_core::stages::{Stage, StageResult};
-use metaygn_shared::protocol::{HookEvent, HookInput};
 use metaygn_shared::budget_tracker::COST_PER_TOKEN_USD;
+use metaygn_shared::protocol::{HookEvent, HookInput};
 use metaygn_shared::state::RiskLevel;
 
 /// Helper: build a default `HookInput`.
@@ -23,7 +23,11 @@ fn budget(risk: RiskLevel, difficulty: f32) -> (u64, u64, f64, RiskLevel) {
     ctx.risk = risk;
     ctx.difficulty = difficulty;
     let result = stage.run(&mut ctx);
-    assert_eq!(result, StageResult::Continue, "budget stage should always return Continue");
+    assert_eq!(
+        result,
+        StageResult::Continue,
+        "budget stage should always return Continue"
+    );
     (
         ctx.budget.max_tokens,
         ctx.budget.max_latency_ms,
@@ -183,21 +187,30 @@ fn latency_same_regardless_of_difficulty_high_risk() {
 fn cost_cap_low_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.1);
     let expected = 1_000.0 * COST_PER_TOKEN_USD;
-    assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
+    assert!(
+        (cost - expected).abs() < 1e-10,
+        "cost should be {expected}, got {cost}"
+    );
 }
 
 #[test]
 fn cost_cap_medium_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.5);
     let expected = 5_000.0 * COST_PER_TOKEN_USD;
-    assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
+    assert!(
+        (cost - expected).abs() < 1e-10,
+        "cost should be {expected}, got {cost}"
+    );
 }
 
 #[test]
 fn cost_cap_high_difficulty() {
     let (_, _, cost, _) = budget(RiskLevel::Low, 0.9);
     let expected = 20_000.0 * COST_PER_TOKEN_USD;
-    assert!((cost - expected).abs() < 1e-10, "cost should be {expected}, got {cost}");
+    assert!(
+        (cost - expected).abs() < 1e-10,
+        "cost should be {expected}, got {cost}"
+    );
 }
 
 // ─── Default context before budget runs ──────────────────────────────────────
@@ -205,25 +218,38 @@ fn cost_cap_high_difficulty() {
 #[test]
 fn default_budget_max_tokens() {
     let ctx = LoopContext::new(default_input());
-    assert_eq!(ctx.budget.max_tokens, 5000, "default max_tokens should be 5000");
+    assert_eq!(
+        ctx.budget.max_tokens, 5000,
+        "default max_tokens should be 5000"
+    );
 }
 
 #[test]
 fn default_budget_consumed_tokens() {
     let ctx = LoopContext::new(default_input());
-    assert_eq!(ctx.budget.consumed_tokens, 0, "default consumed_tokens should be 0");
+    assert_eq!(
+        ctx.budget.consumed_tokens, 0,
+        "default consumed_tokens should be 0"
+    );
 }
 
 #[test]
 fn default_budget_max_latency() {
     let ctx = LoopContext::new(default_input());
-    assert_eq!(ctx.budget.max_latency_ms, 30_000, "default max_latency_ms should be 30000");
+    assert_eq!(
+        ctx.budget.max_latency_ms, 30_000,
+        "default max_latency_ms should be 30000"
+    );
 }
 
 #[test]
 fn default_budget_risk_tolerance() {
     let ctx = LoopContext::new(default_input());
-    assert_eq!(ctx.budget.risk_tolerance, RiskLevel::Medium, "default risk_tolerance should be Medium");
+    assert_eq!(
+        ctx.budget.risk_tolerance,
+        RiskLevel::Medium,
+        "default risk_tolerance should be Medium"
+    );
 }
 
 // ─── Budget stage overwrites defaults ────────────────────────────────────────
@@ -237,7 +263,10 @@ fn budget_stage_overwrites_default_tokens() {
     ctx.difficulty = 0.1;
     ctx.risk = RiskLevel::Low;
     stage.run(&mut ctx);
-    assert_eq!(ctx.budget.max_tokens, 1_000, "budget stage should overwrite default tokens");
+    assert_eq!(
+        ctx.budget.max_tokens, 1_000,
+        "budget stage should overwrite default tokens"
+    );
 }
 
 #[test]
@@ -247,7 +276,10 @@ fn budget_stage_overwrites_default_latency() {
     ctx.risk = RiskLevel::High;
     ctx.difficulty = 0.5;
     stage.run(&mut ctx);
-    assert_eq!(ctx.budget.max_latency_ms, 60_000, "budget stage should overwrite default latency");
+    assert_eq!(
+        ctx.budget.max_latency_ms, 60_000,
+        "budget stage should overwrite default latency"
+    );
 }
 
 #[test]
@@ -257,7 +289,11 @@ fn budget_stage_overwrites_default_risk_tolerance() {
     ctx.risk = RiskLevel::High;
     ctx.difficulty = 0.5;
     stage.run(&mut ctx);
-    assert_eq!(ctx.budget.risk_tolerance, RiskLevel::High, "budget stage should overwrite default risk_tolerance");
+    assert_eq!(
+        ctx.budget.risk_tolerance,
+        RiskLevel::High,
+        "budget stage should overwrite default risk_tolerance"
+    );
 }
 
 // ─── Consumed tokens are not touched by budget stage ─────────────────────────
@@ -270,7 +306,10 @@ fn consumed_tokens_unchanged_by_budget_stage() {
     ctx.risk = RiskLevel::Low;
     ctx.difficulty = 0.5;
     stage.run(&mut ctx);
-    assert_eq!(ctx.budget.consumed_tokens, 42, "budget stage should not modify consumed_tokens");
+    assert_eq!(
+        ctx.budget.consumed_tokens, 42,
+        "budget stage should not modify consumed_tokens"
+    );
 }
 
 // ─── Edge cases ──────────────────────────────────────────────────────────────
@@ -278,13 +317,19 @@ fn consumed_tokens_unchanged_by_budget_stage() {
 #[test]
 fn negative_difficulty_treated_as_low() {
     let (tokens, _, _, _) = budget(RiskLevel::Low, -1.0);
-    assert_eq!(tokens, 1_000, "negative difficulty should map to Low band (1000 tokens)");
+    assert_eq!(
+        tokens, 1_000,
+        "negative difficulty should map to Low band (1000 tokens)"
+    );
 }
 
 #[test]
 fn difficulty_above_1_treated_as_high() {
     let (tokens, _, _, _) = budget(RiskLevel::Low, 2.0);
-    assert_eq!(tokens, 20_000, "difficulty > 1.0 should map to High band (20000 tokens)");
+    assert_eq!(
+        tokens, 20_000,
+        "difficulty > 1.0 should map to High band (20000 tokens)"
+    );
 }
 
 #[test]

@@ -273,8 +273,8 @@ fn classify_command_node(
                 "command_name" => {
                     cmd_name = Some(node_text(child, source).to_string());
                 }
-                "word" | "string" | "raw_string" | "concatenation"
-                | "simple_expansion" | "expansion" | "number" => {
+                "word" | "string" | "raw_string" | "concatenation" | "simple_expansion"
+                | "expansion" | "number" => {
                     args.push(node_text(child, source).to_string());
                 }
                 _ => {}
@@ -351,11 +351,9 @@ fn classify_command_word(cmd: &str) -> EffectKind {
 
         // Read
         "cat" | "less" | "more" | "head" | "tail" | "ls" | "pwd" | "date" | "whoami" | "grep"
-        | "find" | "diff" | "wc" | "sort" | "uniq" | "file" | "stat" | "du" | "df"
-        | "readlink" | "realpath" | "basename" | "dirname" | "id" | "env" | "printenv"
-        | "uname" | "hostname" | "uptime" | "free" | "lsof" | "ps" | "top" | "htop" => {
-            EffectKind::Read
-        }
+        | "find" | "diff" | "wc" | "sort" | "uniq" | "file" | "stat" | "du" | "df" | "readlink"
+        | "realpath" | "basename" | "dirname" | "id" | "env" | "printenv" | "uname"
+        | "hostname" | "uptime" | "free" | "lsof" | "ps" | "top" | "htop" => EffectKind::Read,
 
         // Network
         "curl" | "wget" | "ssh" | "scp" | "rsync" | "nc" | "ncat" | "ping" | "dig" | "nslookup"

@@ -71,10 +71,7 @@ fn rm_rf_target_debug_blocked() {
 fn sudo_apt_install_blocked() {
     let guard = AstGuard;
     let result = guard.check("Bash", "sudo apt install nginx");
-    assert!(
-        !result.allowed,
-        "sudo apt install must be blocked (ASK)"
-    );
+    assert!(!result.allowed, "sudo apt install must be blocked (ASK)");
     assert_eq!(result.score, 30);
     let reason = result.reason.as_deref().unwrap_or("");
     assert!(
@@ -89,10 +86,7 @@ fn sudo_apt_install_blocked() {
 fn curl_redirect_to_file_blocked() {
     let guard = AstGuard;
     let result = guard.check("Bash", "curl api.com > output.json");
-    assert!(
-        !result.allowed,
-        "curl > file must be blocked (ASK)"
-    );
+    assert!(!result.allowed, "curl > file must be blocked (ASK)");
     assert_eq!(result.score, 30);
     let reason = result.reason.as_deref().unwrap_or("");
     assert!(

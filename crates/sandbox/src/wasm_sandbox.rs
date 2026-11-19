@@ -184,9 +184,7 @@ impl WasmSandbox {
 
         // 4. Call `_start` if it exists; otherwise treat as success (the
         //    module may just define data or be a no-op).
-        if let Ok(start_fn) =
-            instance.get_typed_func::<(), ()>(&mut store, "_start")
-        {
+        if let Ok(start_fn) = instance.get_typed_func::<(), ()>(&mut store, "_start") {
             start_fn
                 .call(&mut store, ())
                 .map_err(|e| e.context("_start function trapped"))?;
@@ -266,7 +264,10 @@ mod tests {
             )"#,
         );
         assert!(!result.success);
-        assert!(result.timed_out, "expected timed_out flag for fuel exhaustion");
+        assert!(
+            result.timed_out,
+            "expected timed_out flag for fuel exhaustion"
+        );
     }
 
     #[test]
@@ -283,10 +284,7 @@ mod tests {
     #[test]
     fn network_disabled_by_default() {
         let config = WasmSandboxConfig::default();
-        assert!(
-            !config.allow_network,
-            "network must be denied by default"
-        );
+        assert!(!config.allow_network, "network must be denied by default");
     }
 
     #[test]

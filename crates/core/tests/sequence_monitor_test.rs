@@ -1,8 +1,6 @@
 //! Integration tests for [`metaygn_core::sequence_monitor`].
 
-use metaygn_core::sequence_monitor::{
-    ActionState, ActionType, SequenceMonitor, TargetType,
-};
+use metaygn_core::sequence_monitor::{ActionState, ActionType, SequenceMonitor, TargetType};
 
 fn action(action_type: ActionType, target_type: TargetType) -> ActionState {
     ActionState {
@@ -33,7 +31,11 @@ fn network_read_then_sensitive_write_triggers_alert() {
     mon.record(action(ActionType::NetworkRead, TargetType::Url));
     mon.record(action(ActionType::Write, TargetType::SensitivePath));
     assert_eq!(mon.alerts().len(), 1);
-    assert!(mon.alerts()[0].rule.contains("network_then_sensitive_write"));
+    assert!(
+        mon.alerts()[0]
+            .rule
+            .contains("network_then_sensitive_write")
+    );
 }
 
 #[test]

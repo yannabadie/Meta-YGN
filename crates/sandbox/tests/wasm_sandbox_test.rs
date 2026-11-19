@@ -15,14 +15,22 @@ fn default_config() {
 #[test]
 fn sandbox_creation_succeeds() {
     let sandbox = WasmSandbox::with_defaults();
-    assert!(sandbox.is_ok(), "sandbox creation failed: {:?}", sandbox.err());
+    assert!(
+        sandbox.is_ok(),
+        "sandbox creation failed: {:?}",
+        sandbox.err()
+    );
 }
 
 #[test]
 fn execute_minimal_wat() {
     let sandbox = WasmSandbox::with_defaults().unwrap();
     let result = sandbox.execute_wat(r#"(module (func (export "_start")))"#);
-    assert!(result.success, "expected success, stderr: {}", result.stderr);
+    assert!(
+        result.success,
+        "expected success, stderr: {}",
+        result.stderr
+    );
     assert_eq!(result.exit_code, Some(0));
     assert!(!result.timed_out);
     // duration_ms should be non-negative (trivially true for u64, but
@@ -64,7 +72,10 @@ fn fuel_exhaustion_traps_infinite_loop() {
         )"#,
     );
     assert!(!result.success, "infinite loop should fail");
-    assert!(result.timed_out, "should be flagged as timed_out (fuel exhaustion)");
+    assert!(
+        result.timed_out,
+        "should be flagged as timed_out (fuel exhaustion)"
+    );
 }
 
 #[test]
@@ -72,12 +83,19 @@ fn invalid_wat_returns_error() {
     let sandbox = WasmSandbox::with_defaults().unwrap();
     let result = sandbox.execute_wat("THIS IS NOT WAT");
     assert!(!result.success);
-    assert!(!result.stderr.is_empty(), "stderr should contain error details");
+    assert!(
+        !result.stderr.is_empty(),
+        "stderr should contain error details"
+    );
 }
 
 #[test]
 fn empty_module_succeeds() {
     let sandbox = WasmSandbox::with_defaults().unwrap();
     let result = sandbox.execute_wat("(module)");
-    assert!(result.success, "empty module should succeed, stderr: {}", result.stderr);
+    assert!(
+        result.success,
+        "empty module should succeed, stderr: {}",
+        result.stderr
+    );
 }

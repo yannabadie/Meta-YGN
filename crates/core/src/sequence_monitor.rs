@@ -103,7 +103,10 @@ impl SequenceMonitor {
     pub fn record(&mut self, action: ActionState) {
         // Track transitions across ALL actions (not just window).
         if let Some(prev) = self.last_action_type {
-            *self.transitions.entry((prev, action.action_type)).or_insert(0) += 1;
+            *self
+                .transitions
+                .entry((prev, action.action_type))
+                .or_insert(0) += 1;
         }
         self.last_action_type = Some(action.action_type);
         self.total_count += 1;
@@ -154,7 +157,10 @@ impl SequenceMonitor {
 
         // Find earliest NetworkRead and latest Write(SensitivePath) where
         // the network read comes before the sensitive write.
-        let network_idx = self.window.iter().position(|a| a.action_type == ActionType::NetworkRead);
+        let network_idx = self
+            .window
+            .iter()
+            .position(|a| a.action_type == ActionType::NetworkRead);
         let write_idx = self.window.iter().rposition(|a| {
             a.action_type == ActionType::Write && a.target_type == TargetType::SensitivePath
         });
@@ -165,8 +171,7 @@ impl SequenceMonitor {
             self.fired_rules.insert(rule.to_string());
             self.alerts.push(SequenceAlert {
                 rule: rule.to_string(),
-                description: "NetworkRead followed by Write to SensitivePath detected"
-                    .to_string(),
+                description: "NetworkRead followed by Write to SensitivePath detected".to_string(),
                 action_indices: vec![ni, wi],
             });
         }
@@ -181,7 +186,10 @@ impl SequenceMonitor {
             return;
         }
 
-        let delete_idx = self.window.iter().position(|a| a.action_type == ActionType::Delete);
+        let delete_idx = self
+            .window
+            .iter()
+            .position(|a| a.action_type == ActionType::Delete);
         let push_idx = self
             .window
             .iter()
@@ -284,7 +292,11 @@ mod tests {
         mon.record(action(ActionType::NetworkRead, TargetType::Url));
         mon.record(action(ActionType::Write, TargetType::SensitivePath));
         assert_eq!(mon.alerts().len(), 1);
-        assert!(mon.alerts()[0].rule.contains("network_then_sensitive_write"));
+        assert!(
+            mon.alerts()[0]
+                .rule
+                .contains("network_then_sensitive_write")
+        );
     }
 
     #[test]

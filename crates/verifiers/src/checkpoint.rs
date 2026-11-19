@@ -78,9 +78,7 @@ pub fn git_checkpoint(cwd: &str) -> CheckpointResult {
                     created: true,
                     location: sha.clone(),
                     files_saved: 0,
-                    message: format!(
-                        "To restore working-tree changes: git stash apply {sha}"
-                    ),
+                    message: format!("To restore working-tree changes: git stash apply {sha}"),
                 };
             }
             // Empty output — nothing to stash; fall through to HEAD.
@@ -106,9 +104,7 @@ pub fn git_checkpoint(cwd: &str) -> CheckpointResult {
                     created: true,
                     location: sha.clone(),
                     files_saved: 0,
-                    message: format!(
-                        "To recover to this commit: git checkout {sha}"
-                    ),
+                    message: format!("To recover to this commit: git checkout {sha}"),
                 };
             }
         }
@@ -194,9 +190,7 @@ pub fn file_checkpoint(cwd: &str, files: &[&str]) -> CheckpointResult {
         created: true,
         location: location.clone(),
         files_saved: saved,
-        message: format!(
-            "To recover files: copy from {location}"
-        ),
+        message: format!("To recover files: copy from {location}"),
     }
 }
 
@@ -344,10 +338,7 @@ mod tests {
 
     #[test]
     fn shell_split_quoted() {
-        assert_eq!(
-            shell_split("rm 'my file.txt'"),
-            vec!["rm", "my file.txt"]
-        );
+        assert_eq!(shell_split("rm 'my file.txt'"), vec!["rm", "my file.txt"]);
     }
 
     #[test]

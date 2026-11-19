@@ -1,4 +1,4 @@
-use super::{is_error_result, Stage, StageResult};
+use super::{Stage, StageResult, is_error_result};
 use crate::context::LoopContext;
 use metaygn_shared::state::{Decision, RiskLevel};
 
@@ -65,10 +65,7 @@ impl Stage for DecideStage {
         }
 
         // Has errors in verification => revise.
-        let has_errors = ctx
-            .verification_results
-            .iter()
-            .any(|r| is_error_result(r));
+        let has_errors = ctx.verification_results.iter().any(|r| is_error_result(r));
         if has_errors {
             ctx.decision = Decision::Revise;
             tracing::debug!(

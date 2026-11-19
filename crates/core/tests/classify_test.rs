@@ -32,7 +32,11 @@ fn classify(input: HookInput) -> Option<TaskType> {
     let stage = ClassifyStage;
     let mut ctx = LoopContext::new(input);
     let result = stage.run(&mut ctx);
-    assert_eq!(result, StageResult::Continue, "classify stage should always return Continue");
+    assert_eq!(
+        result,
+        StageResult::Continue,
+        "classify stage should always return Continue"
+    );
     ctx.task_type
 }
 
@@ -56,224 +60,350 @@ fn stage_always_returns_continue() {
 
 #[test]
 fn classifies_security_keyword_security() {
-    assert_eq!(classify(input_with_prompt("audit the security settings")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("audit the security settings")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_vulnerability() {
-    assert_eq!(classify(input_with_prompt("found a vulnerability in auth")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("found a vulnerability in auth")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_cve() {
-    assert_eq!(classify(input_with_prompt("patch cve-2025-1234")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("patch cve-2025-1234")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_auth() {
-    assert_eq!(classify(input_with_prompt("review the auth flow")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("review the auth flow")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_permission() {
-    assert_eq!(classify(input_with_prompt("check file permission bits")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("check file permission bits")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_secret() {
-    assert_eq!(classify(input_with_prompt("rotate the api secret")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("rotate the api secret")),
+        Some(TaskType::Security)
+    );
 }
 
 #[test]
 fn classifies_security_keyword_credential() {
-    assert_eq!(classify(input_with_prompt("update the credential store")), Some(TaskType::Security));
+    assert_eq!(
+        classify(input_with_prompt("update the credential store")),
+        Some(TaskType::Security)
+    );
 }
 
 // ─── Bugfix ───────────────────────────────────────────────────────────────────
 
 #[test]
 fn classifies_bugfix_keyword_fix() {
-    assert_eq!(classify(input_with_prompt("fix the login page")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("fix the login page")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_bug() {
-    assert_eq!(classify(input_with_prompt("there is a bug in parsing")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("there is a bug in parsing")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_error() {
-    assert_eq!(classify(input_with_prompt("handle the error gracefully")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("handle the error gracefully")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_crash() {
-    assert_eq!(classify(input_with_prompt("app crash on startup")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("app crash on startup")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_broken() {
-    assert_eq!(classify(input_with_prompt("the build is broken")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("the build is broken")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_issue() {
-    assert_eq!(classify(input_with_prompt("address the issue in routing")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("address the issue in routing")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_patch() {
-    assert_eq!(classify(input_with_prompt("apply the patch upstream")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("apply the patch upstream")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 #[test]
 fn classifies_bugfix_keyword_regression() {
-    assert_eq!(classify(input_with_prompt("this is a regression from v2")), Some(TaskType::Bugfix));
+    assert_eq!(
+        classify(input_with_prompt("this is a regression from v2")),
+        Some(TaskType::Bugfix)
+    );
 }
 
 // ─── Refactor ─────────────────────────────────────────────────────────────────
 
 #[test]
 fn classifies_refactor_keyword_refactor() {
-    assert_eq!(classify(input_with_prompt("refactor the database layer")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("refactor the database layer")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_cleanup() {
-    assert_eq!(classify(input_with_prompt("cleanup dead code")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("cleanup dead code")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_reorganize() {
-    assert_eq!(classify(input_with_prompt("reorganize the module structure")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("reorganize the module structure")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_rename() {
-    assert_eq!(classify(input_with_prompt("rename the helper functions")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("rename the helper functions")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_simplify() {
-    assert_eq!(classify(input_with_prompt("simplify the control flow")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("simplify the control flow")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_extract() {
-    assert_eq!(classify(input_with_prompt("extract a trait from this struct")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("extract a trait from this struct")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
 fn classifies_refactor_keyword_deduplicate() {
-    assert_eq!(classify(input_with_prompt("deduplicate the validation logic")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("deduplicate the validation logic")),
+        Some(TaskType::Refactor)
+    );
 }
 
 // ─── Architecture ─────────────────────────────────────────────────────────────
 
 #[test]
 fn classifies_architecture_keyword_architecture() {
-    assert_eq!(classify(input_with_prompt("review the architecture")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("review the architecture")),
+        Some(TaskType::Architecture)
+    );
 }
 
 #[test]
 fn classifies_architecture_keyword_design() {
-    assert_eq!(classify(input_with_prompt("design the new API surface")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("design the new API surface")),
+        Some(TaskType::Architecture)
+    );
 }
 
 #[test]
 fn classifies_architecture_keyword_system() {
-    assert_eq!(classify(input_with_prompt("the system needs a new queue")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("the system needs a new queue")),
+        Some(TaskType::Architecture)
+    );
 }
 
 #[test]
 fn classifies_architecture_keyword_infrastructure() {
-    assert_eq!(classify(input_with_prompt("set up the infrastructure")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("set up the infrastructure")),
+        Some(TaskType::Architecture)
+    );
 }
 
 #[test]
 fn classifies_architecture_keyword_migration() {
-    assert_eq!(classify(input_with_prompt("plan the database migration")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("plan the database migration")),
+        Some(TaskType::Architecture)
+    );
 }
 
 #[test]
 fn classifies_architecture_keyword_schema() {
-    assert_eq!(classify(input_with_prompt("update the schema definition")), Some(TaskType::Architecture));
+    assert_eq!(
+        classify(input_with_prompt("update the schema definition")),
+        Some(TaskType::Architecture)
+    );
 }
 
 // ─── Release ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn classifies_release_keyword_release() {
-    assert_eq!(classify(input_with_prompt("prepare the release")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("prepare the release")),
+        Some(TaskType::Release)
+    );
 }
 
 #[test]
 fn classifies_release_keyword_deploy() {
-    assert_eq!(classify(input_with_prompt("deploy to staging")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("deploy to staging")),
+        Some(TaskType::Release)
+    );
 }
 
 #[test]
 fn classifies_release_keyword_publish() {
-    assert_eq!(classify(input_with_prompt("publish the crate")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("publish the crate")),
+        Some(TaskType::Release)
+    );
 }
 
 #[test]
 fn classifies_release_keyword_version() {
-    assert_eq!(classify(input_with_prompt("bump the version number")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("bump the version number")),
+        Some(TaskType::Release)
+    );
 }
 
 #[test]
 fn classifies_release_keyword_tag() {
-    assert_eq!(classify(input_with_prompt("create a tag for v3")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("create a tag for v3")),
+        Some(TaskType::Release)
+    );
 }
 
 #[test]
 fn classifies_release_keyword_changelog() {
-    assert_eq!(classify(input_with_prompt("update the changelog")), Some(TaskType::Release));
+    assert_eq!(
+        classify(input_with_prompt("update the changelog")),
+        Some(TaskType::Release)
+    );
 }
 
 // ─── Research ─────────────────────────────────────────────────────────────────
 
 #[test]
 fn classifies_research_keyword_research() {
-    assert_eq!(classify(input_with_prompt("research alternatives")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("research alternatives")),
+        Some(TaskType::Research)
+    );
 }
 
 #[test]
 fn classifies_research_keyword_investigate() {
-    assert_eq!(classify(input_with_prompt("investigate the cause")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("investigate the cause")),
+        Some(TaskType::Research)
+    );
 }
 
 #[test]
 fn classifies_research_keyword_explore() {
-    assert_eq!(classify(input_with_prompt("explore new frameworks")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("explore new frameworks")),
+        Some(TaskType::Research)
+    );
 }
 
 #[test]
 fn classifies_research_keyword_prototype() {
-    assert_eq!(classify(input_with_prompt("build a prototype")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("build a prototype")),
+        Some(TaskType::Research)
+    );
 }
 
 #[test]
 fn classifies_research_keyword_spike() {
-    assert_eq!(classify(input_with_prompt("do a spike on caching")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("do a spike on caching")),
+        Some(TaskType::Research)
+    );
 }
 
 #[test]
 fn classifies_research_keyword_experiment() {
-    assert_eq!(classify(input_with_prompt("experiment with tokio")), Some(TaskType::Research));
+    assert_eq!(
+        classify(input_with_prompt("experiment with tokio")),
+        Some(TaskType::Research)
+    );
 }
 
 // ─── Feature (default fallback) ───────────────────────────────────────────────
 
 #[test]
 fn classifies_feature_as_default() {
-    assert_eq!(classify(input_with_prompt("add a new button to the UI")), Some(TaskType::Feature));
+    assert_eq!(
+        classify(input_with_prompt("add a new button to the UI")),
+        Some(TaskType::Feature)
+    );
 }
 
 #[test]
 fn classifies_feature_for_generic_prompt() {
-    assert_eq!(classify(input_with_prompt("implement the dashboard")), Some(TaskType::Feature));
+    assert_eq!(
+        classify(input_with_prompt("implement the dashboard")),
+        Some(TaskType::Feature)
+    );
 }
 
 // ─── Priority ordering ───────────────────────────────────────────────────────
@@ -354,9 +484,18 @@ fn no_prompt_defaults_to_feature() {
 
 #[test]
 fn case_insensitive_classification() {
-    assert_eq!(classify(input_with_prompt("FIX THE BUG")), Some(TaskType::Bugfix));
-    assert_eq!(classify(input_with_prompt("SECURITY audit")), Some(TaskType::Security));
-    assert_eq!(classify(input_with_prompt("Refactor This Module")), Some(TaskType::Refactor));
+    assert_eq!(
+        classify(input_with_prompt("FIX THE BUG")),
+        Some(TaskType::Bugfix)
+    );
+    assert_eq!(
+        classify(input_with_prompt("SECURITY audit")),
+        Some(TaskType::Security)
+    );
+    assert_eq!(
+        classify(input_with_prompt("Refactor This Module")),
+        Some(TaskType::Refactor)
+    );
 }
 
 #[test]
@@ -404,7 +543,10 @@ fn release_takes_priority_over_research() {
 fn task_type_is_none_before_classify_runs() {
     let input = input_with_prompt("fix the bug");
     let ctx = LoopContext::new(input);
-    assert_eq!(ctx.task_type, None, "task_type should be None before classify stage runs");
+    assert_eq!(
+        ctx.task_type, None,
+        "task_type should be None before classify stage runs"
+    );
 }
 
 #[test]

@@ -28,7 +28,11 @@ fn assess_tool_need(input: HookInput) -> (bool, Option<String>) {
     let stage = ToolNeedStage;
     let mut ctx = LoopContext::new(input);
     let result = stage.run(&mut ctx);
-    assert_eq!(result, StageResult::Continue, "tool_need stage should always return Continue");
+    assert_eq!(
+        result,
+        StageResult::Continue,
+        "tool_need stage should always return Continue"
+    );
     (ctx.tool_necessary, ctx.tool_necessity_reason)
 }
 
@@ -70,7 +74,10 @@ fn no_tool_name_with_command_still_not_necessary() {
 
 #[test]
 fn bash_with_regular_command_is_necessary() {
-    let (necessary, reason) = assess_tool_need(input_with_tool(Some("Bash"), Some("cargo test --workspace")));
+    let (necessary, reason) = assess_tool_need(input_with_tool(
+        Some("Bash"),
+        Some("cargo test --workspace"),
+    ));
     assert!(necessary);
     assert_eq!(reason.as_deref(), Some("tool invocation detected"));
 }
@@ -112,7 +119,8 @@ fn edit_tool_is_necessary() {
 
 #[test]
 fn bash_with_complex_command_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("git push origin main")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("git push origin main")));
     assert!(necessary);
 }
 
@@ -128,7 +136,8 @@ fn bash_with_no_command_is_necessary() {
 
 #[test]
 fn echo_simple_is_not_necessary() {
-    let (necessary, reason) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello world")));
+    let (necessary, reason) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello world")));
     assert!(!necessary);
     assert!(reason.as_deref().unwrap().contains("echo"));
 }
@@ -148,7 +157,8 @@ fn printf_simple_is_not_necessary() {
 
 #[test]
 fn printf_format_string_is_not_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("printf '%s\\n' hello")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("printf '%s\\n' hello")));
     assert!(!necessary);
 }
 
@@ -156,43 +166,54 @@ fn printf_format_string_is_not_necessary() {
 
 #[test]
 fn echo_with_redirect_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo secret > leak.txt")));
+    let (necessary, _) = assess_tool_need(input_with_tool(
+        Some("Bash"),
+        Some("echo secret > leak.txt"),
+    ));
     assert!(necessary);
 }
 
 #[test]
 fn echo_with_append_redirect_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo data >> file.txt")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("echo data >> file.txt")));
     assert!(necessary);
 }
 
 #[test]
 fn echo_with_pipe_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello | wc -c")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello | wc -c")));
     assert!(necessary);
 }
 
 #[test]
 fn echo_with_ampersand_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello & sleep 1")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello & sleep 1")));
     assert!(necessary);
 }
 
 #[test]
 fn echo_with_semicolon_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello; rm -rf /")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("echo hello; rm -rf /")));
     assert!(necessary);
 }
 
 #[test]
 fn printf_with_redirect_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("printf hello > file.txt")));
+    let (necessary, _) = assess_tool_need(input_with_tool(
+        Some("Bash"),
+        Some("printf hello > file.txt"),
+    ));
     assert!(necessary);
 }
 
 #[test]
 fn printf_with_pipe_is_necessary() {
-    let (necessary, _) = assess_tool_need(input_with_tool(Some("Bash"), Some("printf hello | cat")));
+    let (necessary, _) =
+        assess_tool_need(input_with_tool(Some("Bash"), Some("printf hello | cat")));
     assert!(necessary);
 }
 
@@ -217,13 +238,19 @@ fn echo_with_leading_whitespace() {
 #[test]
 fn default_tool_necessary_is_false() {
     let ctx = LoopContext::new(input_with_tool(None, None));
-    assert!(!ctx.tool_necessary, "default tool_necessary should be false");
+    assert!(
+        !ctx.tool_necessary,
+        "default tool_necessary should be false"
+    );
 }
 
 #[test]
 fn default_tool_necessity_reason_is_none() {
     let ctx = LoopContext::new(input_with_tool(None, None));
-    assert!(ctx.tool_necessity_reason.is_none(), "default reason should be None");
+    assert!(
+        ctx.tool_necessity_reason.is_none(),
+        "default reason should be None"
+    );
 }
 
 // ─── Non-Bash tool with command in tool_input ────────────────────────────────
