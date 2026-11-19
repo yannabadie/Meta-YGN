@@ -8,7 +8,7 @@ Aletheia-Nexus is a Rust daemon that intercepts every tool call, analyzes it thr
 
 ![version](https://img.shields.io/badge/version-2.6.0-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
-![tests](https://img.shields.io/badge/tests-774_passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-737_passing-brightgreen)
 ![rust](https://img.shields.io/badge/rust-stable_2024-orange)
 
 ---
@@ -228,7 +228,7 @@ TypeScript hooks fall back to regex-based guards. Destructive commands (`rm -rf 
 Yes. The daemon exposes an HTTP API on localhost and MCP tools via stdio. Any agent that supports hooks or MCP can use it.
 
 **Is it production-ready?**
-v2.6.0 has 774 tests across 54 test files with zero failures. Bearer auth on all endpoints. Auto-checkpoint system. But experimental features are clearly tagged -- check the tables above.
+v2.6.0 runs 737 tests in CI (`cargo test --workspace --features syntax,semantic`; 710 with default features) with zero failures. Bearer auth on all endpoints. Auto-checkpoint system. But experimental features are clearly tagged -- check the tables above.
 
 **How is it different from cc-safe-setup / Lasso / Trail of Bits guardrails?**
 Those tools use regex pattern matching or static deny lists. Aletheia-Nexus is a metacognitive runtime: AST-based command analysis, multi-action sequence detection, Shannon entropy meltdown detection, adaptive guard learning from session feedback, and automatic recovery checkpoints. It understands command semantics, not just string patterns.
@@ -267,7 +267,7 @@ Experimental features draw on ideas from these papers. None are fully replicated
 ## Contributing
 
 ```bash
-cargo test --workspace                    # run all 774 tests
+cargo test --workspace                    # run the 710 default-feature tests
 cargo test --workspace --features ast-guard  # include AST guard tests
 cargo clippy --workspace -- -D warnings   # lint
 ```
