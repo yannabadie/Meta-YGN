@@ -15,6 +15,9 @@ jobs:
     name: Rust Check & Test
     runs-on: ${{ matrix.os }}
     strategy:
+      # Run every OS to completion so one platform's failure cannot hide
+      # (cancel) the results of the others.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
