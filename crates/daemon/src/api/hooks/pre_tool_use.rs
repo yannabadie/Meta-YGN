@@ -144,16 +144,15 @@ pub(crate) async fn pre_tool_use(
         }
 
         // Include recovery instructions in the response
-        if let Some(ref cp_msg) = checkpoint_message {
-            if let Some(ref mut hso) = output.hook_specific_output {
-                match hso.additional_context {
-                    Some(ref mut ctx) => {
-                        ctx.push_str(&format!(" [checkpoint] {}", cp_msg));
-                    }
-                    None => {
-                        hso.additional_context =
-                            Some(format!("[checkpoint] {}", cp_msg));
-                    }
+        if let Some(ref cp_msg) = checkpoint_message
+            && let Some(ref mut hso) = output.hook_specific_output
+        {
+            match hso.additional_context {
+                Some(ref mut ctx) => {
+                    ctx.push_str(&format!(" [checkpoint] {}", cp_msg));
+                }
+                None => {
+                    hso.additional_context = Some(format!("[checkpoint] {}", cp_msg));
                 }
             }
         }

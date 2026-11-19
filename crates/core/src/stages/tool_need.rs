@@ -12,15 +12,11 @@ fn is_echo_only(cmd: &str) -> bool {
     let trimmed = cmd.trim();
     // Conservative: rejects if special chars appear anywhere, even inside quotes.
     // False negatives (missing an echo-only) are safe; false positives would be wrong.
-    if (trimmed.starts_with("echo ") || trimmed.starts_with("printf "))
+    (trimmed.starts_with("echo ") || trimmed.starts_with("printf "))
         && !trimmed.contains('>')
         && !trimmed.contains('|')
         && !trimmed.contains('&')
         && !trimmed.contains(';')
-    {
-        return true;
-    }
-    false
 }
 
 impl Stage for ToolNeedStage {

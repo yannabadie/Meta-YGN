@@ -59,7 +59,7 @@ pub fn cluster_lessons(lessons: &[String], max_clusters: usize) -> Vec<String> {
     }
 
     // Sort by count descending, take max_clusters
-    clusters.sort_by(|a, b| b.1.cmp(&a.1));
+    clusters.sort_by_key(|c| std::cmp::Reverse(c.1));
     clusters.truncate(max_clusters);
 
     clusters

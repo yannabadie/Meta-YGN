@@ -164,10 +164,10 @@ pub fn file_checkpoint(cwd: &str, files: &[&str]) -> CheckpointResult {
 
         // Mirror the relative path inside the checkpoint directory.
         let target = dest_dir.join(rel);
-        if let Some(parent) = target.parent() {
-            if fs::create_dir_all(parent).is_err() {
-                continue;
-            }
+        if let Some(parent) = target.parent()
+            && fs::create_dir_all(parent).is_err()
+        {
+            continue;
         }
 
         if fs::copy(&src, &target).is_ok() {
