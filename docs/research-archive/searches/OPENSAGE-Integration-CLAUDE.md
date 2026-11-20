@@ -8,7 +8,7 @@
 
 ## PARTIE 1 — ANALYSE DU REPO ACTUEL
 
-### État du repo C:\Projects\MetaYGN
+### État du repo <repo-root>
 
 | Crate | LOC (estimé) | Maturité | Fonction |
 |-------|-------------|----------|----------|
@@ -171,7 +171,7 @@ Your mission: integrate concepts from 4 research papers into the existing MetaYG
 
 ## REPO LOCATION
 ```
-C:\Projects\MetaYGN
+<repo-root>
 ```
 
 ## FIRST ACTION — MANDATORY

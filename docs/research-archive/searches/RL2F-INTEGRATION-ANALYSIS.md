@@ -321,5 +321,5 @@ L'`EvidencePack` (hash chain + Merkle + ed25519) fournit un signal d'intégrité
 
 ---
 
-*Document généré pour `C:\Projects\MetaYGN\docs\plans\RL2F-INTEGRATION-ANALYSIS.md`*
+*Document généré pour `<repo-root>\docs\plans\RL2F-INTEGRATION-ANALYSIS.md`*
 *Classification : `[original-proposal]` — requiert validation par prototypage*

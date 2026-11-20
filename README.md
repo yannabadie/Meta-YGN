@@ -15,17 +15,16 @@ Aletheia-Nexus is a Rust daemon that intercepts every tool call, analyzes it thr
 
 ## Why This Exists
 
-These are not hypotheticals. These are documented incidents from the past twelve months.
+Autonomous coding agents execute real shell and filesystem tools. Common real-world failure classes reported across 2025-2026 include:
 
-| Date | Incident | Impact | Source |
-|------|----------|--------|--------|
-| Feb 2026 | DataTalks.Club: AI agent runs `terraform destroy` on production | 1.9M rows lost, full infrastructure destroyed | [datatalks.club post](https://datatalks.club/blog/ai-engineering-with-alexey.html) |
-| Dec 2025 | Amazon Kiro agent deletes entire cloud environment | 13-hour AWS China outage | [The Register](https://www.theregister.com/2025/01/14/aws_china_outage/) |
-| Jul 2025 | Replit SaaStr: agent ignores 11 explicit instructions, deletes production database | Production data loss during live demo | [SaaStr coverage](https://www.saastr.com/replit-agent-incident-2025/) |
-| Nov 2025 | `git checkout .` wipes 4 days of uncommitted work | Unrecoverable without manual reconstruction | [Hacker News thread](https://news.ycombinator.com/item?id=38274264) |
-| Oct 2025 | Claude Code executes `rm -rf /` from root | System-level file deletion | [GitHub issue](https://github.com/anthropics/claude-code/issues/1247) |
+| Failure Class | Typical Command / Trigger | Impact Without a Safety Gate |
+|---------------|---------------------------|------------------------------|
+| Infrastructure teardown | `terraform destroy` against a live environment | Production database and infrastructure loss |
+| Recursive filesystem wipe | `rm -rf` on wrong working directory or root | Irreversible local or system file deletion |
+| Destructive Git reset | `git checkout .` / `git reset --hard` / `git push --force` | Loss of uncommitted work or shared branch history |
+| Unintended secret/config mutation | Editing host credentials or `~/.claude.json` outside repo scope | Privilege or configuration corruption |
 
-Every one of these would have been caught by Aletheia-Nexus.
+Aletheia-Nexus intercepts these tool calls before execution, scores contextual risk, creates recovery checkpoints, and enforces human approval or denial.
 
 ---
 
@@ -208,10 +207,10 @@ claude --plugin-dir .            # Claude Code with Aletheia protection
 ### Optional feature flags
 
 ```bash
-cargo build --features mcp         # MCP stdio server
-cargo build --features syntax      # tree-sitter multi-language verification
-cargo build --features otel        # OpenTelemetry tracing spans
-cargo build --features embeddings  # Neural embeddings (fastembed, bge-small-en-v1.5)
+cargo build -p metaygn-daemon --features mcp         # MCP stdio server
+cargo build -p metaygn-daemon --features syntax      # tree-sitter multi-language verification
+cargo build -p metaygn-daemon --features otel        # OpenTelemetry tracing spans
+cargo build -p metaygn-daemon --features embeddings  # Neural embeddings (fastembed, bge-small-en-v1.5)
 ```
 
 ---
@@ -267,9 +266,9 @@ Experimental features draw on ideas from these papers. None are fully replicated
 ## Contributing
 
 ```bash
-cargo test --workspace                    # run the 710 default-feature tests
-cargo test --workspace --features ast-guard  # include AST guard tests
-cargo clippy --workspace -- -D warnings   # lint
+cargo test --workspace                                # run the default-feature tests
+cargo test --workspace --features syntax,semantic     # run full CI verification suite
+cargo clippy --workspace -- -D warnings               # lint
 ```
 
 Issues and PRs welcome. See `CHANGELOG.md` for version history.

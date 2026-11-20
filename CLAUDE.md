@@ -1,6 +1,6 @@
 # Aletheia-Nexus - Repo Operating Contract
 
-**Version**: v2.0.0 "Production Hardened"
+**Version**: v2.6.0 "Production Hardened"
 **Detailed docs**: `Meta-YGN/` (Obsidian vault — architecture, features, ADRs, evidence tiers)
 
 ## Mission
